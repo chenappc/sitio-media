@@ -1,3 +1,4 @@
+import Link from "next/link";
 import styles from "./ComingSoon.module.css";
 
 export default function ComingSoonPage() {
@@ -9,6 +10,11 @@ export default function ComingSoonPage() {
         </h1>
         <p className={styles.tagline}>
           Muy pronto. Lo que todo el mundo está hablando.
+        </p>
+        <p className={styles.footerLinkWrap}>
+          <Link href="/quiz-prestamos-py" className={styles.footerLink}>
+            Préstamos Paraguay
+          </Link>
         </p>
         <div className={styles.iconWrap} aria-hidden>
           <svg
