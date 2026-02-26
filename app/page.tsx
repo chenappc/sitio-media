@@ -11,14 +11,14 @@ export default function ComingSoonPage() {
         <p className={styles.tagline}>
           Muy pronto. Lo que todo el mundo está hablando.
         </p>
-        <p className={styles.footerLinkWrap}>
-          <span className={styles.footerIntro}>
-            Mientras construimos nuestro sitio, te invitamos a visitar{" "}
-          </span>
-          <Link href="/quiz-prestamos-py" className={styles.footerLink}>
-            Préstamos Paraguay
+        <div className={styles.ctaBlock}>
+          <p className={styles.ctaIntro}>
+            Mientras construimos nuestro sitio, te invitamos a visitar:
+          </p>
+          <Link href="/quiz-prestamos-py" className={styles.ctaBtn}>
+            Préstamos Paraguay →
           </Link>
-        </p>
+        </div>
         <div className={styles.iconWrap} aria-hidden>
           <svg
             xmlns="http://www.w3.org/2000/svg"

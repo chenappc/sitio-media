@@ -33,25 +33,35 @@
   font-weight: 400;
 }
 
-.footerLinkWrap {
+.ctaBlock {
   margin-top: 1.25rem;
   padding-top: 1rem;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 0.75rem;
+}
+
+.ctaIntro {
+  margin: 0 0 1rem;
+  font-size: 0.8rem;
   color: #6b6b6b;
 }
 
-.footerIntro {
-  color: #6b6b6b;
-}
-
-.footerLink {
-  color: #888;
+.ctaBtn {
+  display: inline-block;
+  padding: 1rem 1.75rem;
+  font-family: "Merriweather", Georgia, serif;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #fff;
+  background: #d62828;
+  border: none;
+  border-radius: 8px;
   text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
-.footerLink:hover {
-  color: #aaa;
+.ctaBtn:hover {
+  background: #b82222;
 }
 
 .iconWrap {
