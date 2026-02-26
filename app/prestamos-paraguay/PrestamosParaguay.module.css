@@ -76,10 +76,13 @@
 
 .ctaWrap {
   margin-top: 2rem;
+  text-align: center;
 }
 
 .ctaBtn {
-  display: inline-block;
+  display: block;
+  margin: 0 auto;
+  width: fit-content;
   padding: 1rem 1.5rem;
   font-size: 1.125rem;
   font-weight: 700;

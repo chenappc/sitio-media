@@ -30,6 +30,11 @@ export const metadata: Metadata = {
   openGraph: {
     siteName: "sitio.media",
   },
+  verification: {
+    other: {
+      "google-adsense-account": "ca-pub-5212469313751329",
+    },
+  },
 };
 
 export default function RootLayout({
@@ -39,17 +44,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className={`${merriweather.variable} ${sourceSans.variable}`}>
-      <head>
-        <meta name="google-adsense-account" content="ca-pub-5212469313751329" />
+      <body>
+        <LayoutShell>{children}</LayoutShell>
         <Script
-          async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5212469313751329"
           crossOrigin="anonymous"
           strategy="afterInteractive"
         />
-      </head>
-      <body>
-        <LayoutShell>{children}</LayoutShell>
       </body>
     </html>
   );
