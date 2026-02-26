@@ -25,7 +25,7 @@ export default function PrestamosParaguayPage() {
         buscan concretar proyectos personales o organizar sus finanzas.
       </p>
 
-      <div className={styles.hero} role="img" aria-label="Itaú Mi Préstamo Paraguay" />
+      <AdSense slot="8857811296" />
 
       <ul className={styles.list}>
         <li className={styles.listItem}>
@@ -81,6 +81,8 @@ export default function PrestamosParaguayPage() {
         tasas y condiciones, consultá directamente con Banco Itaú.
       </p>
 
+      <AdSense slot="9784384730" />
+
       <h2 className={styles.sectionTitle}>
         ¿Cómo solicitar Itaú Mi Préstamo?
       </h2>
@@ -88,8 +90,6 @@ export default function PrestamosParaguayPage() {
         Solicitarlo es rápido y sencillo. Vas a conocer todo lo que necesitás
         saber, solo hacé clic en el botón a continuación:
       </p>
-
-      <AdSense />
 
       <div className={styles.ctaWrap}>
         <Link href="/solicitar-prestamo-paraguay" className={styles.ctaBtn}>

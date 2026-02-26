@@ -26,7 +26,7 @@ export default function SolicitarPrestamoParaguayPage() {
         institución reconocida, te ofrece libertad y confianza en cada paso.
       </p>
 
-      <div className={styles.hero} role="img" aria-label="Itaú Mi Préstamo Paraguay" />
+      <AdSense slot="8857811296" />
 
       <h2 className={styles.sectionTitle}>
         ¿Cuáles son los requisitos para solicitar el Mi Préstamo?
@@ -57,6 +57,8 @@ export default function SolicitarPrestamoParaguayPage() {
         a tus posibilidades, evitando desequilibrios financieros en el futuro.
       </p>
 
+      <AdSense slot="9784384730" />
+
       <h2 className={styles.sectionTitle}>
         ¿Cómo solicitar el préstamo de Banco Itaú?
       </h2>
@@ -65,8 +67,6 @@ export default function SolicitarPrestamoParaguayPage() {
         botón a continuación para visitar el sitio oficial y obtener toda la
         información que necesitás:
       </p>
-
-      <AdSense />
 
       <div className={styles.ctaWrap}>
         <a
