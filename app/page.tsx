@@ -12,6 +12,9 @@ export default function ComingSoonPage() {
           Muy pronto. Lo que todo el mundo está hablando.
         </p>
         <p className={styles.footerLinkWrap}>
+          <span className={styles.footerIntro}>
+            Mientras construimos nuestro sitio, te invitamos a visitar{" "}
+          </span>
           <Link href="/quiz-prestamos-py" className={styles.footerLink}>
             Préstamos Paraguay
           </Link>
