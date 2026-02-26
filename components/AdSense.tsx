@@ -11,7 +11,7 @@ type AdSenseProps = {
 const DEFAULT_SLOT = "8857811296";
 
 export default function AdSense({ slot = DEFAULT_SLOT }: AdSenseProps) {
-  const insRef = useRef<HTMLElement>(null);
+  const insRef = useRef<HTMLModElement>(null);
 
   useEffect(() => {
     if (!slot || !CLIENT || !insRef.current) return;
