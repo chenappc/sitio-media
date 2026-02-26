@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import { Merriweather, Source_Sans_3 } from "next/font/google";
 import "./globals.css";
 import LayoutShell from "@/components/LayoutShell";
+import AdSenseScript from "@/components/AdSenseScript";
 
 const merriweather = Merriweather({
   weight: ["400", "700", "900"],
@@ -46,11 +46,7 @@ export default function RootLayout({
     <html lang="es" className={`${merriweather.variable} ${sourceSans.variable}`}>
       <body>
         <LayoutShell>{children}</LayoutShell>
-        <Script
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5212469313751329"
-          crossOrigin="anonymous"
-          strategy="afterInteractive"
-        />
+        <AdSenseScript />
       </body>
     </html>
   );
