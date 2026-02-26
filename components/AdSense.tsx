@@ -5,10 +5,12 @@ import { useEffect, useRef } from "react";
 const CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT ?? "ca-pub-5212469313751329";
 
 type AdSenseProps = {
-  slot: string;
+  slot?: string;
 };
 
-export default function AdSense({ slot }: AdSenseProps) {
+const DEFAULT_SLOT = "8857811296";
+
+export default function AdSense({ slot = DEFAULT_SLOT }: AdSenseProps) {
   const insRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
