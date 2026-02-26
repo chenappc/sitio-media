@@ -1,0 +1,112 @@
+.page {
+  min-height: 100vh;
+  background: #fff;
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 1rem 1rem 2.5rem;
+  box-sizing: border-box;
+}
+
+.logo {
+  font-family: "Merriweather", Georgia, serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111111;
+  margin-bottom: 1.5rem;
+}
+
+.h1 {
+  font-family: "Merriweather", Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111111;
+  line-height: 1.3;
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 768px) {
+  .h1 {
+    font-size: 1.75rem;
+  }
+}
+
+.intro {
+  font-size: 1.125rem;
+  color: #374151;
+  line-height: 1.65;
+  margin-bottom: 1.25rem;
+}
+
+.hero {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #e5e7eb;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.sectionTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111111;
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.body {
+  font-size: 1.125rem;
+  color: #374151;
+  line-height: 1.65;
+  margin-bottom: 1rem;
+}
+
+.list {
+  margin: 0.75rem 0 1rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.listItem {
+  font-size: 1.125rem;
+  color: #374151;
+  line-height: 1.65;
+  margin-bottom: 0.5rem;
+  padding-left: 0;
+}
+
+.ctaWrap {
+  margin-top: 2rem;
+}
+
+.ctaBtn {
+  display: inline-block;
+  padding: 1rem 1.5rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #fff;
+  background: #16a34a;
+  border: none;
+  border-radius: 12px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.ctaBtn:hover {
+  background: #15803d;
+}
+
+.note {
+  font-size: 0.9375rem;
+  color: #6b7280;
+  margin-top: 1rem;
+  line-height: 1.5;
+}
+
+.footer {
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
