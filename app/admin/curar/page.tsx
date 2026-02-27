@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import styles from "./CurarPage.module.css";
 
@@ -12,6 +12,14 @@ const PAISES = [
   { value: "co", label: "Colombia" },
   { value: "es", label: "España" },
 ] as const;
+
+const PROGRESS_STEPS: { label: string; percent: number }[] = [
+  { label: "Obteniendo artículo...", percent: 25 },
+  { label: "Analizando contenido...", percent: 50 },
+  { label: "Curando con IA...", percent: 75 },
+  { label: "Procesando imagen...", percent: 90 },
+  { label: "¡Listo!", percent: 100 },
+];
 
 type CurarResult = {
   titulo: string;
@@ -27,17 +35,37 @@ export default function CurarPage() {
   const [pais, setPais] = useState("general");
   const [adminSecret, setAdminSecret] = useState("");
   const [loading, setLoading] = useState(false);
+  const [progressStep, setProgressStep] = useState(0);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const [publishLoading, setPublishLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<CurarResult | null>(null);
   const [published, setPublished] = useState(false);
   const [createdSlug, setCreatedSlug] = useState<string | null>(null);
 
+  useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach(clearTimeout);
+      timeoutsRef.current = [];
+    };
+  }, []);
+
+  const runProgressSimulation = () => {
+    timeoutsRef.current.forEach(clearTimeout);
+    timeoutsRef.current = [];
+    setProgressStep(0);
+    const t1 = setTimeout(() => setProgressStep(1), 600);
+    const t2 = setTimeout(() => setProgressStep(2), 2200);
+    const t3 = setTimeout(() => setProgressStep(3), 4200);
+    timeoutsRef.current = [t1, t2, t3];
+  };
+
   const handleCurar = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setPreview(null);
     setLoading(true);
+    runProgressSimulation();
     try {
       const res = await fetch("/api/curar", {
         method: "POST",
@@ -48,15 +76,22 @@ export default function CurarPage() {
         body: JSON.stringify({ url: url.trim(), pais }),
       });
       const data = await res.json().catch(() => ({}));
+      timeoutsRef.current.forEach(clearTimeout);
+      timeoutsRef.current = [];
+      setProgressStep(4);
       if (!res.ok) {
         setError(data.error ?? `Error ${res.status}`);
+        setTimeout(() => setLoading(false), 500);
         return;
       }
       setPreview(data);
+      setTimeout(() => setLoading(false), 500);
     } catch (err) {
+      timeoutsRef.current.forEach(clearTimeout);
+      timeoutsRef.current = [];
+      setProgressStep(4);
       setError(err instanceof Error ? err.message : "Error de red");
-    } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 500);
     }
   };
 
@@ -184,6 +219,23 @@ export default function CurarPage() {
           {loading ? "Curando…" : "Curar con IA"}
         </button>
       </form>
+
+      {loading && (
+        <div className={styles.progressWrap}>
+          <p className={styles.progressLabel}>
+            {PROGRESS_STEPS[progressStep].label}
+          </p>
+          <div className={styles.progressTrack}>
+            <div
+              className={styles.progressBar}
+              style={{ width: `${PROGRESS_STEPS[progressStep].percent}%` }}
+            />
+          </div>
+          <p className={styles.progressPercent}>
+            {PROGRESS_STEPS[progressStep].percent}%
+          </p>
+        </div>
+      )}
 
       {preview && (
         <section className={styles.preview}>
