@@ -98,6 +98,16 @@ export async function POST(req: NextRequest) {
       imagenPrincipal = resolveUrl(urlClean, imagenPrincipal);
     }
 
+    let nombreMedio =
+      $('meta[property="og:site_name"]').attr("content")?.trim() || "";
+    if (!nombreMedio) {
+      try {
+        nombreMedio = new URL(urlClean).hostname.replace(/^www\./, "");
+      } catch {
+        nombreMedio = "la fuente";
+      }
+    }
+
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
@@ -113,6 +123,7 @@ export async function POST(req: NextRequest) {
 3. LENGUAJE: Usá un español cotidiano, amigable y natural del país elegido. Evitá tecnicismos innecesarios. El texto debe ser fácil de leer, agradable y culturalmente apropiado para ese país.
 4. VIRALIDAD: Mantené los elementos que hicieron viral la nota: el gancho emocional, el dato sorprendente, el conflicto o la curiosidad. No los suavices ni los elimines.
 5. ORIGINALIDAD: Reescribí completamente, nunca copies frases del original. Debe pasar cualquier detector de plagio.
+6. NOMBRES Y LUGARES: Siempre mencioná los nombres propios, personas, lugares, ciudades, países, instituciones y marcas que aparecen en el artículo original. No los omitas ni los reemplaces por referencias vagas como 'una persona', 'un lugar' o 'una institución'. Los nombres propios son parte del valor noticioso y de la viralidad.
 
 Siempre respondé SOLO con JSON válido sin markdown ni backticks.`;
     const userPrompt = `País de la audiencia: ${paisStr}.
@@ -123,9 +134,11 @@ ${tituloOriginal}
 Cuerpo original (texto plano):
 ${cuerpoOriginal.slice(0, 12000)}
 
+Nombre del medio de origen (usar para el párrafo final): ${nombreMedio}
+
 Devuelve ÚNICAMENTE un objeto JSON con estas tres claves (sin markdown, sin \`\`\`):
 - "titulo": título curado en español del país, manteniendo el gancho viral, máximo 80 caracteres.
-- "cuerpo": cuerpo curado en HTML. Cada párrafo debe ir envuelto en su propia etiqueta <p>. No uses otros contenedores: solo <p> para cada párrafo separado. 300-500 palabras, en el español del país elegido.
+- "cuerpo": cuerpo curado en HTML. Cada párrafo debe ir envuelto en su propia etiqueta <p>. No uses otros contenedores: solo <p> para cada párrafo separado. 300-500 palabras, en el español del país elegido. Al final del cuerpo, antes de cerrar, agregá un último párrafo en etiqueta <p> normal (sin negrita ni estilo especial) con exactamente este texto: "Nota original publicada en ${nombreMedio}." Ese párrafo es parte natural del artículo.
 - "adcopy": texto para Facebook, máximo 3 líneas cortas, sin hashtags, que genere curiosidad y clicks sin revelar todo.`;
 
     const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
