@@ -21,6 +21,85 @@ function resolveUrl(base: string, path: string): string {
   }
 }
 
+const EXCLUDE_CLASSES = [
+  "related",
+  "recomendado",
+  "lee-tambien",
+  "lea-tambien",
+  "tambien",
+  "sidebar",
+  "widget",
+  "ad",
+  "publicidad",
+  "newsletter",
+  "suscri",
+  "footer",
+  "header",
+  "nav",
+  "menu",
+  "comment",
+  "share",
+  "social",
+];
+
+function classMatchesExclude(className: string): boolean {
+  const c = className.toLowerCase();
+  return EXCLUDE_CLASSES.some((key) => c.includes(key));
+}
+
+function getOriginHost(urlClean: string): string {
+  try {
+    return new URL(urlClean).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
+function isSameDomain(href: string, baseUrl: string, originHost: string): boolean {
+  if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:"))
+    return false;
+  try {
+    const u = new URL(href, baseUrl);
+    const h = u.hostname.replace(/^www\./, "");
+    return h === originHost || h.endsWith("." + originHost);
+  } catch {
+    return false;
+  }
+}
+
+function cleanDom($: cheerio.CheerioAPI, urlClean: string): void {
+  const originHost = getOriginHost(urlClean);
+  if (!originHost) return;
+
+  $("script, style, noscript").remove();
+  $("aside, nav, footer, header").remove();
+
+  $("*").each((_, el) => {
+    const $el = $(el);
+    const tag = el.tagName?.toLowerCase();
+    if (tag === "html" || tag === "body") return;
+    const cls = $el.attr("class");
+    if (cls && classMatchesExclude(cls)) {
+      $el.remove();
+      return;
+    }
+    if (tag === "figure") {
+      const hasInternalLink = $el.find("a[href]").length > 0 && $el.find("a[href]").toArray().some((a) => isSameDomain($(a).attr("href") ?? "", urlClean, originHost));
+      if (hasInternalLink) $el.remove();
+      return;
+    }
+    if (tag === "div" || tag === "section") {
+      const $links = $el.find("a[href]");
+      const hasInternal = $links.length > 0 && $links.toArray().some((a) => isSameDomain($(a).attr("href") ?? "", urlClean, originHost));
+      if (!hasInternal) return;
+      const isMain =
+        $el.is("article, [role='article'], main") ||
+        /post-content|entry-content|article-body|content/.test(cls ?? "");
+      if (!isMain) $el.remove();
+    }
+  });
+}
+
 export async function POST(req: NextRequest) {
   if (!auth(req)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -54,35 +133,6 @@ export async function POST(req: NextRequest) {
       $("title").first().text().trim() ||
       "";
 
-    let cuerpoOriginal = "";
-    const article =
-      $("article").first().length > 0
-        ? $("article").first()
-        : $('[role="article"]').first().length > 0
-          ? $('[role="article"]').first()
-          : $("main").first().length > 0
-            ? $("main").first()
-            : $(".post-content, .article-body, .content, .entry-content").first();
-    if (article.length) {
-      cuerpoOriginal = article.find("p").length
-        ? article
-            .find("p")
-            .map((_, el) => $(el).text().trim())
-            .get()
-            .filter(Boolean)
-            .join("\n\n")
-        : article.text().trim();
-    }
-    if (!cuerpoOriginal && $("p").length) {
-      cuerpoOriginal = $("p")
-        .slice(0, 20)
-        .map((_, el) => $(el).text().trim())
-        .get()
-        .filter(Boolean)
-        .join("\n\n");
-    }
-    if (!cuerpoOriginal) cuerpoOriginal = $("body").text().trim().slice(0, 8000);
-
     let imagenPrincipal =
       $('meta[property="og:image"]').attr("content") ||
       $('meta[name="twitter:image"]').attr("content");
@@ -108,6 +158,59 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    cleanDom($, urlClean);
+
+    let cuerpoOriginal = "";
+    const article =
+      $("article").first().length > 0
+        ? $("article").first()
+        : $('[role="article"]').first().length > 0
+          ? $('[role="article"]').first()
+          : $("main").first().length > 0
+            ? $("main").first()
+            : $(".post-content, .article-body, .entry-content").first();
+    if (article.length) {
+      const text = article.find("p").length
+        ? article
+            .find("p")
+            .map((_, el) => $(el).text().trim())
+            .get()
+            .filter(Boolean)
+            .join("\n\n")
+        : article.text().trim();
+      if (text.length > 100) cuerpoOriginal = text;
+    }
+    if (!cuerpoOriginal) {
+      const candidates = $(".content, .post-content, .entry-content, .article-body, article, main");
+      let maxLen = 0;
+      let bestCuerpo = "";
+      candidates.each((_, el) => {
+        const $el = $(el);
+        const t = $el.text().trim();
+        if (t.length > maxLen) {
+          maxLen = t.length;
+          bestCuerpo = $el.find("p").length
+            ? $el
+                .find("p")
+                .map((_, p) => $(p).text().trim())
+                .get()
+                .filter(Boolean)
+                .join("\n\n")
+            : t;
+        }
+      });
+      if (bestCuerpo.length > 100) cuerpoOriginal = bestCuerpo;
+    }
+    if (!cuerpoOriginal && $("p").length) {
+      cuerpoOriginal = $("p")
+        .slice(0, 30)
+        .map((_, el) => $(el).text().trim())
+        .get()
+        .filter(Boolean)
+        .join("\n\n");
+    }
+    if (!cuerpoOriginal) cuerpoOriginal = $("body").text().trim().slice(0, 8000);
+
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
@@ -131,7 +234,8 @@ Siempre respondé SOLO con JSON válido sin markdown ni backticks.`;
 Título original del artículo:
 ${tituloOriginal}
 
-Cuerpo original (texto plano):
+Cuerpo original (texto plano). El texto que te paso ya está limpio. Si ves referencias a otras notas o temas que no tienen relación con el tema principal, ignoralas completamente.
+
 ${cuerpoOriginal.slice(0, 12000)}
 
 Nombre del medio de origen (usar para el párrafo final): ${nombreMedio}
