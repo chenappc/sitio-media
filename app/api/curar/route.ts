@@ -76,7 +76,7 @@ function cleanDom($: cheerio.CheerioAPI, urlClean: string): void {
 
   $("*").each((_, el) => {
     const $el = $(el);
-    const tag = el.tagName?.toLowerCase();
+    const tag = "tagName" in el ? (el as { tagName: string }).tagName?.toLowerCase() : undefined;
     if (tag === "html" || tag === "body") return;
     const cls = $el.attr("class");
     if (cls && classMatchesExclude(cls)) {
