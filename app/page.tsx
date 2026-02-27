@@ -13,12 +13,6 @@ function formatHora(fecha: Date) {
   return formatDistanceToNow(new Date(fecha), { addSuffix: true, locale: es });
 }
 
-function formatShares(n: number) {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return String(n);
-}
-
 function EmptyState() {
   return (
     <main className={styles.main}>
@@ -60,9 +54,7 @@ function FeaturedCard({ nota }: { nota: Nota }) {
         <span className={styles.featuredBadge}>VIRAL</span>
         <h2 className={styles.featuredTitle}>{nota.titulo}</h2>
         <p className={styles.featuredEntradilla}>{nota.entradilla}</p>
-        <p className={styles.featuredMeta}>
-          {formatHora(nota.fecha)} · {formatShares(nota.shares_buzzsumo)} shares
-        </p>
+        <p className={styles.featuredMeta}>{formatHora(nota.fecha)}</p>
       </Link>
     </article>
   );
