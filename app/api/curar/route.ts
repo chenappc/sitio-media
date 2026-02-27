@@ -125,7 +125,7 @@ ${cuerpoOriginal.slice(0, 12000)}
 
 Devuelve ÚNICAMENTE un objeto JSON con estas tres claves (sin markdown, sin \`\`\`):
 - "titulo": título curado en español del país, manteniendo el gancho viral, máximo 80 caracteres.
-- "cuerpo": cuerpo curado en HTML limpio (párrafos con <p>), 300-500 palabras, en el español del país elegido.
+- "cuerpo": cuerpo curado en HTML. Cada párrafo debe ir envuelto en su propia etiqueta <p>. No uses otros contenedores: solo <p> para cada párrafo separado. 300-500 palabras, en el español del país elegido.
 - "adcopy": texto para Facebook, máximo 3 líneas cortas, sin hashtags, que genere curiosidad y clicks sin revelar todo.`;
 
     const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {

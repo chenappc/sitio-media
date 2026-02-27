@@ -46,6 +46,71 @@ export async function getTodasNotas(): Promise<Nota[]> {
   }
 }
 
+export async function getNotaById(id: number): Promise<Nota | null> {
+  try {
+    const res = await pool.query<Nota>(
+      `SELECT id, slug, titulo, entradilla, cuerpo, imagen_url, imagen_alt,
+              fuente_nombre, fuente_url, shares_buzzsumo, pais, publicado, fecha
+       FROM notas
+       WHERE id = $1`,
+      [id]
+    );
+    return res.rows[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export interface ActualizarNotaInput {
+  titulo: string;
+  entradilla: string;
+  cuerpo: string;
+  imagen_url?: string | null;
+  imagen_alt?: string | null;
+  fuente_nombre: string;
+  fuente_url: string;
+  shares_buzzsumo: number;
+  pais: string;
+  publicado: boolean;
+}
+
+export async function updateNota(id: number, input: ActualizarNotaInput): Promise<Nota | null> {
+  try {
+    const res = await pool.query<Nota>(
+      `UPDATE notas
+       SET titulo = $1, entradilla = $2, cuerpo = $3, imagen_url = $4, imagen_alt = $5,
+           fuente_nombre = $6, fuente_url = $7, shares_buzzsumo = $8, pais = $9, publicado = $10
+       WHERE id = $11
+       RETURNING id, slug, titulo, entradilla, cuerpo, imagen_url, imagen_alt, fuente_nombre, fuente_url, shares_buzzsumo, pais, publicado, fecha`,
+      [
+        input.titulo.trim(),
+        input.entradilla.trim(),
+        input.cuerpo.trim(),
+        input.imagen_url ?? null,
+        input.imagen_alt ?? null,
+        input.fuente_nombre.trim(),
+        input.fuente_url.trim(),
+        input.shares_buzzsumo,
+        input.pais.trim(),
+        input.publicado,
+        id,
+      ]
+    );
+    return res.rows[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteNota(id: number): Promise<boolean> {
+  try {
+    const res = await pool.query("DELETE FROM notas WHERE id = $1", [id]);
+    return (res.rowCount ?? 0) > 0;
+  } catch {
+    return false;
+  }
+}
+
 export interface CrearNotaInput {
   titulo: string;
   entradilla: string;

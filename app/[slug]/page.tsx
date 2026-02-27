@@ -5,6 +5,7 @@ import { es } from "date-fns/locale";
 import { getNotaBySlug } from "@/lib/notas";
 import AdSense from "@/components/AdSense";
 import type { Metadata } from "next";
+import styles from "./page.module.css";
 
 export const revalidate = 3600;
 
@@ -71,7 +72,7 @@ export default async function NotaPage({ params }: Props) {
       </p>
 
       <div
-        className="prose prose-lg mt-6 max-w-none prose-p:leading-relaxed prose-a:text-[var(--rojo)] prose-a:no-underline hover:prose-a:underline"
+        className={`prose prose-lg mt-6 max-w-none prose-a:text-[var(--rojo)] prose-a:no-underline hover:prose-a:underline ${styles.cuerpo}`}
         dangerouslySetInnerHTML={{ __html: nota.cuerpo }}
       />
 
