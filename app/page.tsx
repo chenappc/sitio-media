@@ -6,7 +6,8 @@ import { getNotasPublicadas } from "@/lib/notas";
 import type { Nota } from "@/lib/types";
 import styles from "./Home.module.css";
 
-export const revalidate = 3600;
+export const revalidate = 0;
+export const dynamic = "force-dynamic";
 
 function formatHora(fecha: Date) {
   return formatDistanceToNow(new Date(fecha), { addSuffix: true, locale: es });
