@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Readable } from "stream";
 import * as cheerio from "cheerio";
 import sharp from "sharp";
+import cloudinary from "@/lib/cloudinary";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET ?? "sitio2026";
 const CLAUDE_MODEL = "claude-sonnet-4-20250514";
@@ -172,7 +174,7 @@ Devuelve ÚNICAMENTE un objeto JSON con estas tres claves (sin markdown, sin \`\
     const cuerpo = String(parsed.cuerpo ?? "").trim();
     const adcopy = String(parsed.adcopy ?? "").trim();
 
-    let imagenBase64: string | null = null;
+    let imagen_url: string | null = null;
     if (imagenPrincipal) {
       try {
         const imgRes = await fetch(imagenPrincipal, {
@@ -184,10 +186,19 @@ Devuelve ÚNICAMENTE un objeto JSON con estas tres claves (sin markdown, sin \`\
             .resize(1200, 630, { fit: "cover", position: "center" })
             .jpeg({ quality: 85 })
             .toBuffer();
-          imagenBase64 = `data:image/jpeg;base64,${out.toString("base64")}`;
+          imagen_url = await new Promise<string>((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+              { folder: "sitio-media" },
+              (err, result) => {
+                if (err) reject(err);
+                else resolve(result!.secure_url);
+              }
+            );
+            Readable.from(out).pipe(uploadStream);
+          });
         }
       } catch (e) {
-        console.error("Error procesando imagen:", e);
+        console.error("Error subiendo imagen a Cloudinary:", e);
       }
     }
 
@@ -195,7 +206,7 @@ Devuelve ÚNICAMENTE un objeto JSON con estas tres claves (sin markdown, sin \`\
       titulo,
       cuerpo,
       adcopy,
-      imagenBase64,
+      imagen_url,
       fuente_url: urlClean,
       pais: paisStr,
     });

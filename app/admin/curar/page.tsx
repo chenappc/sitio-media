@@ -25,7 +25,7 @@ type CurarResult = {
   titulo: string;
   cuerpo: string;
   adcopy: string;
-  imagenBase64: string | null;
+  imagen_url: string | null;
   fuente_url: string;
   pais: string;
 };
@@ -119,7 +119,7 @@ export default function CurarPage() {
           titulo: preview.titulo,
           entradilla,
           cuerpo: preview.cuerpo,
-          imagenBase64: preview.imagenBase64 || undefined,
+          imagen_url: preview.imagen_url || undefined,
           imagen_alt: preview.titulo,
           fuente_nombre: fuenteNombre,
           fuente_url: preview.fuente_url,
@@ -255,11 +255,11 @@ export default function CurarPage() {
               dangerouslySetInnerHTML={{ __html: preview.cuerpo }}
             />
           </div>
-          {preview.imagenBase64 && (
+          {preview.imagen_url && (
             <div className={styles.previewBlock}>
               <div className={styles.previewLabel}>Imagen procesada</div>
               <img
-                src={preview.imagenBase64}
+                src={preview.imagen_url}
                 alt={preview.titulo}
                 className={styles.previewImg}
               />

@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 import { getTodasNotas, createNota } from "@/lib/notas";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
@@ -36,8 +34,7 @@ export async function POST(req: NextRequest) {
       titulo,
       entradilla,
       cuerpo,
-      imagen_url: imagenUrlBody,
-      imagenBase64,
+      imagen_url,
       imagen_alt,
       fuente_nombre,
       fuente_url,
@@ -51,25 +48,11 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    let imagen_url: string | undefined = imagenUrlBody
-      ? String(imagenUrlBody).trim()
-      : undefined;
-    if (imagenBase64 && typeof imagenBase64 === "string") {
-      const match = imagenBase64.match(/^data:image\/\w+;base64,(.+)$/);
-      if (match) {
-        const dir = path.join(process.cwd(), "public", "uploads");
-        await mkdir(dir, { recursive: true });
-        const name = `${crypto.randomUUID()}.jpg`;
-        const filePath = path.join(dir, name);
-        await writeFile(filePath, Buffer.from(match[1], "base64"));
-        imagen_url = `/uploads/${name}`;
-      }
-    }
     const nota = await createNota({
       titulo: String(titulo).trim(),
       entradilla: String(entradilla).trim(),
       cuerpo: String(cuerpo).trim(),
-      imagen_url,
+      imagen_url: imagen_url ? String(imagen_url).trim() : undefined,
       imagen_alt: imagen_alt ? String(imagen_alt).trim() : undefined,
       fuente_nombre: String(fuente_nombre).trim(),
       fuente_url: String(fuente_url).trim(),
