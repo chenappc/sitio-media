@@ -31,12 +31,22 @@ type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const nota = await getNotaBySlug(slug);
-  if (!nota) return { title: "Nota no encontrada" };
+  if (!nota) return {};
   return {
     title: nota.titulo,
+    description: nota.entradilla,
     openGraph: {
       title: nota.titulo,
-      images: nota.imagen_url ? [{ url: nota.imagen_url, alt: nota.imagen_alt ?? nota.titulo }] : [],
+      description: nota.entradilla,
+      images: nota.imagen_url ? [{ url: nota.imagen_url, width: 1200, height: 630 }] : [],
+      type: "article",
+      url: `https://sitio.media/${nota.slug}`,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: nota.titulo,
+      description: nota.entradilla,
+      images: nota.imagen_url ? [nota.imagen_url] : [],
     },
   };
 }
