@@ -38,7 +38,7 @@ type CurarResult = {
 export default function CurarPage() {
   const [url, setUrl] = useState("");
   const [pais, setPais] = useState("general");
-  const [adminSecret, setAdminSecret] = useState("");
+  const [secret, setSecret] = useState("");
   const [loading, setLoading] = useState(false);
   const [progressStep, setProgressStep] = useState(0);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -50,7 +50,7 @@ export default function CurarPage() {
 
   useEffect(() => {
     const saved = getStoredAdminSecret();
-    if (saved) setAdminSecret(saved);
+    if (saved) setSecret(saved);
   }, []);
 
   useEffect(() => {
@@ -81,7 +81,7 @@ export default function CurarPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-admin-secret": adminSecret,
+          "x-admin-secret": secret,
         },
         body: JSON.stringify({ url: url.trim(), pais }),
       });
@@ -94,7 +94,7 @@ export default function CurarPage() {
         setTimeout(() => setLoading(false), 500);
         return;
       }
-      saveAdminSecretToStorage(adminSecret);
+      saveAdminSecretToStorage(secret);
       setPreview(data);
       setTimeout(() => setLoading(false), 500);
     } catch (err) {
@@ -124,7 +124,7 @@ export default function CurarPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-admin-secret": adminSecret,
+          "x-admin-secret": secret,
         },
         body: JSON.stringify({
           titulo: preview.titulo,
@@ -144,7 +144,7 @@ export default function CurarPage() {
         setError(data.error ?? `Error ${res.status}`);
         return;
       }
-      saveAdminSecretToStorage(adminSecret);
+      saveAdminSecretToStorage(secret);
       setCreatedSlug(data.slug ?? null);
       setPublished(true);
     } catch (err) {
@@ -189,8 +189,8 @@ export default function CurarPage() {
             id="adminSecret"
             type="password"
             required
-            value={adminSecret}
-            onChange={(e) => setAdminSecret(e.target.value)}
+            value={secret}
+            onChange={(e) => setSecret(e.target.value)}
             className={styles.input}
           />
         </div>
