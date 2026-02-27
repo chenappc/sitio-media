@@ -13,7 +13,7 @@ export default function PrivacidadPage() {
         Política de Privacidad
       </h1>
       <p className="mt-2 text-sm text-[var(--negro)]/60">
-        Última actualización: febrero 2025
+        Última actualización: Febrero 2026
       </p>
 
       <section className="mt-8">
