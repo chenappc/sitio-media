@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# uploads from curar
+/public/uploads
+
 # production
 /build
 

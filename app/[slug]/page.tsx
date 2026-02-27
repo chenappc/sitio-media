@@ -47,6 +47,9 @@ export default async function NotaPage({ params }: Props) {
       <h1 className="mt-3 font-serif text-2xl font-bold leading-tight md:text-3xl">
         {nota.titulo}
       </h1>
+      <div className="mt-4">
+        <AdSense slot="4862111765" />
+      </div>
       <p className="mt-2 text-sm text-[var(--negro)]/60">
         {formatHora(nota.fecha)} · {formatShares(nota.shares_buzzsumo)} shares
       </p>
@@ -74,7 +77,7 @@ export default async function NotaPage({ params }: Props) {
       />
 
       <div className="mt-8">
-        <AdSense />
+        <AdSense slot="8801356773" />
       </div>
 
       {nota.fuente_url && (
