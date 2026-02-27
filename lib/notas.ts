@@ -46,6 +46,20 @@ export async function getTodasNotas(): Promise<Nota[]> {
   }
 }
 
+/** Trae TODAS las notas (publicadas y no publicadas) ordenadas por fecha descendente. */
+export async function getTodasLasNotas(): Promise<Nota[]> {
+  try {
+    const res = await pool.query<Nota>(
+      `SELECT id, slug, titulo, entradilla, shares_buzzsumo, publicado, fecha
+       FROM notas
+       ORDER BY fecha DESC`
+    );
+    return res.rows;
+  } catch {
+    return [];
+  }
+}
+
 export async function getNotaById(id: number): Promise<Nota | null> {
   try {
     const res = await pool.query<Nota>(

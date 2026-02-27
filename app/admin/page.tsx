@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { getTodasNotas } from "@/lib/notas";
+import { getTodasLasNotas } from "@/lib/notas";
 import NotasList from "./NotasList";
 import CerrarSesionBtn from "./CerrarSesionBtn";
 
 export default async function AdminPage() {
-  const notas = await getTodasNotas();
+  const notas = await getTodasLasNotas();
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6">

@@ -206,7 +206,13 @@ Siempre respondé SOLO con JSON válido sin markdown ni backticks.`;
         ? nombresPropios.join(", ")
         : "(ninguno detectado automáticamente)";
 
-    const userPrompt = `País de la audiencia: ${paisStr}.
+    const manualModeIntro = manualMode
+      ? `El texto que te paso puede contener links, URLs, código HTML, menús de navegación, publicidades, textos de redes sociales y otros elementos que no son parte del artículo principal. Tu primera tarea es identificar y extraer SOLO el artículo periodístico principal, ignorando todo lo demás. Luego aplicá las reglas de curación sobre ese texto limpio únicamente.
+
+`
+      : "";
+
+    const userPrompt = `${manualModeIntro}País de la audiencia: ${paisStr}.
 
 NOMBRES PROPIOS OBLIGATORIOS QUE DEBEN APARECER EN TU RESPUESTA (extraídos del original): ${listaNombres}
 
