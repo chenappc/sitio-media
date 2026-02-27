@@ -45,8 +45,10 @@ export default function CurarPage() {
   const [publishLoading, setPublishLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<CurarResult | null>(null);
+  const [manualImageBase64, setManualImageBase64] = useState<string | null>(null);
   const [published, setPublished] = useState(false);
   const [createdSlug, setCreatedSlug] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const saved = getStoredAdminSecret();
@@ -74,6 +76,7 @@ export default function CurarPage() {
     e.preventDefault();
     setError(null);
     setPreview(null);
+    setManualImageBase64(null);
     setLoading(true);
     runProgressSimulation();
     try {
@@ -97,6 +100,7 @@ export default function CurarPage() {
       setError(null);
       saveAdminSecretToStorage(secret);
       setPreview(data);
+      setManualImageBase64(null);
       setTimeout(() => setLoading(false), 500);
     } catch (err) {
       timeoutsRef.current.forEach(clearTimeout);
@@ -105,6 +109,18 @@ export default function CurarPage() {
       setError(err instanceof Error ? err.message : "Error de red");
       setTimeout(() => setLoading(false), 500);
     }
+  };
+
+  const handleManualImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      setManualImageBase64(typeof dataUrl === "string" ? dataUrl : null);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
   const handlePublicar = async () => {
@@ -121,24 +137,29 @@ export default function CurarPage() {
       } catch {
         // keep default
       }
+      const body: Record<string, unknown> = {
+        titulo: preview.titulo,
+        entradilla,
+        cuerpo: preview.cuerpo,
+        imagen_alt: preview.titulo,
+        fuente_nombre: fuenteNombre,
+        fuente_url: preview.fuente_url,
+        shares_buzzsumo: 0,
+        pais: preview.pais,
+        publicado: true,
+      };
+      if (manualImageBase64) {
+        body.imagenBase64 = manualImageBase64;
+      } else {
+        body.imagen_url = preview.imagen_url || undefined;
+      }
       const res = await fetch("/api/notas", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-admin-secret": secret,
         },
-        body: JSON.stringify({
-          titulo: preview.titulo,
-          entradilla,
-          cuerpo: preview.cuerpo,
-          imagen_url: preview.imagen_url || undefined,
-          imagen_alt: preview.titulo,
-          fuente_nombre: fuenteNombre,
-          fuente_url: preview.fuente_url,
-          shares_buzzsumo: 0,
-          pais: preview.pais,
-          publicado: true,
-        }),
+        body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -282,7 +303,7 @@ export default function CurarPage() {
               dangerouslySetInnerHTML={{ __html: preview.cuerpo }}
             />
           </div>
-          {preview.imagen_url && (
+          {preview.imagen_url ? (
             <div className={styles.previewBlock}>
               <div className={styles.previewLabel}>Imagen procesada</div>
               <img
@@ -290,6 +311,27 @@ export default function CurarPage() {
                 alt={preview.titulo}
                 className={styles.previewImg}
               />
+            </div>
+          ) : (
+            <div className={styles.previewBlock}>
+              <div className={styles.previewLabel}>Imagen</div>
+              <p className={styles.previewHint}>No se encontró og:image. Subí una imagen manualmente.</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleManualImageChange}
+                className={styles.input}
+                style={{ marginTop: 8 }}
+              />
+              {manualImageBase64 && (
+                <img
+                  src={manualImageBase64}
+                  alt="Vista previa"
+                  className={styles.previewImg}
+                  style={{ marginTop: 12 }}
+                />
+              )}
             </div>
           )}
           <div className={styles.actions}>

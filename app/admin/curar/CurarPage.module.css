@@ -183,6 +183,12 @@
   margin-bottom: 0.25rem;
 }
 
+.previewHint {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.875rem;
+  color: rgba(0, 0, 0, 0.65);
+}
+
 .previewTitulo {
   font-family: Georgia, serif;
   font-size: 1.25rem;

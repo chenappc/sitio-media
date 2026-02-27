@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Readable } from "stream";
-import * as cheerio from "cheerio";
 import sharp from "sharp";
 import cloudinary from "@/lib/cloudinary";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET ?? "sitio2026";
 const CLAUDE_MODEL = "claude-sonnet-4-20250514";
+const UA = "Mozilla/5.0 (compatible; sitio-media-bot/1.0)";
 
 function auth(req: NextRequest): boolean {
   const secret = req.headers.get("x-admin-secret");
@@ -21,38 +21,21 @@ function resolveUrl(base: string, path: string): string {
   }
 }
 
-const EXCLUDE_CLASSES = [
-  "related",
-  "recomendado",
-  "lee-tambien",
-  "lea-tambien",
-  "tambien",
-  "sidebar",
-  "widget",
-  "ad",
-  "publicidad",
-  "newsletter",
-  "suscri",
-  "footer",
-  "header",
-  "nav",
-  "menu",
-  "comment",
-  "share",
-  "social",
-];
-
-function classMatchesExclude(className: string): boolean {
-  const c = className.toLowerCase();
-  return EXCLUDE_CLASSES.some((key) => c.includes(key));
+/** Extrae content de meta property con regex (property antes o después de content). */
+function metaContent(html: string, property: string): string | null {
+  const esc = property.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const m =
+    html.match(new RegExp(`<meta[^>]+property=["']${esc}["'][^>]+content=["']([^"']+)["']`, "i")) ||
+    html.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+property=["']${esc}["']`, "i"));
+  return m ? m[1].trim() : null;
 }
 
-function getOriginHost(urlClean: string): string {
-  try {
-    return new URL(urlClean).hostname.replace(/^www\./, "");
-  } catch {
-    return "";
-  }
+/** Extrae og:image del HTML con las dos variantes de orden de atributos. */
+function getOgImage(html: string): string | null {
+  const m =
+    html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
+    html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+  return m ? m[1].trim() : null;
 }
 
 /** Extrae palabras con mayúscula que no son inicio de oración (candidatos a nombres propios). */
@@ -73,51 +56,6 @@ function extraerNombresPropios(texto: string): string[] {
   return Array.from(set).sort((a, b) => a.localeCompare(b));
 }
 
-function isSameDomain(href: string, baseUrl: string, originHost: string): boolean {
-  if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:"))
-    return false;
-  try {
-    const u = new URL(href, baseUrl);
-    const h = u.hostname.replace(/^www\./, "");
-    return h === originHost || h.endsWith("." + originHost);
-  } catch {
-    return false;
-  }
-}
-
-function cleanDom($: cheerio.CheerioAPI, urlClean: string): void {
-  const originHost = getOriginHost(urlClean);
-  if (!originHost) return;
-
-  $("script, style, noscript").remove();
-  $("aside, nav, footer, header").remove();
-
-  $("*").each((_, el) => {
-    const $el = $(el);
-    const tag = 'tagName' in el ? (el as unknown as { tagName: string }).tagName?.toLowerCase() : undefined;
-    if (tag === "html" || tag === "body") return;
-    const cls = $el.attr("class");
-    if (cls && classMatchesExclude(cls)) {
-      $el.remove();
-      return;
-    }
-    if (tag === "figure") {
-      const hasInternalLink = $el.find("a[href]").length > 0 && $el.find("a[href]").toArray().some((a) => isSameDomain($(a).attr("href") ?? "", urlClean, originHost));
-      if (hasInternalLink) $el.remove();
-      return;
-    }
-    if (tag === "div" || tag === "section") {
-      const $links = $el.find("a[href]");
-      const hasInternal = $links.length > 0 && $links.toArray().some((a) => isSameDomain($(a).attr("href") ?? "", urlClean, originHost));
-      if (!hasInternal) return;
-      const isMain =
-        $el.is("article, [role='article'], main") ||
-        /post-content|entry-content|article-body|content/.test(cls ?? "");
-      if (!isMain) $el.remove();
-    }
-  });
-}
-
 export async function POST(req: NextRequest) {
   if (!auth(req)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -131,103 +69,17 @@ export async function POST(req: NextRequest) {
     const urlClean = url.trim();
     const paisStr = typeof pais === "string" ? pais.trim() : "general";
 
-    const res = await fetch(urlClean, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (compatible; sitio-media-bot/1.0)",
-      },
+    // 1. Contenido del artículo vía Jina (texto limpio)
+    const jinaRes = await fetch(`https://r.jina.ai/${urlClean}`, {
+      headers: { "User-Agent": UA },
     });
-    if (!res.ok) {
+    if (!jinaRes.ok) {
       return NextResponse.json(
-        { error: `No se pudo obtener la URL: ${res.status}` },
+        { error: `No se pudo obtener el contenido (Jina: ${jinaRes.status})` },
         { status: 400 }
       );
     }
-    const html = await res.text();
-    const $ = cheerio.load(html);
-
-    const tituloOriginal =
-      $('meta[property="og:title"]').attr("content")?.trim() ||
-      $("title").first().text().trim() ||
-      "";
-
-    let imagenPrincipal =
-      $('meta[property="og:image"]').attr("content") ||
-      $('meta[name="twitter:image"]').attr("content");
-    if (!imagenPrincipal) {
-      const img = $("article img, main img, .post-content img, .article-body img, .content img").first();
-      if (img.length) imagenPrincipal = img.attr("src") || undefined;
-    }
-    if (!imagenPrincipal) {
-      const img = $("img[src]").first();
-      if (img.length) imagenPrincipal = img.attr("src");
-    }
-    if (imagenPrincipal) {
-      imagenPrincipal = resolveUrl(urlClean, imagenPrincipal);
-    }
-
-    let nombreMedio =
-      $('meta[property="og:site_name"]').attr("content")?.trim() || "";
-    if (!nombreMedio) {
-      try {
-        nombreMedio = new URL(urlClean).hostname.replace(/^www\./, "");
-      } catch {
-        nombreMedio = "la fuente";
-      }
-    }
-
-    cleanDom($, urlClean);
-
-    let cuerpoOriginal = "";
-    const article =
-      $("article").first().length > 0
-        ? $("article").first()
-        : $('[role="article"]').first().length > 0
-          ? $('[role="article"]').first()
-          : $("main").first().length > 0
-            ? $("main").first()
-            : $(".post-content, .article-body, .entry-content").first();
-    if (article.length) {
-      const text = article.find("p").length
-        ? article
-            .find("p")
-            .map((_, el) => $(el).text().trim())
-            .get()
-            .filter(Boolean)
-            .join("\n\n")
-        : article.text().trim();
-      if (text.length > 100) cuerpoOriginal = text;
-    }
-    if (!cuerpoOriginal) {
-      const candidates = $(".content, .post-content, .entry-content, .article-body, article, main");
-      let maxLen = 0;
-      let bestCuerpo = "";
-      candidates.each((_, el) => {
-        const $el = $(el);
-        const t = $el.text().trim();
-        if (t.length > maxLen) {
-          maxLen = t.length;
-          bestCuerpo = $el.find("p").length
-            ? $el
-                .find("p")
-                .map((_, p) => $(p).text().trim())
-                .get()
-                .filter(Boolean)
-                .join("\n\n")
-            : t;
-        }
-      });
-      if (bestCuerpo.length > 100) cuerpoOriginal = bestCuerpo;
-    }
-    if (!cuerpoOriginal && $("p").length) {
-      cuerpoOriginal = $("p")
-        .slice(0, 30)
-        .map((_, el) => $(el).text().trim())
-        .get()
-        .filter(Boolean)
-        .join("\n\n");
-    }
-    if (!cuerpoOriginal) cuerpoOriginal = $("body").text().trim().slice(0, 8000);
+    const cuerpoOriginal = (await jinaRes.text()).trim();
 
     if (cuerpoOriginal.length < 200) {
       return NextResponse.json(
@@ -237,6 +89,35 @@ export async function POST(req: NextRequest) {
         },
         { status: 422 }
       );
+    }
+
+    // 2. Fetch a la URL original para meta (título, medio, og:image)
+    let tituloOriginal = "";
+    let nombreMedio = "la fuente";
+    let imagenPrincipal: string | null = null;
+    try {
+      const pageRes = await fetch(urlClean, { headers: { "User-Agent": UA } });
+      if (pageRes.ok) {
+        const html = await pageRes.text();
+        tituloOriginal = metaContent(html, "og:title") || "";
+        if (!tituloOriginal) {
+          const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
+          if (titleMatch) tituloOriginal = titleMatch[1].trim();
+        }
+        const siteName = metaContent(html, "og:site_name");
+        if (siteName) nombreMedio = siteName;
+        else {
+          try {
+            nombreMedio = new URL(urlClean).hostname.replace(/^www\./, "") || "la fuente";
+          } catch {
+            // keep default
+          }
+        }
+        const ogImage = getOgImage(html);
+        if (ogImage) imagenPrincipal = resolveUrl(urlClean, ogImage);
+      }
+    } catch (e) {
+      console.error("Error obteniendo meta de la URL:", e);
     }
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
