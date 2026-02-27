@@ -55,6 +55,24 @@ function getOriginHost(urlClean: string): string {
   }
 }
 
+/** Extrae palabras con mayúscula que no son inicio de oración (candidatos a nombres propios). */
+function extraerNombresPropios(texto: string): string[] {
+  const text = (texto || "").trim();
+  if (!text) return [];
+  const re = /\b([A-ZÁÉÍÓÚÑ][a-zA-ZáéíóúñÁÉÍÓÚÑ\-']*)\b/g;
+  const set = new Set<string>();
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const word = m[1];
+    if (word.length < 2) continue;
+    let i = m.index - 1;
+    while (i >= 0 && /\s/.test(text[i])) i--;
+    if (i >= 0 && /[.!?]/.test(text[i])) continue;
+    set.add(word);
+  }
+  return Array.from(set).sort((a, b) => a.localeCompare(b));
+}
+
 function isSameDomain(href: string, baseUrl: string, originHost: string): boolean {
   if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:"))
     return false;
@@ -229,7 +247,20 @@ export async function POST(req: NextRequest) {
 6. NOMBRES Y LUGARES: Siempre mencioná los nombres propios, personas, lugares, ciudades, países, instituciones y marcas que aparecen en el artículo original. No los omitas ni los reemplaces por referencias vagas como 'una persona', 'un lugar' o 'una institución'. Los nombres propios son parte del valor noticioso y de la viralidad.
 
 Siempre respondé SOLO con JSON válido sin markdown ni backticks.`;
+
+    const nombresPropios = extraerNombresPropios(
+      `${tituloOriginal} ${cuerpoOriginal}`
+    ).slice(0, 80);
+    const listaNombres =
+      nombresPropios.length > 0
+        ? nombresPropios.join(", ")
+        : "(ninguno detectado automáticamente)";
+
     const userPrompt = `País de la audiencia: ${paisStr}.
+
+NOMBRES PROPIOS OBLIGATORIOS QUE DEBEN APARECER EN TU RESPUESTA (extraídos del original): ${listaNombres}
+
+Si alguno de estos nombres no aparece en tu versión curada, tu respuesta será rechazada. Verificá que todos estén presentes antes de responder.
 
 INSTRUCCIONES OBLIGATORIAS:
 - Usá TODOS los nombres propios, apellidos, apodos, lugares, ciudades, países, instituciones, marcas y cifras exactas que aparecen en el texto original. No los omitas bajo ningún concepto.
@@ -263,6 +294,7 @@ Devuelve ÚNICAMENTE un objeto JSON con estas tres claves (sin markdown, sin \`\
       body: JSON.stringify({
         model: CLAUDE_MODEL,
         max_tokens: 2048,
+        temperature: 0.3,
         system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
       }),
