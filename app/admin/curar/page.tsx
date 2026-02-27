@@ -48,8 +48,6 @@ export default function CurarPage() {
   const [published, setPublished] = useState(false);
   const [createdSlug, setCreatedSlug] = useState<string | null>(null);
 
-  const [adminSecret, setAdminSecret] = useState("");
-
   useEffect(() => {
     const saved = getStoredAdminSecret();
     if (saved) setAdminSecret(saved);
