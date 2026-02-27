@@ -231,6 +231,14 @@ export async function POST(req: NextRequest) {
 Siempre respondé SOLO con JSON válido sin markdown ni backticks.`;
     const userPrompt = `País de la audiencia: ${paisStr}.
 
+INSTRUCCIONES OBLIGATORIAS:
+- Usá TODOS los nombres propios, apellidos, apodos, lugares, ciudades, países, instituciones, marcas y cifras exactas que aparecen en el texto original. No los omitas bajo ningún concepto.
+- Si en el original dice 'Zoe' o 'Mati' o 'Buenos Aires' o '8 años', el artículo curado DEBE mencionar esos mismos datos.
+- No reemplaces nombres por 'una persona', 'un lugar', 'una institución' u otras referencias vagas.
+- Revisá tu respuesta antes de enviarla y verificá que cada nombre propio del original esté presente en tu versión curada.
+
+ARTÍCULO ORIGINAL A CURAR:
+
 Título original del artículo:
 ${tituloOriginal}
 
