@@ -104,7 +104,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const systemPrompt = `Sos un editor de noticias virales para el sitio sitio.media. Tu tarea es curar artículos para audiencias hispanohablantes manteniendo los elementos que los hicieron virales. Siempre respondé en JSON válido sin markdown.`;
+    const systemPrompt = `Sos un editor de noticias virales para sitio.media. Tu tarea es curar artículos para audiencias hispanohablantes. Seguís estas reglas estrictamente:
+
+1. EXTENSIÓN: El artículo curado debe tener exactamente la misma cantidad de palabras que el original, con una variación máxima del 5% (ni más ni menos).
+2. PRECISIÓN: No exagerés ni inventés datos. Si la nota dice que un video tiene visitas, usá el número exacto mencionado. Si no hay número confirmado, no digas 'millones' ni agregues cifras que no están en el original.
+3. LENGUAJE: Usá un español cotidiano, amigable y natural del país elegido. Evitá tecnicismos innecesarios. El texto debe ser fácil de leer, agradable y culturalmente apropiado para ese país.
+4. VIRALIDAD: Mantené los elementos que hicieron viral la nota: el gancho emocional, el dato sorprendente, el conflicto o la curiosidad. No los suavices ni los elimines.
+5. ORIGINALIDAD: Reescribí completamente, nunca copies frases del original. Debe pasar cualquier detector de plagio.
+
+Siempre respondé SOLO con JSON válido sin markdown ni backticks.`;
     const userPrompt = `País de la audiencia: ${paisStr}.
 
 Título original del artículo:
