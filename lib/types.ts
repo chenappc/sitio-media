@@ -5,6 +5,7 @@ export interface Nota {
   entradilla: string;
   cuerpo: string;
   imagen_url: string | null;
+  imagen2_url: string | null;
   imagen_alt: string | null;
   fuente_nombre: string;
   fuente_url: string;

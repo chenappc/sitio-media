@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
       cuerpo,
       imagen_url: imagenUrlBody,
       imagenBase64,
+      imagen2Base64,
       imagen_alt,
       fuente_nombre,
       fuente_url,
@@ -81,11 +82,40 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    let imagen2_url: string | null = null;
+    if (imagen2Base64 && typeof imagen2Base64 === "string") {
+      try {
+        const base64Data = imagen2Base64.replace(/^data:image\/[^;]+;base64,/, "");
+        const buf = Buffer.from(base64Data, "base64");
+        const out = await sharp(buf)
+          .resize(1200, 630, { fit: "cover", position: "center" })
+          .jpeg({ quality: 85 })
+          .toBuffer();
+        imagen2_url = await new Promise<string>((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            { folder: "sitio-media" },
+            (err, result) => {
+              if (err) reject(err);
+              else resolve(result!.secure_url);
+            }
+          );
+          Readable.from(out).pipe(uploadStream);
+        });
+      } catch (e) {
+        console.error("Error subiendo imagen2Base64 a Cloudinary:", e);
+        return NextResponse.json(
+          { error: "No se pudo procesar la imagen 2" },
+          { status: 400 }
+        );
+      }
+    }
+
     const nota = await createNota({
       titulo: String(titulo).trim(),
       entradilla: String(entradilla).trim(),
       cuerpo: String(cuerpo).trim(),
       imagen_url,
+      imagen2_url,
       imagen_alt: imagen_alt ? String(imagen_alt).trim() : undefined,
       fuente_nombre: String(fuente_nombre).trim(),
       fuente_url: String(fuente_url).trim(),

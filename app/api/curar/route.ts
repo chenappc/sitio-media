@@ -255,6 +255,7 @@ Devuelve ÚNICAMENTE un objeto JSON con estas tres claves (sin markdown, sin \`\
       cuerpo,
       adcopy,
       imagen_url,
+      imagen2_url: null,
       fuente_url: urlClean,
       pais: paisStr,
     });

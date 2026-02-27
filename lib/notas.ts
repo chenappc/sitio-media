@@ -4,7 +4,7 @@ import type { Nota } from "./types";
 export async function getNotasPublicadas(limite: number): Promise<Nota[]> {
   try {
     const res = await pool.query<Nota>(
-    `SELECT id, slug, titulo, entradilla, cuerpo, imagen_url, imagen_alt,
+    `SELECT id, slug, titulo, entradilla, cuerpo, imagen_url, imagen2_url, imagen_alt,
             fuente_nombre, fuente_url, shares_buzzsumo, pais, publicado, fecha
      FROM notas
      WHERE publicado = true
@@ -21,7 +21,7 @@ export async function getNotasPublicadas(limite: number): Promise<Nota[]> {
 export async function getNotaBySlug(slug: string): Promise<Nota | null> {
   try {
     const res = await pool.query<Nota>(
-    `SELECT id, slug, titulo, entradilla, cuerpo, imagen_url, imagen_alt,
+    `SELECT id, slug, titulo, entradilla, cuerpo, imagen_url, imagen2_url, imagen_alt,
             fuente_nombre, fuente_url, shares_buzzsumo, pais, publicado, fecha
      FROM notas
      WHERE slug = $1 AND publicado = true`,
@@ -49,7 +49,7 @@ export async function getTodasNotas(): Promise<Nota[]> {
 export async function getNotaById(id: number): Promise<Nota | null> {
   try {
     const res = await pool.query<Nota>(
-      `SELECT id, slug, titulo, entradilla, cuerpo, imagen_url, imagen_alt,
+      `SELECT id, slug, titulo, entradilla, cuerpo, imagen_url, imagen2_url, imagen_alt,
               fuente_nombre, fuente_url, shares_buzzsumo, pais, publicado, fecha
        FROM notas
        WHERE id = $1`,
@@ -116,6 +116,7 @@ export interface CrearNotaInput {
   entradilla: string;
   cuerpo: string;
   imagen_url?: string;
+  imagen2_url?: string | null;
   imagen_alt?: string;
   fuente_nombre: string;
   fuente_url: string;
@@ -137,15 +138,16 @@ export async function createNota(input: CrearNotaInput): Promise<Nota> {
   }
 
   const res = await pool.query<Nota>(
-    `INSERT INTO notas (slug, titulo, entradilla, cuerpo, imagen_url, imagen_alt, fuente_nombre, fuente_url, shares_buzzsumo, pais, publicado)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-     RETURNING id, slug, titulo, entradilla, cuerpo, imagen_url, imagen_alt, fuente_nombre, fuente_url, shares_buzzsumo, pais, publicado, fecha`,
+    `INSERT INTO notas (slug, titulo, entradilla, cuerpo, imagen_url, imagen2_url, imagen_alt, fuente_nombre, fuente_url, shares_buzzsumo, pais, publicado)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+     RETURNING id, slug, titulo, entradilla, cuerpo, imagen_url, imagen2_url, imagen_alt, fuente_nombre, fuente_url, shares_buzzsumo, pais, publicado, fecha`,
     [
       slug,
       input.titulo,
       input.entradilla,
       input.cuerpo,
       input.imagen_url ?? null,
+      input.imagen2_url ?? null,
       input.imagen_alt ?? null,
       input.fuente_nombre,
       input.fuente_url,

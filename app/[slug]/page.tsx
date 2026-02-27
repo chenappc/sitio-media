@@ -13,6 +13,19 @@ function formatHora(fecha: Date) {
   return formatDistanceToNow(new Date(fecha), { addSuffix: true, locale: es });
 }
 
+/** Inserta imagen2 en el centro del cuerpo (después del párrafo que está a la mitad). */
+function cuerpoConImagen2(cuerpo: string, imagen2_url: string | null, alt: string): string {
+  if (!imagen2_url?.trim()) return cuerpo;
+  const paragraphs = cuerpo.match(/<p[^>]*>[\s\S]*?<\/p>/gi);
+  if (!paragraphs || paragraphs.length === 0) return cuerpo;
+  const mid = Math.floor((paragraphs.length - 1) / 2);
+  const escapedAlt = alt.replace(/"/g, "&quot;");
+  const img = `<img src="${imagen2_url.replace(/"/g, "&quot;")}" alt="${escapedAlt}" style="width:100%; height:auto; margin: 24px 0;" />`;
+  const before = paragraphs.slice(0, mid + 1).join("");
+  const after = paragraphs.slice(mid + 1).join("");
+  return before + img + after;
+}
+
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -67,7 +80,9 @@ export default async function NotaPage({ params }: Props) {
 
       <div
         className={`prose prose-lg mt-6 max-w-none prose-a:text-[var(--rojo)] prose-a:no-underline hover:prose-a:underline ${styles.cuerpo}`}
-        dangerouslySetInnerHTML={{ __html: nota.cuerpo }}
+        dangerouslySetInnerHTML={{
+          __html: cuerpoConImagen2(nota.cuerpo, nota.imagen2_url, nota.imagen_alt ?? nota.titulo),
+        }}
       />
 
       <div className="mt-8">

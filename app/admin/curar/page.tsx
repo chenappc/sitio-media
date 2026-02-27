@@ -31,6 +31,7 @@ type CurarResult = {
   cuerpo: string;
   adcopy: string;
   imagen_url: string | null;
+  imagen2_url: string | null;
   fuente_url: string;
   pais: string;
 };
@@ -46,9 +47,11 @@ export default function CurarPage() {
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<CurarResult | null>(null);
   const [manualImageBase64, setManualImageBase64] = useState<string | null>(null);
+  const [manualImage2Base64, setManualImage2Base64] = useState<string | null>(null);
   const [published, setPublished] = useState(false);
   const [createdSlug, setCreatedSlug] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInput2Ref = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const saved = getStoredAdminSecret();
@@ -77,6 +80,7 @@ export default function CurarPage() {
     setError(null);
     setPreview(null);
     setManualImageBase64(null);
+    setManualImage2Base64(null);
     setLoading(true);
     runProgressSimulation();
     try {
@@ -101,6 +105,7 @@ export default function CurarPage() {
       saveAdminSecretToStorage(secret);
       setPreview(data);
       setManualImageBase64(null);
+      setManualImage2Base64(null);
       setTimeout(() => setLoading(false), 500);
     } catch (err) {
       timeoutsRef.current.forEach(clearTimeout);
@@ -111,6 +116,8 @@ export default function CurarPage() {
     }
   };
 
+  const hasFoto1 = !!(preview?.imagen_url || manualImageBase64);
+
   const handleManualImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !file.type.startsWith("image/")) return;
@@ -118,6 +125,23 @@ export default function CurarPage() {
     reader.onload = () => {
       const dataUrl = reader.result;
       setManualImageBase64(typeof dataUrl === "string" ? dataUrl : null);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handleManualImage2Change = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!hasFoto1) {
+      setError("Tenés que subir la Foto 1 (principal) antes de la Foto 2.");
+      return;
+    }
+    setError(null);
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      setManualImage2Base64(typeof dataUrl === "string" ? dataUrl : null);
     };
     reader.readAsDataURL(file);
     e.target.value = "";
@@ -152,6 +176,9 @@ export default function CurarPage() {
         body.imagenBase64 = manualImageBase64;
       } else {
         body.imagen_url = preview.imagen_url || undefined;
+      }
+      if (manualImage2Base64) {
+        body.imagen2Base64 = manualImage2Base64;
       }
       const res = await fetch("/api/notas", {
         method: "POST",
@@ -305,7 +332,7 @@ export default function CurarPage() {
           </div>
           {preview.imagen_url ? (
             <div className={styles.previewBlock}>
-              <div className={styles.previewLabel}>Imagen procesada</div>
+              <div className={styles.previewLabel}>Foto 1 – Principal (portada y preview Facebook)</div>
               <img
                 src={preview.imagen_url}
                 alt={preview.titulo}
@@ -314,7 +341,7 @@ export default function CurarPage() {
             </div>
           ) : (
             <div className={styles.previewBlock}>
-              <div className={styles.previewLabel}>Imagen</div>
+              <div className={styles.previewLabel}>Foto 1 – Principal (portada y preview Facebook)</div>
               <p className={styles.previewHint}>No se encontró og:image. Subí una imagen manualmente.</p>
               <input
                 ref={fileInputRef}
@@ -327,13 +354,36 @@ export default function CurarPage() {
               {manualImageBase64 && (
                 <img
                   src={manualImageBase64}
-                  alt="Vista previa"
+                  alt="Vista previa Foto 1"
                   className={styles.previewImg}
                   style={{ marginTop: 12 }}
                 />
               )}
             </div>
           )}
+          <div className={styles.previewBlock}>
+            <div className={styles.previewLabel}>Foto 2 – Interior (opcional, se inserta en el centro de la nota)</div>
+            {!hasFoto1 && (
+              <p className={styles.previewHint}>Subí primero la Foto 1 para poder agregar la Foto 2.</p>
+            )}
+            <input
+              ref={fileInput2Ref}
+              type="file"
+              accept="image/*"
+              onChange={handleManualImage2Change}
+              className={styles.input}
+              style={{ marginTop: 8 }}
+              disabled={!hasFoto1}
+            />
+            {manualImage2Base64 && (
+              <img
+                src={manualImage2Base64}
+                alt="Vista previa Foto 2"
+                className={styles.previewImg}
+                style={{ marginTop: 12 }}
+              />
+            )}
+          </div>
           <div className={styles.actions}>
             <button
               type="button"
