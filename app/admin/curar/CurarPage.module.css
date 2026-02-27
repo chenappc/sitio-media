@@ -112,6 +112,15 @@
   color: var(--rojo, #c00);
 }
 
+.errorBlock {
+  padding: 0.75rem 1rem;
+  margin: 0;
+  background: rgba(198, 0, 0, 0.08);
+  border-left: 4px solid var(--rojo, #c00);
+  color: var(--rojo, #c00);
+  font-weight: 500;
+}
+
 .progressWrap {
   margin-top: 1.5rem;
   padding: 1rem;

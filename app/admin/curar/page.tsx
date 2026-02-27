@@ -94,6 +94,7 @@ export default function CurarPage() {
         setTimeout(() => setLoading(false), 500);
         return;
       }
+      setError(null);
       saveAdminSecretToStorage(secret);
       setPreview(data);
       setTimeout(() => setLoading(false), 500);
@@ -225,7 +226,18 @@ export default function CurarPage() {
             ))}
           </select>
         </div>
-        {error && <p className={styles.error}>{error}</p>}
+        {error && (
+          <p
+            className={
+              error.includes("No fue posible extraer")
+                ? `${styles.error} ${styles.errorBlock}`
+                : styles.error
+            }
+            role="alert"
+          >
+            {error}
+          </p>
+        )}
         <button
           type="submit"
           disabled={loading}

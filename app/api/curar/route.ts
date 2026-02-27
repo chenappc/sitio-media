@@ -229,6 +229,16 @@ export async function POST(req: NextRequest) {
     }
     if (!cuerpoOriginal) cuerpoOriginal = $("body").text().trim().slice(0, 8000);
 
+    if (cuerpoOriginal.length < 200) {
+      return NextResponse.json(
+        {
+          error:
+            "No fue posible extraer el contenido del artículo. El sitio puede estar bloqueando el acceso automático. Intentá con otra URL o pegá el texto del artículo manualmente.",
+        },
+        { status: 422 }
+      );
+    }
+
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
