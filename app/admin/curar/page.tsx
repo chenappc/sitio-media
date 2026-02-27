@@ -29,14 +29,18 @@ const PROGRESS_STEPS: { label: string; percent: number }[] = [
 type CurarResult = {
   titulo: string;
   cuerpo: string;
-  adcopy: string;
+  entradilla: string;
   imagen_url: string | null;
   imagen2_url: string | null;
+  fuente_nombre?: string;
   fuente_url: string;
   pais: string;
 };
 
+type CurarMode = "url" | "manual";
+
 export default function CurarPage() {
+  const [mode, setMode] = useState<CurarMode>("url");
   const [url, setUrl] = useState("");
   const [pais, setPais] = useState("general");
   const [secret, setSecret] = useState("");
@@ -52,6 +56,15 @@ export default function CurarPage() {
   const [createdSlug, setCreatedSlug] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileInput2Ref = useRef<HTMLInputElement>(null);
+
+  // Modo manual
+  const [manualTexto, setManualTexto] = useState("");
+  const [manualFuenteNombre, setManualFuenteNombre] = useState("");
+  const [manualFuenteUrl, setManualFuenteUrl] = useState("");
+  const [manualModeFoto1Base64, setManualModeFoto1Base64] = useState<string | null>(null);
+  const [manualModeFoto2Base64, setManualModeFoto2Base64] = useState<string | null>(null);
+  const manualFoto1Ref = useRef<HTMLInputElement>(null);
+  const manualFoto2Ref = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const saved = getStoredAdminSecret();
@@ -81,16 +94,38 @@ export default function CurarPage() {
     setPreview(null);
     setManualImageBase64(null);
     setManualImage2Base64(null);
+    if (mode === "manual") {
+      const lines = manualTexto.trim().split(/\r?\n/).length;
+      if (lines < 10) {
+        setError("El texto debe tener al menos 10 líneas.");
+        return;
+      }
+      if (!manualModeFoto1Base64) {
+        setError("En modo manual la Foto 1 es obligatoria.");
+        return;
+      }
+    }
     setLoading(true);
     runProgressSimulation();
     try {
+      const body =
+        mode === "url"
+          ? { url: url.trim(), pais }
+          : {
+              texto: manualTexto.trim(),
+              fuente_nombre: manualFuenteNombre.trim(),
+              fuente_url: manualFuenteUrl.trim(),
+              pais,
+              imagenBase64: manualModeFoto1Base64,
+              ...(manualModeFoto2Base64 && { imagen2Base64: manualModeFoto2Base64 }),
+            };
       const res = await fetch("/api/curar", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-admin-secret": secret,
         },
-        body: JSON.stringify({ url: url.trim(), pais }),
+        body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => ({}));
       timeoutsRef.current.forEach(clearTimeout);
@@ -147,20 +182,47 @@ export default function CurarPage() {
     e.target.value = "";
   };
 
+  const handleManualModeFoto1Change = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      setManualModeFoto1Base64(typeof dataUrl === "string" ? dataUrl : null);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handleManualModeFoto2Change = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      setManualModeFoto2Base64(typeof dataUrl === "string" ? dataUrl : null);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
   const handlePublicar = async () => {
     if (!preview) return;
     setError(null);
     setPublishLoading(true);
     try {
       const entradilla =
-        preview.adcopy.trim() ||
+        preview.entradilla.trim() ||
         preview.cuerpo.replace(/<[^>]+>/g, "").slice(0, 160).trim();
-      let fuenteNombre = "Fuente";
-      try {
-        fuenteNombre = new URL(preview.fuente_url).hostname.replace(/^www\./, "");
-      } catch {
-        // keep default
-      }
+      const fuenteNombre =
+        preview.fuente_nombre?.trim() ||
+        (() => {
+          try {
+            return new URL(preview.fuente_url).hostname.replace(/^www\./, "");
+          } catch {
+            return "Fuente";
+          }
+        })();
       const body: Record<string, unknown> = {
         titulo: preview.titulo,
         entradilla,
@@ -177,7 +239,9 @@ export default function CurarPage() {
       } else {
         body.imagen_url = preview.imagen_url || undefined;
       }
-      if (manualImage2Base64) {
+      if (preview.imagen2_url) {
+        body.imagen2_url = preview.imagen2_url;
+      } else if (manualImage2Base64) {
         body.imagen2Base64 = manualImage2Base64;
       }
       const res = await fetch("/api/notas", {
@@ -229,6 +293,24 @@ export default function CurarPage() {
         <CerrarSesionBtn />
       </div>
       <h1 className={styles.title}>Curar con IA</h1>
+
+      <div className={styles.tabs}>
+        <button
+          type="button"
+          className={mode === "url" ? `${styles.tab} ${styles.tabActive}` : styles.tab}
+          onClick={() => setMode("url")}
+        >
+          MODO 1 – Desde URL
+        </button>
+        <button
+          type="button"
+          className={mode === "manual" ? `${styles.tab} ${styles.tabActive}` : styles.tab}
+          onClick={() => setMode("manual")}
+        >
+          MODO 2 – Manual
+        </button>
+      </div>
+
       <form onSubmit={handleCurar} className={styles.form}>
         <div className={styles.field}>
           <label htmlFor="adminSecret" className={styles.label}>
@@ -243,37 +325,141 @@ export default function CurarPage() {
             className={styles.input}
           />
         </div>
-        <div className={styles.field}>
-          <label htmlFor="url" className={styles.label}>
-            URL del artículo viral
-          </label>
-          <input
-            id="url"
-            type="url"
-            required
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://..."
-            className={styles.input}
-          />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor="pais" className={styles.label}>
-            País
-          </label>
-          <select
-            id="pais"
-            value={pais}
-            onChange={(e) => setPais(e.target.value)}
-            className={styles.select}
-          >
-            {PAISES.map((p) => (
-              <option key={p.value} value={p.value}>
-                {p.label}
-              </option>
-            ))}
-          </select>
-        </div>
+
+        {mode === "url" ? (
+          <>
+            <div className={styles.field}>
+              <label htmlFor="url" className={styles.label}>
+                URL del artículo viral
+              </label>
+              <input
+                id="url"
+                type="url"
+                required
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://..."
+                className={styles.input}
+              />
+            </div>
+            <div className={styles.field}>
+              <label htmlFor="pais" className={styles.label}>
+                País
+              </label>
+              <select
+                id="pais"
+                value={pais}
+                onChange={(e) => setPais(e.target.value)}
+                className={styles.select}
+              >
+                {PAISES.map((p) => (
+                  <option key={p.value} value={p.value}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className={styles.field}>
+              <label htmlFor="manualTexto" className={styles.label}>
+                Pegá el texto del artículo original aquí
+              </label>
+              <textarea
+                id="manualTexto"
+                required
+                value={manualTexto}
+                onChange={(e) => setManualTexto(e.target.value)}
+                placeholder="Mínimo 10 líneas..."
+                className={styles.textarea}
+                rows={12}
+              />
+            </div>
+            <div className={styles.field}>
+              <label htmlFor="manualFuenteNombre" className={styles.label}>
+                Nombre de la fuente
+              </label>
+              <input
+                id="manualFuenteNombre"
+                type="text"
+                required
+                value={manualFuenteNombre}
+                onChange={(e) => setManualFuenteNombre(e.target.value)}
+                placeholder="Ej: El Trece TV"
+                className={styles.input}
+              />
+            </div>
+            <div className={styles.field}>
+              <label htmlFor="manualFuenteUrl" className={styles.label}>
+                URL de la fuente
+              </label>
+              <input
+                id="manualFuenteUrl"
+                type="url"
+                required
+                value={manualFuenteUrl}
+                onChange={(e) => setManualFuenteUrl(e.target.value)}
+                placeholder="https://..."
+                className={styles.input}
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Foto 1 – Principal (obligatoria)</label>
+              <input
+                ref={manualFoto1Ref}
+                type="file"
+                accept="image/*"
+                onChange={handleManualModeFoto1Change}
+                className={styles.input}
+              />
+              {manualModeFoto1Base64 && (
+                <img
+                  src={manualModeFoto1Base64}
+                  alt="Vista previa Foto 1"
+                  className={styles.previewImg}
+                  style={{ marginTop: 8, maxWidth: 300 }}
+                />
+              )}
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Foto 2 – Interior (opcional)</label>
+              <input
+                ref={manualFoto2Ref}
+                type="file"
+                accept="image/*"
+                onChange={handleManualModeFoto2Change}
+                className={styles.input}
+              />
+              {manualModeFoto2Base64 && (
+                <img
+                  src={manualModeFoto2Base64}
+                  alt="Vista previa Foto 2"
+                  className={styles.previewImg}
+                  style={{ marginTop: 8, maxWidth: 300 }}
+                />
+              )}
+            </div>
+            <div className={styles.field}>
+              <label htmlFor="paisManual" className={styles.label}>
+                País
+              </label>
+              <select
+                id="paisManual"
+                value={pais}
+                onChange={(e) => setPais(e.target.value)}
+                className={styles.select}
+              >
+                {PAISES.map((p) => (
+                  <option key={p.value} value={p.value}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
+
         {error && (
           <p
             className={
@@ -320,8 +506,8 @@ export default function CurarPage() {
             <div className={styles.previewTitulo}>{preview.titulo}</div>
           </div>
           <div className={styles.previewBlock}>
-            <div className={styles.previewLabel}>Ad copy Facebook</div>
-            <div className={styles.previewAdcopy}>{preview.adcopy}</div>
+            <div className={styles.previewLabel}>Entradilla</div>
+            <div className={styles.previewAdcopy}>{preview.entradilla}</div>
           </div>
           <div className={styles.previewBlock}>
             <div className={styles.previewLabel}>Cuerpo curado</div>

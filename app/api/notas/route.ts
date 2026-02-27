@@ -82,8 +82,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    let imagen2_url: string | null = null;
-    if (imagen2Base64 && typeof imagen2Base64 === "string") {
+    let imagen2_url: string | null =
+      body.imagen2_url != null && typeof body.imagen2_url === "string" && body.imagen2_url.trim()
+        ? body.imagen2_url.trim()
+        : null;
+    if (!imagen2_url && imagen2Base64 && typeof imagen2Base64 === "string") {
       try {
         const base64Data = imagen2Base64.replace(/^data:image\/[^;]+;base64,/, "");
         const buf = Buffer.from(base64Data, "base64");
