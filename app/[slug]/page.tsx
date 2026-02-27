@@ -13,12 +13,6 @@ function formatHora(fecha: Date) {
   return formatDistanceToNow(new Date(fecha), { addSuffix: true, locale: es });
 }
 
-function formatShares(n: number) {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return String(n);
-}
-
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -51,7 +45,7 @@ export default async function NotaPage({ params }: Props) {
         <AdSense slot="4862111765" />
       </div>
       <p className="mt-2 text-sm text-[var(--negro)]/60">
-        {formatHora(nota.fecha)} · {formatShares(nota.shares_buzzsumo)} shares
+        {formatHora(nota.fecha)}
       </p>
 
       {nota.imagen_url && (
