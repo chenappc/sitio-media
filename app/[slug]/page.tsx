@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { getNotaBySlug } from "@/lib/notas";
@@ -81,16 +80,15 @@ export default async function NotaPage({ params }: Props) {
       </div>
 
       {nota.fuente_url && (
-        <p className="mt-6 text-sm text-[var(--negro)]/60">
+        <p style={{ fontSize: 14, color: "#666", marginTop: 24 }}>
           Fuente:{" "}
-          <Link
+          <a
             href={nota.fuente_url}
-            rel="nofollow noopener"
             target="_blank"
-            className="text-[var(--rojo)] underline hover:no-underline"
+            rel="nofollow noopener noreferrer"
           >
             {nota.fuente_nombre || "Enlace externo"}
-          </Link>
+          </a>
         </p>
       )}
     </article>
