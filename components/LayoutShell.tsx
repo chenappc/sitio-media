@@ -11,7 +11,6 @@ export default function LayoutShell({
 }) {
   const pathname = usePathname();
   const isStandalone =
-    pathname === "/" ||
     pathname?.startsWith("/quiz-prestamos-py") ||
     pathname === "/prestamos-paraguay" ||
     pathname === "/solicitar-prestamo-paraguay";

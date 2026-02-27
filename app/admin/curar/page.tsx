@@ -3,6 +3,11 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import styles from "./CurarPage.module.css";
+import {
+  getAdminSecret as getStoredAdminSecret,
+  setAdminSecret as saveAdminSecretToStorage,
+} from "../CerrarSesionBtn";
+import CerrarSesionBtn from "../CerrarSesionBtn";
 
 const PAISES = [
   { value: "general", label: "General" },
@@ -42,6 +47,13 @@ export default function CurarPage() {
   const [preview, setPreview] = useState<CurarResult | null>(null);
   const [published, setPublished] = useState(false);
   const [createdSlug, setCreatedSlug] = useState<string | null>(null);
+
+  const [adminSecret, setAdminSecret] = useState("");
+
+  useEffect(() => {
+    const saved = getStoredAdminSecret();
+    if (saved) setAdminSecret(saved);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -84,6 +96,7 @@ export default function CurarPage() {
         setTimeout(() => setLoading(false), 500);
         return;
       }
+      saveAdminSecretToStorage(adminSecret);
       setPreview(data);
       setTimeout(() => setLoading(false), 500);
     } catch (err) {
@@ -133,6 +146,7 @@ export default function CurarPage() {
         setError(data.error ?? `Error ${res.status}`);
         return;
       }
+      saveAdminSecretToStorage(adminSecret);
       setCreatedSlug(data.slug ?? null);
       setPublished(true);
     } catch (err) {
@@ -161,9 +175,12 @@ export default function CurarPage() {
 
   return (
     <div className={styles.wrap}>
-      <Link href="/admin" className={styles.back}>
-        ← Admin
-      </Link>
+      <div className={styles.headerRow}>
+        <Link href="/admin" className={styles.back}>
+          ← Admin
+        </Link>
+        <CerrarSesionBtn />
+      </div>
       <h1 className={styles.title}>Curar con IA</h1>
       <form onSubmit={handleCurar} className={styles.form}>
         <div className={styles.field}>

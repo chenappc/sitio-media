@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
+import { getAdminSecret, setAdminSecret } from "./CerrarSesionBtn";
 
 function formatHora(fecha: Date) {
   return formatDistanceToNow(new Date(fecha), { addSuffix: true, locale: es });
@@ -25,15 +26,18 @@ type NotaRow = {
   fecha: Date;
 };
 
-export default function NotasList({ notas }: { notas: NotaRow[] }) {
-  const router = useRouter();
+export default function NotasList({ notas: notasInitial }: { notas: NotaRow[] }) {
+  const [notas, setNotas] = useState<NotaRow[]>(notasInitial);
 
   const handleBorrar = async (id: number, titulo: string) => {
     if (!confirm(`¿Borrar la nota "${titulo}"? Esta acción no se puede deshacer.`)) {
       return;
     }
-    const secret = window.prompt("Contraseña admin");
-    if (!secret) return;
+    let secret = getAdminSecret();
+    if (!secret) {
+      secret = window.prompt("Contraseña admin") ?? "";
+      if (!secret) return;
+    }
     try {
       const res = await fetch(`/api/notas/${id}`, {
         method: "DELETE",
@@ -44,7 +48,8 @@ export default function NotasList({ notas }: { notas: NotaRow[] }) {
         alert(data.error ?? `Error ${res.status}`);
         return;
       }
-      router.refresh();
+      setAdminSecret(secret);
+      setNotas((prev) => prev.filter((n) => n.id !== id));
     } catch (err) {
       alert(err instanceof Error ? err.message : "Error de red");
     }

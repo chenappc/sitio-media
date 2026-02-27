@@ -1,0 +1,240 @@
+/* Mobile first */
+
+.main {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #111111;
+}
+
+.mainWithFeed {
+  background-color: var(--background, #ffffff);
+  color: var(--foreground, #111111);
+}
+
+.content {
+  flex: 1;
+  max-width: 56rem;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0 1rem 2rem;
+  box-sizing: border-box;
+}
+
+/* ----- Empty state ----- */
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  background-color: #111111;
+  min-height: 80vh;
+}
+
+.emptyLogo {
+  font-family: var(--font-serif), "Merriweather", Georgia, serif;
+  font-weight: 700;
+  font-size: 2.5rem;
+  color: white;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.emptyLogoDot {
+  color: #d62828;
+}
+
+.emptyTagline {
+  margin-top: 1rem;
+  font-size: 1.1rem;
+  color: #6b6b6b;
+  font-weight: 400;
+}
+
+.emptyCta {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.emptyCtaIntro {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  color: #6b6b6b;
+}
+
+.emptyCtaBtn {
+  display: inline-block;
+  padding: 1rem 1.75rem;
+  font-family: var(--font-serif), "Merriweather", Georgia, serif;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #fff;
+  background: #d62828;
+  border: none;
+  border-radius: 8px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.emptyCtaBtn:hover {
+  background: #b82222;
+}
+
+/* ----- Feed ----- */
+.feed {
+  padding-top: 1.5rem;
+}
+
+.featured {
+  margin-bottom: 2rem;
+}
+
+.featuredLink {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.featuredImageWrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.08);
+  margin-bottom: 1rem;
+}
+
+.featuredImageWrap img {
+  object-fit: cover;
+}
+
+.featuredBadge {
+  display: inline-block;
+  margin-bottom: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: white;
+  background: #d62828;
+  border-radius: 4px;
+}
+
+.featuredTitle {
+  font-family: var(--font-serif), "Merriweather", Georgia, serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0 0 0.75rem;
+  color: var(--negro, #111);
+}
+
+.featuredEntradilla {
+  font-size: 1.125rem;
+  line-height: 1.5;
+  margin: 0 0 0.75rem;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.featuredMeta {
+  font-size: 0.9375rem;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+/* ----- Grid ----- */
+.grid {
+  display: grid;
+  gap: 1.75rem;
+}
+
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+  }
+}
+
+.cardLink {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.cardImageWrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.06);
+  margin-bottom: 0.75rem;
+}
+
+.cardImageWrap img {
+  object-fit: cover;
+}
+
+.cardBadge {
+  display: inline-block;
+  margin-bottom: 0.5rem;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: white;
+  background: #d62828;
+  border-radius: 4px;
+}
+
+.cardTitle {
+  font-family: var(--font-serif), "Merriweather", Georgia, serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0 0 0.5rem;
+  color: var(--negro, #111);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cardEntradilla {
+  font-size: 1rem;
+  line-height: 1.45;
+  margin: 0 0 0.5rem;
+  color: rgba(0, 0, 0, 0.75);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cardMeta {
+  font-size: 0.875rem;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+@media (min-width: 768px) {
+  .featuredTitle {
+    font-size: 2.25rem;
+  }
+
+  .featuredEntradilla {
+    font-size: 1.25rem;
+  }
+
+  .cardTitle {
+    font-size: 1.35rem;
+  }
+
+  .cardEntradilla {
+    font-size: 1.0625rem;
+  }
+}

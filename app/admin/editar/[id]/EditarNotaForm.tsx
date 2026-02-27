@@ -1,8 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import type { Nota } from "@/lib/types";
+import {
+  getAdminSecret as getStoredAdminSecret,
+  setAdminSecret as saveAdminSecretToStorage,
+} from "../../CerrarSesionBtn";
+import CerrarSesionBtn from "../../CerrarSesionBtn";
 
 const PAISES = [
   { value: "general", label: "General" },
@@ -33,6 +38,11 @@ export default function EditarNotaForm({ nota }: { nota: Nota }) {
     publicado: nota.publicado,
   });
 
+  useEffect(() => {
+    const saved = getStoredAdminSecret();
+    if (saved) setForm((f) => ({ ...f, adminSecret: saved }));
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -62,6 +72,7 @@ export default function EditarNotaForm({ nota }: { nota: Nota }) {
         setError(data.error ?? `Error ${res.status}`);
         return;
       }
+      saveAdminSecretToStorage(form.adminSecret);
       setOk(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error de red");
@@ -83,9 +94,12 @@ export default function EditarNotaForm({ nota }: { nota: Nota }) {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
-      <Link href="/admin" className="mb-4 inline-block text-sm text-[var(--negro)]/60 hover:text-[var(--rojo)]">
-        ← Admin
-      </Link>
+      <div className="mb-4 flex items-center justify-between">
+        <Link href="/admin" className="text-sm text-[var(--negro)]/60 hover:text-[var(--rojo)]">
+          ← Admin
+        </Link>
+        <CerrarSesionBtn />
+      </div>
       <h1 className="font-serif text-2xl font-bold">Editar nota</h1>
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <div>

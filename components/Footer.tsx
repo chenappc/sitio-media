@@ -20,6 +20,9 @@ export default function Footer() {
           <Link href="/contacto" className={styles.navLink}>
             Contacto
           </Link>
+          <Link href="/quiz-prestamos-py" className={styles.navLink}>
+            Préstamos Paraguay
+          </Link>
         </nav>
       </div>
     </footer>
