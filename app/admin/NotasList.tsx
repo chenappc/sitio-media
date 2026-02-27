@@ -10,18 +10,11 @@ function formatHora(fecha: Date) {
   return formatDistanceToNow(new Date(fecha), { addSuffix: true, locale: es });
 }
 
-function formatShares(n: number) {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return String(n);
-}
-
 type NotaRow = {
   id: number;
   slug: string;
   titulo: string;
   entradilla: string;
-  shares_buzzsumo: number;
   publicado: boolean;
   fecha: Date;
 };
@@ -78,7 +71,7 @@ export default function NotasList({ notas: notasInitial }: { notas: NotaRow[] })
               {nota.titulo}
             </Link>
             <p className="text-sm text-[var(--negro)]/60">
-              {formatHora(nota.fecha)} · {formatShares(nota.shares_buzzsumo)} shares
+              {formatHora(nota.fecha)}
             </p>
           </div>
           <span
