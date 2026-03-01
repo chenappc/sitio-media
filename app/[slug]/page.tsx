@@ -7,7 +7,8 @@ import AdSense from "@/components/AdSense";
 import type { Metadata } from "next";
 import styles from "./page.module.css";
 
-export const revalidate = 3600;
+export const revalidate = 0;
+export const dynamic = "force-dynamic";
 
 function formatHora(fecha: Date) {
   return formatDistanceToNow(new Date(fecha), { addSuffix: true, locale: es });
