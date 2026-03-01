@@ -17,6 +17,45 @@
   justify-content: space-between;
 }
 
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.separator {
+  display: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 400;
+  user-select: none;
+}
+
+.slogan {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.55);
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .brand {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .separator {
+    display: inline;
+    font-size: 0.875rem;
+  }
+
+  .slogan {
+    font-size: 0.8125rem;
+    color: rgba(255, 255, 255, 0.6);
+    text-align: left;
+  }
+}
+
 .logo {
   font-family: "Merriweather", Georgia, serif;
   font-size: 1.25rem;

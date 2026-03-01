@@ -19,13 +19,17 @@ export default function Header() {
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
-        <Link
-          href="/"
-          className={styles.logo}
-          aria-label="sitio.media - Inicio"
-        >
-          sitio<span className={styles.logoDot}>.</span>media
-        </Link>
+        <div className={styles.brand}>
+          <Link
+            href="/"
+            className={styles.logo}
+            aria-label="sitio.media - Inicio"
+          >
+            sitio<span className={styles.logoDot}>.</span>media
+          </Link>
+          <span className={styles.separator}>·</span>
+          <span className={styles.slogan}>Lo que todo el mundo está hablando</span>
+        </div>
         <span className={styles.date}>
           <FechaHoy />
         </span>
