@@ -64,9 +64,9 @@ export default async function NotaPage({ params }: Props) {
       <h1 className="mt-3 font-serif text-2xl font-bold leading-tight md:text-3xl">
         {nota.titulo}
       </h1>
-      <div className="mt-4">
+      {/* <div className="mt-4">
         <AdSense slot="4862111765" />
-      </div>
+      </div> */}
       <p className="mt-2 text-sm text-[var(--negro)]/60">
         {formatHora(nota.fecha)}
       </p>
@@ -95,9 +95,18 @@ export default async function NotaPage({ params }: Props) {
         }}
       />
 
-      <div className="mt-8">
+      {/* <div className="mt-8">
         <AdSense slot="8801356773" />
-      </div>
+      </div> */}
+
+      <a
+        href={`https://wa.me/?text=${encodeURIComponent(nota.titulo + " " + "https://sitio.media/" + nota.slug)}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={styles.whatsappShare}
+      >
+        Compartí esta nota por WhatsApp
+      </a>
 
       {nota.fuente_url && (
         <p style={{ fontSize: 14, color: "#666", marginTop: 24 }}>

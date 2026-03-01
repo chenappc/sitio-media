@@ -2,3 +2,32 @@
   margin-bottom: 1.5rem;
   line-height: 1.8;
 }
+
+.whatsappShare {
+  display: inline-block;
+  width: 100%;
+  max-width: 320px;
+  margin-top: 1.5rem;
+  padding: 14px 20px;
+  background: #25d366;
+  color: #fff;
+  text-align: center;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.whatsappShare:hover {
+  filter: brightness(1.05);
+}
+
+@media (max-width: 640px) {
+  .whatsappShare {
+    width: 100%;
+    max-width: none;
+  }
+}
