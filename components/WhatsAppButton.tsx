@@ -3,7 +3,7 @@
 export default function WhatsAppButton({ titulo, slug }: { titulo: string; slug: string }) {
   return (
     <a
-      href={`https://wa.me/?text=${encodeURIComponent(titulo + " " + "https://sitio.media/" + slug)}`}
+      href={`https://wa.me/?text=${encodeURIComponent(titulo + " " + "https://www.sitio.media/" + slug)}`}
       target="_blank"
       rel="noopener noreferrer"
       style={{
