@@ -5,6 +5,7 @@ import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { getNotaBySlug } from "@/lib/notas";
 import AdSense from "@/components/AdSense";
+import WhatsAppButton from "@/components/WhatsAppButton";
 import type { Metadata } from "next";
 import styles from "./page.module.css";
 
@@ -101,14 +102,7 @@ export default async function NotaPage({ params }: Props) {
         <AdSense slot="8801356773" />
       </div> */}
 
-      <a
-        href={`https://wa.me/?text=${encodeURIComponent(nota.titulo + " " + "https://sitio.media/" + nota.slug)}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={styles.whatsappShare}
-      >
-        Compartir esta nota por WhatsApp
-      </a>
+      <WhatsAppButton titulo={nota.titulo} slug={nota.slug} />
 
       {nota.fuente_url && (
         <p style={{ fontSize: 14, color: "#666", marginTop: 24 }}>
