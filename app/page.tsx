@@ -36,30 +36,6 @@ function EmptyState() {
   );
 }
 
-function FeaturedCard({ nota }: { nota: Nota }) {
-  return (
-    <article className={styles.featured}>
-      <Link href={`/${nota.slug}`} className={styles.featuredLink}>
-        {nota.imagen_url && (
-          <div className={styles.featuredImageWrap}>
-            <Image
-              src={nota.imagen_url}
-              alt={nota.imagen_alt ?? nota.titulo}
-              fill
-              sizes="(max-width: 768px) 100vw, 896px"
-              priority
-            />
-          </div>
-        )}
-        <span className={styles.featuredBadge}>VIRAL</span>
-        <h2 className={styles.featuredTitle}>{nota.titulo}</h2>
-        <p className={styles.featuredEntradilla}>{nota.entradilla}</p>
-        <p className={styles.featuredMeta}>{formatHora(nota.fecha)}</p>
-      </Link>
-    </article>
-  );
-}
-
 function GridCard({ nota }: { nota: Nota }) {
   return (
     <article>
@@ -90,20 +66,15 @@ export default async function HomePage() {
     return <EmptyState />;
   }
 
-  const [featured, ...rest] = notas;
-
   return (
     <main className={`${styles.main} ${styles.mainWithFeed}`}>
       <div className={styles.content}>
         <div className={styles.feed}>
-          <FeaturedCard nota={featured} />
-          {rest.length > 0 && (
-            <div className={styles.grid}>
-              {rest.map((nota) => (
-                <GridCard key={nota.id} nota={nota} />
-              ))}
-            </div>
-          )}
+          <div className={styles.grid}>
+            {notas.map((nota) => (
+              <GridCard key={nota.id} nota={nota} />
+            ))}
+          </div>
         </div>
       </div>
     </main>
