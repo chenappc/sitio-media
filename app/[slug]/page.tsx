@@ -105,7 +105,7 @@ export default async function NotaPage({ params }: Props) {
         rel="noopener noreferrer"
         className={styles.whatsappShare}
       >
-        Compartí esta nota por WhatsApp
+        Compartir esta nota por WhatsApp
       </a>
 
       {nota.fuente_url && (

@@ -237,7 +237,7 @@ Nombre del medio de origen (usar para el párrafo final): ${nombreMedio}
 
 Devuelve ÚNICAMENTE un objeto JSON con estas tres claves (sin markdown, sin \`\`\`):
 - "titulo": título curado en español del país, manteniendo el gancho viral, máximo 80 caracteres.
-- "cuerpo": cuerpo curado en HTML. Cada párrafo debe ir envuelto en su propia etiqueta <p>. No uses otros contenedores: solo <p> para cada párrafo separado. 300-500 palabras, en el español del país elegido. Al final del cuerpo, antes de cerrar, agregá un último párrafo en etiqueta <p> normal (sin negrita ni estilo especial) con exactamente este texto: "Nota original publicada en ${nombreMedio}." Ese párrafo es parte natural del artículo.
+- "cuerpo": cuerpo curado en HTML. Cada párrafo debe ir envuelto en su propia etiqueta <p>. No uses otros contenedores: solo <p> para cada párrafo separado. 300-500 palabras, en el español del país elegido. No agregues al final ninguna frase del tipo "Nota original publicada en...".
 - "entradilla": exactamente 2 oraciones breves separadas por punto seguido, máximo 150 caracteres en total, que resuman el gancho principal de la nota. Formato ejemplo: 'Un nieto cordobés cumplió el sueño de su abuela de 84 años. La foto que compartió emocionó a miles en las redes.' Sin comillas, sin saltos de línea, sin puntos suspensivos.`;
 
     const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
