@@ -25,12 +25,37 @@ export async function POST(req: NextRequest) {
     }
 
     const pageId = process.env.FB_PAGE_ID;
-    const accessToken = process.env.FB_PAGE_ACCESS_TOKEN;
+    let accessToken = process.env.FB_PAGE_ACCESS_TOKEN;
+    const appId = process.env.FB_APP_ID;
+    const appSecret = process.env.FB_APP_SECRET;
+
     if (!pageId || !accessToken) {
       return NextResponse.json(
         { error: "FB_PAGE_ID o FB_PAGE_ACCESS_TOKEN no configurados" },
         { status: 503 }
       );
+    }
+
+    // Intentar renovar token de larga duración (opcional; si falla se usa el actual)
+    if (appId && appSecret) {
+      try {
+        const exchangeUrl = new URL("https://graph.facebook.com/v19.0/oauth/access_token");
+        exchangeUrl.searchParams.set("grant_type", "fb_exchange_token");
+        exchangeUrl.searchParams.set("client_id", appId);
+        exchangeUrl.searchParams.set("client_secret", appSecret);
+        exchangeUrl.searchParams.set("fb_exchange_token", accessToken);
+
+        const exchangeRes = await fetch(exchangeUrl.toString());
+        const exchangeData = (await exchangeRes.json().catch(() => ({}))) as {
+          access_token?: string;
+          error?: { message?: string };
+        };
+        if (exchangeRes.ok && exchangeData.access_token) {
+          accessToken = exchangeData.access_token;
+        }
+      } catch (_) {
+        // Si falla la renovación, se sigue con el token actual
+      }
     }
 
     const link = `https://www.sitio.media/${nota.slug}`;
