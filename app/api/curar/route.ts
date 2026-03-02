@@ -38,6 +38,38 @@ function getOgImage(html: string): string | null {
   return m ? m[1].trim() : null;
 }
 
+const TARGET_W = 1200;
+const TARGET_H = 630;
+const MAX_KB = 100;
+
+async function processImageForCloudinary(buf: Buffer): Promise<Buffer> {
+  const meta = await sharp(buf).metadata();
+  const w = meta.width ?? 1;
+  const h = meta.height ?? 1;
+  const ratio = w / h;
+
+  const useContain = ratio < 1.7;
+  const resizeOpts = useContain
+    ? {
+        fit: "contain" as const,
+        position: "center" as const,
+        background: { r: 0, g: 0, b: 0 },
+      }
+    : { fit: "cover" as const, position: "center" as const };
+
+  for (const q of [75, 60, 45]) {
+    const out = await sharp(buf)
+      .resize(TARGET_W, TARGET_H, resizeOpts)
+      .jpeg({ quality: q })
+      .toBuffer();
+    if (out.length <= MAX_KB * 1024) return out;
+  }
+  return sharp(buf)
+    .resize(TARGET_W, TARGET_H, resizeOpts)
+    .jpeg({ quality: 45 })
+    .toBuffer();
+}
+
 async function uploadBufferToCloudinary(buf: Buffer): Promise<string> {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
@@ -236,9 +268,9 @@ ${cuerpoOriginal.slice(0, 12000)}
 Nombre del medio de origen (usar para el párrafo final): ${nombreMedio}
 
 Devuelve ÚNICAMENTE un objeto JSON con estas tres claves (sin markdown, sin \`\`\`):
-- "titulo": título curado en español del país, manteniendo el gancho viral, máximo 80 caracteres.
+- "titulo": título curado en español del país, manteniendo el gancho viral, máximo 80 caracteres. IMPORTANTE: El titular NO debe mencionar nombres propios de personas, solo referencias genéricas (ej.: "Un joven", "La mujer", "La pareja").
 - "cuerpo": cuerpo curado en HTML. Cada párrafo debe ir envuelto en su propia etiqueta <p>. No uses otros contenedores: solo <p> para cada párrafo separado. 300-500 palabras, en el español del país elegido. No agregues al final ninguna frase del tipo "Nota original publicada en...".
-- "entradilla": exactamente 2 oraciones breves separadas por punto seguido, máximo 150 caracteres en total, que resuman el gancho principal de la nota. Formato ejemplo: 'Un nieto cordobés cumplió el sueño de su abuela de 84 años. La foto que compartió emocionó a miles en las redes.' Sin comillas, sin saltos de línea, sin puntos suspensivos.`;
+- "entradilla": exactamente 2 oraciones breves separadas por punto seguido, máximo 150 caracteres en total, que resuman el gancho principal de la nota. IMPORTANTE: La entradilla NO debe mencionar nombres propios de personas (ni protagonistas ni secundarios). En su lugar usá referencias genéricas como "el hombre", "la mujer", "la pareja", "el joven", "la familia", "los protagonistas", etc. Los nombres aparecerán solo en el cuerpo de la nota. Formato ejemplo: "Un joven cumplió el sueño de su abuela de 84 años. La foto que compartió emocionó a miles en las redes." Sin comillas, sin saltos de línea, sin puntos suspensivos.`;
 
     const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -292,10 +324,7 @@ Devuelve ÚNICAMENTE un objeto JSON con estas tres claves (sin markdown, sin \`\
         try {
           const base64Data = body.imagenBase64.replace(/^data:image\/[^;]+;base64,/, "");
           const buf = Buffer.from(base64Data, "base64");
-          const out = await sharp(buf)
-            .resize(1200, 630, { fit: "cover", position: "center" })
-            .jpeg({ quality: 85 })
-            .toBuffer();
+          const out = await processImageForCloudinary(buf);
           imagen_url = await uploadBufferToCloudinary(out);
         } catch (e) {
           console.error("Error subiendo Foto 1 a Cloudinary:", e);
@@ -305,10 +334,7 @@ Devuelve ÚNICAMENTE un objeto JSON con estas tres claves (sin markdown, sin \`\
         try {
           const base64Data = body.imagen2Base64.replace(/^data:image\/[^;]+;base64,/, "");
           const buf = Buffer.from(base64Data, "base64");
-          const out = await sharp(buf)
-            .resize(1200, 630, { fit: "cover", position: "center" })
-            .jpeg({ quality: 85 })
-            .toBuffer();
+          const out = await processImageForCloudinary(buf);
           imagen2_url = await uploadBufferToCloudinary(out);
         } catch (e) {
           console.error("Error subiendo Foto 2 a Cloudinary:", e);
@@ -322,10 +348,7 @@ Devuelve ÚNICAMENTE un objeto JSON con estas tres claves (sin markdown, sin \`\
           });
           if (imgRes.ok) {
             const buf = Buffer.from(await imgRes.arrayBuffer());
-            const out = await sharp(buf)
-              .resize(1200, 630, { fit: "cover", position: "center" })
-              .jpeg({ quality: 85 })
-              .toBuffer();
+            const out = await processImageForCloudinary(buf);
             imagen_url = await uploadBufferToCloudinary(out);
           }
         } catch (e) {
