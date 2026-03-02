@@ -19,8 +19,49 @@ type NotaRow = {
   fecha: Date;
 };
 
+type PostearResult = { notaId: number; postUrl?: string; error?: string } | null;
+
 export default function NotasList({ notas: notasInitial }: { notas: NotaRow[] }) {
   const [notas, setNotas] = useState<NotaRow[]>(notasInitial);
+  const [postingId, setPostingId] = useState<number | null>(null);
+  const [postearResult, setPostearResult] = useState<PostearResult>(null);
+
+  const handlePostear = async (notaId: number) => {
+    setPostearResult(null);
+    let secret = getAdminSecret();
+    if (!secret) {
+      secret = window.prompt("Contraseña admin") ?? "";
+      if (!secret) return;
+    }
+    setPostingId(notaId);
+    try {
+      const res = await fetch("/api/fb/postear", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-secret": secret,
+        },
+        body: JSON.stringify({ notaId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setPostearResult({ notaId, error: data.error ?? `Error ${res.status}` });
+        return;
+      }
+      setAdminSecret(secret);
+      setPostearResult({
+        notaId,
+        postUrl: data.postUrl,
+      });
+    } catch (err) {
+      setPostearResult({
+        notaId,
+        error: err instanceof Error ? err.message : "Error de red",
+      });
+    } finally {
+      setPostingId(null);
+    }
+  };
 
   const handleBorrar = async (id: number, titulo: string) => {
     if (!confirm(`¿Borrar la nota "${titulo}"? Esta acción no se puede deshacer.`)) {
@@ -83,7 +124,21 @@ export default function NotasList({ notas: notasInitial }: { notas: NotaRow[] })
           >
             {nota.publicado ? "Publicado" : "Borrador"}
           </span>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {nota.publicado && (
+              <button
+                type="button"
+                onClick={() => handlePostear(nota.id)}
+                disabled={postingId !== null}
+                className="rounded border border-[#1877f2] bg-[#1877f2] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#166fe5] disabled:opacity-50"
+              >
+                {postingId === nota.id ? (
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  "Postear en FB"
+                )}
+              </button>
+            )}
             <Link
               href={`/admin/editar/${nota.id}`}
               className="rounded border border-[var(--negro)]/20 px-3 py-1.5 text-sm font-medium text-[var(--negro)] hover:bg-[var(--negro)]/5"
@@ -98,6 +153,27 @@ export default function NotasList({ notas: notasInitial }: { notas: NotaRow[] })
               Borrar
             </button>
           </div>
+          {postearResult?.notaId === nota.id && (
+            <div className="mt-2 w-full">
+              {postearResult.postUrl ? (
+                <p className="text-sm text-green-700">
+                  Publicado:{" "}
+                  <a
+                    href={postearResult.postUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    Ver en Facebook
+                  </a>
+                </p>
+              ) : (
+                <p className="text-sm text-red-600" role="alert">
+                  {postearResult.error}
+                </p>
+              )}
+            </div>
+          )}
         </li>
       ))}
     </ul>
