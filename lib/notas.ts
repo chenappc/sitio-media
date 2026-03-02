@@ -46,14 +46,29 @@ export async function getTodasNotas(): Promise<Nota[]> {
   }
 }
 
-/** Trae TODAS las notas (publicadas y no publicadas) ordenadas por fecha descendente. */
-export async function getTodasLasNotas(): Promise<Nota[]> {
+/** Cuenta total de notas. */
+export async function getTotalNotas(): Promise<number> {
   try {
-    const res = await pool.query<Nota>(
-      `SELECT id, slug, titulo, entradilla, shares_buzzsumo, publicado, fecha
-       FROM notas
-       ORDER BY fecha DESC`
-    );
+    const res = await pool.query<{ count: string }>("SELECT COUNT(*) AS count FROM notas");
+    return parseInt(res.rows[0]?.count ?? "0", 10);
+  } catch {
+    return 0;
+  }
+}
+
+/** Trae notas (publicadas y no publicadas) ordenadas por fecha descendente. Con limit/offset para paginación. */
+export async function getTodasLasNotas(limit?: number, offset?: number): Promise<Nota[]> {
+  try {
+    const hasPagination = typeof limit === "number" && limit > 0 && typeof offset === "number" && offset >= 0;
+    const query = hasPagination
+      ? `SELECT id, slug, titulo, entradilla, shares_buzzsumo, publicado, fecha
+         FROM notas
+         ORDER BY fecha DESC
+         LIMIT $1 OFFSET $2`
+      : `SELECT id, slug, titulo, entradilla, shares_buzzsumo, publicado, fecha
+         FROM notas
+         ORDER BY fecha DESC`;
+    const res = await pool.query<Nota>(query, hasPagination ? [limit, offset] : []);
     return res.rows;
   } catch {
     return [];

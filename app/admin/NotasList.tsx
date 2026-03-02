@@ -21,7 +21,19 @@ type NotaRow = {
 
 type PostearResult = { notaId: number; postUrl?: string; error?: string } | null;
 
-export default function NotasList({ notas: notasInitial }: { notas: NotaRow[] }) {
+type NotasListProps = {
+  notas: NotaRow[];
+  currentPage: number;
+  totalPages: number;
+  totalNotas: number;
+};
+
+export default function NotasList({
+  notas: notasInitial,
+  currentPage,
+  totalPages,
+  totalNotas,
+}: NotasListProps) {
   const [notas, setNotas] = useState<NotaRow[]>(notasInitial);
   const [postingId, setPostingId] = useState<number | null>(null);
   const [postearResult, setPostearResult] = useState<PostearResult>(null);
@@ -89,7 +101,7 @@ export default function NotasList({ notas: notasInitial }: { notas: NotaRow[] })
     }
   };
 
-  if (notas.length === 0) {
+  if (notas.length === 0 && totalNotas === 0) {
     return (
       <p className="py-8 text-center text-[var(--negro)]/60">
         No hay notas. <Link href="/admin/nueva" className="text-[var(--rojo)] underline">Crear una</Link>.
@@ -97,7 +109,10 @@ export default function NotasList({ notas: notasInitial }: { notas: NotaRow[] })
     );
   }
 
+  const showPagination = totalPages > 1;
+
   return (
+    <>
     <ul className="space-y-3">
       {notas.map((nota) => (
         <li
@@ -177,5 +192,40 @@ export default function NotasList({ notas: notasInitial }: { notas: NotaRow[] })
         </li>
       ))}
     </ul>
+
+    {showPagination && (
+      <nav className="mt-6 flex flex-wrap items-center justify-center gap-4 border-t border-[var(--negro)]/10 pt-4" aria-label="Paginación">
+        <span className="text-sm text-[var(--negro)]/70">
+          Página {currentPage} de {totalPages}
+        </span>
+        <div className="flex gap-2">
+          {currentPage > 1 ? (
+            <Link
+              href={currentPage === 2 ? "/admin" : `/admin?page=${currentPage - 1}`}
+              className="rounded border border-[var(--negro)]/20 px-4 py-2 text-sm font-medium text-[var(--negro)] hover:bg-[var(--negro)]/5"
+            >
+              Anterior
+            </Link>
+          ) : (
+            <span className="rounded border border-[var(--negro)]/10 px-4 py-2 text-sm text-[var(--negro)]/40 cursor-not-allowed">
+              Anterior
+            </span>
+          )}
+          {currentPage < totalPages ? (
+            <Link
+              href={`/admin?page=${currentPage + 1}`}
+              className="rounded border border-[var(--negro)]/20 px-4 py-2 text-sm font-medium text-[var(--negro)] hover:bg-[var(--negro)]/5"
+            >
+              Siguiente
+            </Link>
+          ) : (
+            <span className="rounded border border-[var(--negro)]/10 px-4 py-2 text-sm text-[var(--negro)]/40 cursor-not-allowed">
+              Siguiente
+            </span>
+          )}
+        </div>
+      </nav>
+    )}
+    </>
   );
 }
