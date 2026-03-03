@@ -16,7 +16,7 @@ export default async function AdminPage({ searchParams }: Props) {
   const offset = (page - 1) * NOTAS_PER_PAGE;
 
   const [notas, total] = await Promise.all([
-    getTodasLasNotas(NOTAS_PER_PAGE, offset),
+    getTodasLasNotas({ limit: NOTAS_PER_PAGE, offset }),
     getTotalNotas(),
   ]);
 

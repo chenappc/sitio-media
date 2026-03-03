@@ -2,9 +2,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import { getNotasPublicadas } from "@/lib/notas";
+import { getNotasPublicadas, getTotalNotasPublicadas } from "@/lib/notas";
 import type { Nota } from "@/lib/types";
 import styles from "./Home.module.css";
+
+const NOTAS_PER_PAGE = 20;
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -59,12 +61,25 @@ function GridCard({ nota }: { nota: Nota }) {
   );
 }
 
-export default async function HomePage() {
-  const notas = await getNotasPublicadas(15);
+type Props = { searchParams: Promise<{ page?: string }> };
 
-  if (notas.length === 0) {
+export default async function HomePage({ searchParams }: Props) {
+  const params = await searchParams;
+  const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
+  const offset = (page - 1) * NOTAS_PER_PAGE;
+
+  const [notas, total] = await Promise.all([
+    getNotasPublicadas({ limit: NOTAS_PER_PAGE, offset }),
+    getTotalNotasPublicadas(),
+  ]);
+
+  if (notas.length === 0 && total === 0) {
     return <EmptyState />;
   }
+
+  const totalPages = Math.max(1, Math.ceil(total / NOTAS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const showPagination = totalPages > 1;
 
   return (
     <main className={`${styles.main} ${styles.mainWithFeed}`}>
@@ -75,6 +90,35 @@ export default async function HomePage() {
               <GridCard key={nota.id} nota={nota} />
             ))}
           </div>
+          {showPagination && (
+            <nav className={styles.pagination} aria-label="Paginación">
+              <div className={styles.paginationInner}>
+                {currentPage > 1 ? (
+                  <Link
+                    href={currentPage === 2 ? "/" : `/?page=${currentPage - 1}`}
+                    className={styles.paginationLink}
+                  >
+                    ← Anterior
+                  </Link>
+                ) : (
+                  <span className={styles.paginationDisabled}>← Anterior</span>
+                )}
+                <span className={styles.paginationLabel}>
+                  Página {currentPage} de {totalPages}
+                </span>
+                {currentPage < totalPages ? (
+                  <Link
+                    href={`/?page=${currentPage + 1}`}
+                    className={styles.paginationLink}
+                  >
+                    Siguiente →
+                  </Link>
+                ) : (
+                  <span className={styles.paginationDisabled}>Siguiente →</span>
+                )}
+              </div>
+            </nav>
+          )}
         </div>
       </div>
     </main>

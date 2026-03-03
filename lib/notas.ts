@@ -1,17 +1,33 @@
 import pool from "./db";
 import type { Nota } from "./types";
 
-export async function getNotasPublicadas(limite: number): Promise<Nota[]> {
+/** Cantidad total de notas publicadas (para paginación). */
+export async function getTotalNotasPublicadas(): Promise<number> {
   try {
+    const res = await pool.query<{ count: string }>(
+      "SELECT COUNT(*) AS count FROM notas WHERE publicado = true"
+    );
+    return parseInt(res.rows[0]?.count ?? "0", 10);
+  } catch {
+    return 0;
+  }
+}
+
+export async function getNotasPublicadas(opts: {
+  limit: number;
+  offset?: number;
+}): Promise<Nota[]> {
+  try {
+    const { limit, offset = 0 } = opts;
     const res = await pool.query<Nota>(
-    `SELECT id, slug, titulo, entradilla, cuerpo, imagen_url, imagen2_url, imagen_alt,
-            fuente_nombre, fuente_url, shares_buzzsumo, pais, publicado, fecha
-     FROM notas
-     WHERE publicado = true
-     ORDER BY fecha DESC
-     LIMIT $1`,
-    [limite]
-  );
+      `SELECT id, slug, titulo, entradilla, cuerpo, imagen_url, imagen2_url, imagen_alt,
+              fuente_nombre, fuente_url, shares_buzzsumo, pais, publicado, fecha
+       FROM notas
+       WHERE publicado = true
+       ORDER BY fecha DESC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
     return res.rows;
   } catch {
     return [];
@@ -56,10 +72,16 @@ export async function getTotalNotas(): Promise<number> {
   }
 }
 
-/** Trae notas (publicadas y no publicadas) ordenadas por fecha descendente. Con limit/offset para paginación. */
-export async function getTodasLasNotas(limit?: number, offset?: number): Promise<Nota[]> {
+/** Trae notas (publicadas y no publicadas) ordenadas por fecha descendente. Con { limit, offset } para paginación. */
+export async function getTodasLasNotas(opts?: {
+  limit?: number;
+  offset?: number;
+}): Promise<Nota[]> {
   try {
-    const hasPagination = typeof limit === "number" && limit > 0 && typeof offset === "number" && offset >= 0;
+    const limit = opts?.limit;
+    const offset = opts?.offset ?? 0;
+    const hasPagination =
+      typeof limit === "number" && limit > 0 && typeof offset === "number" && offset >= 0;
     const query = hasPagination
       ? `SELECT id, slug, titulo, entradilla, shares_buzzsumo, publicado, fecha
          FROM notas

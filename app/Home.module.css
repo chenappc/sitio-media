@@ -217,6 +217,49 @@
   color: rgba(0, 0, 0, 0.55);
 }
 
+/* ----- Paginación ----- */
+.pagination {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  text-align: center;
+}
+
+.paginationInner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.paginationLink {
+  padding: 0.5rem 1rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--negro, #111);
+  text-decoration: none;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.paginationLink:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.paginationLabel {
+  font-size: 0.875rem;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.paginationDisabled {
+  padding: 0.5rem 1rem;
+  font-size: 0.9375rem;
+  color: rgba(0, 0, 0, 0.4);
+  cursor: default;
+}
+
 @media (min-width: 768px) {
   .featuredTitle {
     font-size: 2.25rem;

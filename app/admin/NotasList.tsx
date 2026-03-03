@@ -200,24 +200,24 @@ export default function NotasList({
         </span>
         <div className="flex gap-2">
           {currentPage > 1 ? (
-            <Link
+            <a
               href={currentPage === 2 ? "/admin" : `/admin?page=${currentPage - 1}`}
-              className="rounded border border-[var(--negro)]/20 px-4 py-2 text-sm font-medium text-[var(--negro)] hover:bg-[var(--negro)]/5"
+              className="rounded border border-[var(--negro)]/20 px-4 py-2 text-sm font-medium text-[var(--negro)] hover:bg-[var(--negro)]/5 no-underline"
             >
               Anterior
-            </Link>
+            </a>
           ) : (
             <span className="rounded border border-[var(--negro)]/10 px-4 py-2 text-sm text-[var(--negro)]/40 cursor-not-allowed">
               Anterior
             </span>
           )}
           {currentPage < totalPages ? (
-            <Link
+            <a
               href={`/admin?page=${currentPage + 1}`}
-              className="rounded border border-[var(--negro)]/20 px-4 py-2 text-sm font-medium text-[var(--negro)] hover:bg-[var(--negro)]/5"
+              className="rounded border border-[var(--negro)]/20 px-4 py-2 text-sm font-medium text-[var(--negro)] hover:bg-[var(--negro)]/5 no-underline"
             >
               Siguiente
-            </Link>
+            </a>
           ) : (
             <span className="rounded border border-[var(--negro)]/10 px-4 py-2 text-sm text-[var(--negro)]/40 cursor-not-allowed">
               Siguiente
