@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getNotaById } from "@/lib/notas";
+import { getNotaById, updateNotaFbPost } from "@/lib/notas";
+
+// SQL de referencia (ejecutar en Railway PostgreSQL si no existen las columnas):
+// ALTER TABLE notas ADD COLUMN IF NOT EXISTS fb_post_id TEXT;
+// ALTER TABLE notas ADD COLUMN IF NOT EXISTS fb_post_url TEXT;
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
 
@@ -99,6 +103,10 @@ export async function POST(req: NextRequest) {
         : postId
           ? `https://www.facebook.com/${postId}`
           : "";
+
+    if (postId && postUrl) {
+      await updateNotaFbPost(notaId, postId, postUrl);
+    }
 
     return NextResponse.json({
       success: true,

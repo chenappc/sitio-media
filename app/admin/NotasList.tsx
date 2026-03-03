@@ -17,6 +17,8 @@ type NotaRow = {
   entradilla: string;
   publicado: boolean;
   fecha: Date;
+  fb_post_id?: string | null;
+  fb_post_url?: string | null;
 };
 
 type PostearResult = { notaId: number; postUrl?: string; error?: string } | null;
@@ -65,6 +67,15 @@ export default function NotasList({
         notaId,
         postUrl: data.postUrl,
       });
+      if (data.postUrl) {
+        setNotas((prev) =>
+          prev.map((n) =>
+            n.id === notaId
+              ? { ...n, fb_post_id: data.postId ?? null, fb_post_url: data.postUrl }
+              : n
+          )
+        );
+      }
     } catch (err) {
       setPostearResult({
         notaId,
@@ -141,18 +152,32 @@ export default function NotasList({
           </span>
           <div className="flex flex-wrap items-center gap-2">
             {nota.publicado && (
-              <button
-                type="button"
-                onClick={() => handlePostear(nota.id)}
-                disabled={postingId !== null}
-                className="rounded border border-[#1877f2] bg-[#1877f2] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#166fe5] disabled:opacity-50"
-              >
-                {postingId === nota.id ? (
-                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                  "Postear en FB"
+              <>
+                <button
+                  type="button"
+                  onClick={() => handlePostear(nota.id)}
+                  disabled={postingId !== null}
+                  className="rounded border border-[#1877f2] bg-[#1877f2] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#166fe5] disabled:opacity-50"
+                >
+                  {postingId === nota.id ? (
+                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : nota.fb_post_id ? (
+                    "Repostear en FB"
+                  ) : (
+                    "Postear en FB"
+                  )}
+                </button>
+                {nota.fb_post_url && (
+                  <a
+                    href={nota.fb_post_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-[#1877f2] hover:underline"
+                  >
+                    Ver post
+                  </a>
                 )}
-              </button>
+              </>
             )}
             <Link
               href={`/admin/editar/${nota.id}`}

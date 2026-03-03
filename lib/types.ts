@@ -14,4 +14,6 @@ export interface Nota {
   publicado: boolean;
   fecha: Date;
   created_at?: Date;
+  fb_post_id?: string | null;
+  fb_post_url?: string | null;
 }

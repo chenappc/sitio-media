@@ -83,11 +83,11 @@ export async function getTodasLasNotas(opts?: {
     const hasPagination =
       typeof limit === "number" && limit > 0 && typeof offset === "number" && offset >= 0;
     const query = hasPagination
-      ? `SELECT id, slug, titulo, entradilla, shares_buzzsumo, publicado, fecha
+      ? `SELECT id, slug, titulo, entradilla, shares_buzzsumo, publicado, fecha, fb_post_id, fb_post_url
          FROM notas
          ORDER BY fecha DESC
          LIMIT $1 OFFSET $2`
-      : `SELECT id, slug, titulo, entradilla, shares_buzzsumo, publicado, fecha
+      : `SELECT id, slug, titulo, entradilla, shares_buzzsumo, publicado, fecha, fb_post_id, fb_post_url
          FROM notas
          ORDER BY fecha DESC`;
     const res = await pool.query<Nota>(query, hasPagination ? [limit, offset] : []);
@@ -101,7 +101,7 @@ export async function getNotaById(id: number): Promise<Nota | null> {
   try {
     const res = await pool.query<Nota>(
       `SELECT id, slug, titulo, entradilla, cuerpo, imagen_url, imagen2_url, imagen_alt,
-              fuente_nombre, fuente_url, shares_buzzsumo, pais, publicado, fecha
+              fuente_nombre, fuente_url, shares_buzzsumo, pais, publicado, fecha, fb_post_id, fb_post_url
        FROM notas
        WHERE id = $1`,
       [id]
@@ -110,6 +110,18 @@ export async function getNotaById(id: number): Promise<Nota | null> {
   } catch {
     return null;
   }
+}
+
+/** Actualiza fb_post_id y fb_post_url de una nota después de postear en Facebook. */
+export async function updateNotaFbPost(
+  notaId: number,
+  fbPostId: string,
+  fbPostUrl: string
+): Promise<void> {
+  await pool.query(
+    "UPDATE notas SET fb_post_id = $1, fb_post_url = $2 WHERE id = $3",
+    [fbPostId, fbPostUrl, notaId]
+  );
 }
 
 export interface ActualizarNotaInput {
