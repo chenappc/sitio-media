@@ -99,6 +99,7 @@ export async function POST(req: NextRequest) {
       targeting.locales = [4, 24];
     }
 
+    console.log('Usando campaign_id:', fbCampaignId);
     const adsetRes = await fetch(`https://graph.facebook.com/v19.0/${adAccountId}/adsets`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
