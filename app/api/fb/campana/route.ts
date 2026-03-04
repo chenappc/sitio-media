@@ -49,12 +49,12 @@ export async function POST(req: NextRequest) {
   try {
     const campanaRes = await fetch(`https://graph.facebook.com/v19.0/${adAccountId}/campaigns`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: nombreCampana,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        name: `${paisConfig.nombre} - Sitio.media - Interacciones`,
         objective: 'POST_ENGAGEMENT',
         status: 'PAUSED',
-        buying_type: 'AUCTION',
+        special_ad_categories: JSON.stringify([]),
         access_token: accessToken,
       }),
     });
