@@ -88,6 +88,7 @@ export async function POST(req: NextRequest) {
         optimization_goal: 'POST_ENGAGEMENT',
         daily_budget: 100,
         bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
+        promoted_object: { page_id: process.env.FB_PAGE_ID ?? '100210801705114' },
         targeting,
         status: 'PAUSED',
         access_token: accessToken,
