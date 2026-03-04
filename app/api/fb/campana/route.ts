@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
         name: nombreAdset,
         campaign_id: fbCampaignId,
         billing_event: 'IMPRESSIONS',
-        optimization_goal: 'POST_ENGAGEMENT',
+        optimization_goal: 'ENGAGEMENT',
         daily_budget: 100,
         bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
         promoted_object: { page_id: process.env.FB_PAGE_ID ?? '100210801705114' },
