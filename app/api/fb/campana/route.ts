@@ -86,6 +86,7 @@ export async function POST(req: NextRequest) {
         billing_event: 'IMPRESSIONS',
         optimization_goal: 'POST_ENGAGEMENT',
         daily_budget: 100,
+        bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
         targeting,
         status: 'PAUSED',
         access_token: accessToken,
