@@ -56,24 +56,38 @@ export async function POST(req: NextRequest) {
   const nombreAd = nota.titulo;
 
   try {
-    const campanaRes = await fetch(`https://graph.facebook.com/v19.0/${adAccountId}/campaigns`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        name: `${paisConfig.nombre} - Sitio.media - Interacciones`,
-        objective: 'OUTCOME_ENGAGEMENT',
-        status: 'PAUSED',
-        special_ad_categories: '[]',
-        is_adset_budget_sharing_enabled: 'false',
-        access_token: process.env.FB_PAGE_ACCESS_TOKEN ?? '',
-      }),
-    });
-    const campanaData = await campanaRes.json();
-    if (campanaData.error) {
-      console.error('FB error campana:', JSON.stringify(campanaData, null, 2));
-      throw new Error(campanaData.error.message);
+    const campaignName = `${paisConfig.nombre} - Sitio.media - Interacciones`;
+    const filterJson = JSON.stringify([{ field: 'name', operator: 'EQUAL', value: campaignName }]);
+    const listUrl = `https://graph.facebook.com/v19.0/${adAccountId}/campaigns?fields=id,name&filtering=${encodeURIComponent(filterJson)}&access_token=${encodeURIComponent(accessToken ?? '')}`;
+    const listRes = await fetch(listUrl);
+    const listData = (await listRes.json()) as { data?: { id: string }[]; error?: { message: string } };
+    let fbCampaignId: string;
+    if (listData.error) {
+      console.error('FB error campana list:', JSON.stringify(listData, null, 2));
+      throw new Error(listData.error.message);
     }
-    const fbCampaignId = campanaData.id;
+    if (listData.data && listData.data.length > 0) {
+      fbCampaignId = listData.data[0].id;
+    } else {
+      const campanaRes = await fetch(`https://graph.facebook.com/v19.0/${adAccountId}/campaigns`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          name: campaignName,
+          objective: 'OUTCOME_ENGAGEMENT',
+          status: 'PAUSED',
+          special_ad_categories: '[]',
+          is_adset_budget_sharing_enabled: 'false',
+          access_token: process.env.FB_PAGE_ACCESS_TOKEN ?? '',
+        }),
+      });
+      const campanaData = await campanaRes.json();
+      if (campanaData.error) {
+        console.error('FB error campana:', JSON.stringify(campanaData, null, 2));
+        throw new Error(campanaData.error.message);
+      }
+      fbCampaignId = campanaData.id;
+    }
 
     const targeting: Record<string, unknown> = {
       age_min: 55,
