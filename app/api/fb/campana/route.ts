@@ -91,12 +91,16 @@ export async function POST(req: NextRequest) {
 
     const targeting: Record<string, unknown> = {
       age_min: 55,
-      geo_locations: { countries: [paisConfig.geo] },
+      age_max: 65,
+      geo_locations: { countries: [paisConfig.geo], location_types: ['home', 'recent'] },
+      publisher_platforms: ['facebook'],
+      facebook_positions: ['feed'],
+      device_platforms: ['mobile'],
       targeting_automation: { advantage_audience: 0 },
     };
     if ('idioma' in paisConfig) {
       targeting.behaviors = EXPAT_BEHAVIOR_IDS.map(id => ({ id, name: '' }));
-      targeting.locales = [4, 24];
+      targeting.locales = [1002];
     }
 
     console.log('Usando campaign_id:', fbCampaignId);
