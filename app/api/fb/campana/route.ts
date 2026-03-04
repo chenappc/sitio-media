@@ -108,6 +108,7 @@ export async function POST(req: NextRequest) {
         campaign_id: fbCampaignId,
         billing_event: 'IMPRESSIONS',
         optimization_goal: 'POST_ENGAGEMENT',
+        destination_type: 'ON_POST',
         daily_budget: 100,
         bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
         targeting,
@@ -122,28 +123,13 @@ export async function POST(req: NextRequest) {
     }
     const fbAdsetId = adsetData.id;
 
-    const creativeRes = await fetch(`https://graph.facebook.com/v19.0/${adAccountId}/adcreatives`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: nombreAd,
-        object_story_id: `${pageId}_${nota.fb_post_id}`,
-        access_token: accessToken,
-      }),
-    });
-    const creativeData = await creativeRes.json();
-    if (creativeData.error) {
-      console.error('FB error campana:', JSON.stringify(creativeData, null, 2));
-      throw new Error(creativeData.error.message);
-    }
-
     const adRes = await fetch(`https://graph.facebook.com/v19.0/${adAccountId}/ads`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: nombreAd,
         adset_id: fbAdsetId,
-        creative: { creative_id: creativeData.id },
+        creative: { object_story_id: `${pageId}_${nota.fb_post_id}` },
         status: 'PAUSED',
         access_token: accessToken,
       }),
