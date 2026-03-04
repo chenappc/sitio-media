@@ -42,6 +42,15 @@ export async function POST(req: NextRequest) {
   const paisConfig = PAISES[pais as keyof typeof PAISES];
   if (!paisConfig) return NextResponse.json({ error: 'País no válido' }, { status: 400 });
 
+  const existingRes = await pool.query(
+    'SELECT * FROM campanas WHERE nota_id = $1 AND pais = $2',
+    [notaId, pais]
+  );
+  const registro = existingRes.rows[0];
+  if (registro?.fb_campaign_id) {
+    return NextResponse.json({ ok: true, already_exists: true, campana: registro });
+  }
+
   const nombreCampana = `${paisConfig.nombre} - Sitio.media - Interacciones`;
   const nombreAdset = `${paisConfig.nombre} (55-65+) ${nota.titulo}`;
   const nombreAd = nota.titulo;
@@ -52,7 +61,7 @@ export async function POST(req: NextRequest) {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         name: `${paisConfig.nombre} - Sitio.media - Interacciones`,
-        objective: 'OUTCOME_AWARENESS',
+        objective: 'OUTCOME_ENGAGEMENT',
         status: 'PAUSED',
         special_ad_categories: '[]',
         is_adset_budget_sharing_enabled: 'false',
@@ -84,7 +93,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         name: nombreAdset,
         campaign_id: fbCampaignId,
-        billing_event: 'POST_ENGAGEMENT',
+        billing_event: 'IMPRESSIONS',
         optimization_goal: 'POST_ENGAGEMENT',
         promoted_object: { page_id: process.env.FB_PAGE_ID ?? '100210801705114' },
         daily_budget: 100,
