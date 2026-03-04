@@ -40,27 +40,33 @@ export default function NotasList({
   const [postingId, setPostingId] = useState<number | null>(null);
   const [postearResult, setPostearResult] = useState<PostearResult>(null);
   const [campanas, setCampanas] = useState<Record<string, Record<string, boolean>>>({});
+  const [cargando, setCargando] = useState<string | null>(null);
 
   const crearCampana = async (notaId: number, pais: string) => {
     const secret = prompt("Contraseña admin") || "";
     if (!secret) return;
-    const res = await fetch("/api/fb/campana", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-admin-secret": secret,
-      },
-      body: JSON.stringify({ notaId, pais }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      setCampanas((prev) => ({
-        ...prev,
-        [notaId]: { ...prev[notaId], [pais]: true },
-      }));
-      alert(`Campaña ${pais} creada OK`);
-    } else {
-      alert(`Error: ${data.error}`);
+    setCargando(`${notaId}-${pais}`);
+    try {
+      const res = await fetch("/api/fb/campana", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-secret": secret,
+        },
+        body: JSON.stringify({ notaId, pais }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCampanas((prev) => ({
+          ...prev,
+          [notaId]: { ...prev[notaId], [pais]: true },
+        }));
+        alert(`Campaña ${pais} creada OK`);
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } finally {
+      setCargando(null);
     }
   };
 
@@ -221,25 +227,37 @@ export default function NotasList({
             <div style={{ marginTop: 8 }}>
               <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>Campañas:</div>
               <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                {["AR", "CL", "CO", "ES", "MX", "PE", "US", "IT", "CA"].map((pais) => (
-                  <button
-                    key={pais}
-                    type="button"
-                    onClick={() => crearCampana(nota.id, pais)}
-                    style={{
-                      fontSize: 11,
-                      padding: "2px 6px",
-                      background: campanas[nota.id]?.[pais] ? "#4CAF50" : "#1877f2",
-                      color: "white",
-                      border: "none",
-                      borderRadius: 3,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {pais}
-                  </button>
-                ))}
+                {["AR", "CL", "CO", "ES", "MX", "PE", "US", "IT", "CA"].map((pais) => {
+                  const estaCargando = cargando === `${nota.id}-${pais}`;
+                  return (
+                    <button
+                      key={pais}
+                      type="button"
+                      onClick={() => crearCampana(nota.id, pais)}
+                      disabled={estaCargando}
+                      style={{
+                        fontSize: 11,
+                        padding: "2px 6px",
+                        background: campanas[nota.id]?.[pais] ? "#4CAF50" : "#1877f2",
+                        color: "white",
+                        border: "none",
+                        borderRadius: 3,
+                        cursor: estaCargando ? "wait" : "pointer",
+                        opacity: estaCargando ? 0.8 : 1,
+                      }}
+                    >
+                      {estaCargando ? (
+                        <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      ) : (
+                        pais
+                      )}
+                    </button>
+                  );
+                })}
               </div>
+              {cargando && cargando.startsWith(`${nota.id}-`) && (
+                <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>Creando campaña...</div>
+              )}
             </div>
           )}
           {postearResult?.notaId === nota.id && (
