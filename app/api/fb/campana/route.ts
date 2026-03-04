@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         name: `${paisConfig.nombre} - Sitio.media - Interacciones`,
-        objective: 'POST_ENGAGEMENT',
+        objective: 'OUTCOME_ENGAGEMENT',
         status: 'PAUSED',
         special_ad_categories: '[]',
         access_token: process.env.FB_PAGE_ACCESS_TOKEN ?? '',
