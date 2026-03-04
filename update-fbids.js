@@ -1,0 +1,4 @@
+﻿const { Pool } = require('pg');
+const pool = new Pool({ connectionString: 'postgresql://postgres:shHjrZCGZPVUEpCeVoaHaXJtOIyCNAfu@hopper.proxy.rlwy.net:16672/railway' });
+const updates = [[27,'1527608132701242'],[26,'1527607652701290'],[25,'1527607286034660'],[24,'1527607096034679'],[23,'1527606929368029'],[22,'1527605679368154'],[21,'1527604772701578'],[20,'1527603862701669'],[19,'1527601922701863'],[18,'1527601459368576'],[17,'1527308552731200'],[16,'1527308099397912'],[15,'1527307542731301'],[14,'1527307132731342'],[13,'1527304732731582'],[12,'1527304259398296'],[11,'1527303892731666'],[10,'1527303589398363']];
+Promise.all(updates.map(([id,fbid]) => pool.query('UPDATE notas SET fb_post_id = $1, fb_post_url = $2 WHERE id = $3', [fbid, 'https://www.facebook.com/100210801705114/posts/'+fbid, id]))).then(() => { console.log('OK'); pool.end(); }).catch(e => { console.error(e.message); pool.end(); });

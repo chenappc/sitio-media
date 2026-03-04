@@ -42,11 +42,13 @@ export default function NotasList({
   const [campanas, setCampanas] = useState<Record<string, Record<string, boolean>>>({});
 
   const crearCampana = async (notaId: number, pais: string) => {
+    const secret = prompt("Contraseña admin") || "";
+    if (!secret) return;
     const res = await fetch("/api/fb/campana", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-admin-secret": process.env.NEXT_PUBLIC_ADMIN_SECRET || "",
+        "x-admin-secret": secret,
       },
       body: JSON.stringify({ notaId, pais }),
     });
