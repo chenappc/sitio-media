@@ -41,30 +41,67 @@ export default function NotasList({
   const [postearResult, setPostearResult] = useState<PostearResult>(null);
   const [campanas, setCampanas] = useState<Record<string, Record<string, boolean>>>({});
   const [cargando, setCargando] = useState<string | null>(null);
+  const [modalNotaId, setModalNotaId] = useState<number | null>(null);
 
-  const crearCampana = async (notaId: number, pais: string) => {
-    const secret = prompt("Contraseña admin") || "";
+  const PAISES = ["AR", "CL", "CO", "ES", "MX", "PE", "US", "IT", "CA"];
+
+  const doCreateCampana = async (notaId: number, pais: string, secret: string) => {
+    const res = await fetch("/api/fb/campana", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-admin-secret": secret,
+      },
+      body: JSON.stringify({ notaId, pais }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      setCampanas((prev) => ({
+        ...prev,
+        [notaId]: { ...prev[notaId], [pais]: true },
+      }));
+      alert(`Campaña ${pais} creada OK`);
+    } else {
+      alert(`Error: ${data.error}`);
+    }
+  };
+
+  const crearCampana = async (notaId: number, pais: string, secret?: string) => {
+    const s = secret ?? prompt("Contraseña admin") ?? "";
+    if (!s) return;
+    setCargando(`${notaId}-${pais}`);
+    try {
+      await doCreateCampana(notaId, pais, s);
+    } finally {
+      setCargando(null);
+    }
+  };
+
+  const handlePaisClick = async (notaId: number, pais: string) => {
+    const yaExiste = campanas[notaId]?.[pais];
+    if (yaExiste) {
+      if (!confirm(`¿Recrear campaña para ${pais}? Esto borrará el registro anterior.`)) return;
+    }
+    const secret = prompt("Contraseña admin") ?? "";
     if (!secret) return;
     setCargando(`${notaId}-${pais}`);
     try {
-      const res = await fetch("/api/fb/campana", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-secret": secret,
-        },
-        body: JSON.stringify({ notaId, pais }),
-      });
-      const data = await res.json();
-      if (data.success) {
+      if (yaExiste) {
+        const delRes = await fetch(
+          `/api/fb/campana?notaId=${notaId}&pais=${encodeURIComponent(pais)}`,
+          { method: "DELETE", headers: { "x-admin-secret": secret } }
+        );
+        if (!delRes.ok) {
+          const d = await delRes.json().catch(() => ({}));
+          alert(d.error ?? "Error al borrar");
+          return;
+        }
         setCampanas((prev) => ({
           ...prev,
-          [notaId]: { ...prev[notaId], [pais]: true },
+          [notaId]: { ...prev[notaId], [pais]: false },
         }));
-        alert(`Campaña ${pais} creada OK`);
-      } else {
-        alert(`Error: ${data.error}`);
       }
+      await doCreateCampana(notaId, pais, secret);
     } finally {
       setCargando(null);
     }
@@ -224,41 +261,13 @@ export default function NotasList({
             </button>
           </div>
           {nota.fb_post_id && (
-            <div style={{ marginTop: 8 }}>
-              <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>Campañas:</div>
-              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                {["AR", "CL", "CO", "ES", "MX", "PE", "US", "IT", "CA"].map((pais) => {
-                  const estaCargando = cargando === `${nota.id}-${pais}`;
-                  return (
-                    <button
-                      key={pais}
-                      type="button"
-                      onClick={() => crearCampana(nota.id, pais)}
-                      disabled={estaCargando}
-                      style={{
-                        fontSize: 11,
-                        padding: "2px 6px",
-                        background: campanas[nota.id]?.[pais] ? "#4CAF50" : "#1877f2",
-                        color: "white",
-                        border: "none",
-                        borderRadius: 3,
-                        cursor: estaCargando ? "wait" : "pointer",
-                        opacity: estaCargando ? 0.8 : 1,
-                      }}
-                    >
-                      {estaCargando ? (
-                        <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      ) : (
-                        pais
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-              {cargando && cargando.startsWith(`${nota.id}-`) && (
-                <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>Creando campaña...</div>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => setModalNotaId(nota.id)}
+              className="rounded border border-[var(--negro)]/20 px-3 py-1.5 text-sm font-medium text-[var(--negro)] hover:bg-[var(--negro)]/5"
+            >
+              Campañas
+            </button>
           )}
           {postearResult?.notaId === nota.id && (
             <div className="mt-2 w-full">
@@ -284,6 +293,84 @@ export default function NotasList({
         </li>
       ))}
     </ul>
+
+    {modalNotaId != null && (() => {
+      const notaModal = notas.find((n) => n.id === modalNotaId);
+      if (!notaModal) return null;
+      return (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 50,
+          }}
+          onClick={() => setModalNotaId(null)}
+        >
+          <div
+            style={{
+              background: "white",
+              borderRadius: 8,
+              padding: "1.25rem 1.5rem",
+              maxWidth: 420,
+              width: "90%",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="modal-title" style={{ margin: "0 0 1rem", fontSize: "1rem", fontWeight: 600 }}>
+              {notaModal.titulo}
+            </h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 12 }}>
+              {PAISES.map((pais) => {
+                const estaCargando = cargando === `${notaModal.id}-${pais}`;
+                const yaExiste = campanas[notaModal.id]?.[pais];
+                return (
+                  <button
+                    key={pais}
+                    type="button"
+                    onClick={() => handlePaisClick(notaModal.id, pais)}
+                    disabled={estaCargando}
+                    style={{
+                      fontSize: 12,
+                      padding: "8px",
+                      background: yaExiste ? "#4CAF50" : "#1877f2",
+                      color: "white",
+                      border: "none",
+                      borderRadius: 6,
+                      cursor: estaCargando ? "wait" : "pointer",
+                      opacity: estaCargando ? 0.8 : 1,
+                    }}
+                  >
+                    {estaCargando ? (
+                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    ) : (
+                      pais
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            {cargando && cargando.startsWith(`${notaModal.id}-`) && (
+              <div style={{ fontSize: 12, color: "#666", marginBottom: 12 }}>Creando campaña...</div>
+            )}
+            <button
+              type="button"
+              onClick={() => setModalNotaId(null)}
+              className="rounded border border-[var(--negro)]/20 px-4 py-2 text-sm font-medium text-[var(--negro)] hover:bg-[var(--negro)]/5"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      );
+    })()}
 
     {showPagination && (
       <nav className="mt-6 flex flex-wrap items-center justify-center gap-4 border-t border-[var(--negro)]/10 pt-4" aria-label="Paginación">

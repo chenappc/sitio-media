@@ -161,3 +161,22 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  const adminSecret = req.headers.get('x-admin-secret');
+  if (adminSecret !== process.env.ADMIN_SECRET) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  }
+  const { searchParams } = new URL(req.url);
+  const notaId = searchParams.get('notaId');
+  const pais = searchParams.get('pais');
+  if (!notaId || !pais) {
+    return NextResponse.json({ error: 'Faltan notaId o pais' }, { status: 400 });
+  }
+  const notaIdNum = parseInt(notaId, 10);
+  if (Number.isNaN(notaIdNum)) {
+    return NextResponse.json({ error: 'notaId inválido' }, { status: 400 });
+  }
+  await pool.query('DELETE FROM campanas WHERE nota_id = $1 AND pais = $2', [notaIdNum, pais]);
+  return NextResponse.json({ ok: true });
+}
