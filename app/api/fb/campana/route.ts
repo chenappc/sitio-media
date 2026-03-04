@@ -71,6 +71,7 @@ export async function POST(req: NextRequest) {
       geo_locations: { countries: [paisConfig.geo] },
       device_platforms: ['mobile'],
       facebook_positions: ['feed'],
+      targeting_automation: { advantage_audience: 0 },
     };
     if ('idioma' in paisConfig) {
       targeting.behaviors = EXPAT_BEHAVIOR_IDS.map(id => ({ id, name: '' }));
