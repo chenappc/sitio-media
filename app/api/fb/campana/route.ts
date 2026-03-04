@@ -59,7 +59,10 @@ export async function POST(req: NextRequest) {
       }),
     });
     const campanaData = await campanaRes.json();
-    if (campanaData.error) throw new Error(campanaData.error.message);
+    if (campanaData.error) {
+      console.error('FB error campana:', JSON.stringify(campanaData, null, 2));
+      throw new Error(campanaData.error.message);
+    }
     const fbCampaignId = campanaData.id;
 
     const targeting: Record<string, unknown> = {
@@ -88,7 +91,10 @@ export async function POST(req: NextRequest) {
       }),
     });
     const adsetData = await adsetRes.json();
-    if (adsetData.error) throw new Error(adsetData.error.message);
+    if (adsetData.error) {
+      console.error('FB error campana:', JSON.stringify(adsetData, null, 2));
+      throw new Error(adsetData.error.message);
+    }
     const fbAdsetId = adsetData.id;
 
     const creativeRes = await fetch(`https://graph.facebook.com/v19.0/${adAccountId}/adcreatives`, {
@@ -101,7 +107,10 @@ export async function POST(req: NextRequest) {
       }),
     });
     const creativeData = await creativeRes.json();
-    if (creativeData.error) throw new Error(creativeData.error.message);
+    if (creativeData.error) {
+      console.error('FB error campana:', JSON.stringify(creativeData, null, 2));
+      throw new Error(creativeData.error.message);
+    }
 
     const adRes = await fetch(`https://graph.facebook.com/v19.0/${adAccountId}/ads`, {
       method: 'POST',
@@ -115,7 +124,10 @@ export async function POST(req: NextRequest) {
       }),
     });
     const adData = await adRes.json();
-    if (adData.error) throw new Error(adData.error.message);
+    if (adData.error) {
+      console.error('FB error campana:', JSON.stringify(adData, null, 2));
+      throw new Error(adData.error.message);
+    }
     const fbAdId = adData.id;
 
     await pool.query(`
@@ -128,7 +140,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, fbCampaignId, fbAdsetId, fbAdId });
 
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Error desconocido';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : JSON.stringify(error) },
+      { status: 500 }
+    );
   }
 }
