@@ -1,0 +1,3 @@
+﻿const { Pool } = require('pg');
+const pool = new Pool({ connectionString: 'postgresql://postgres:shHjrZCGZPVUEpCeVoaHaXJtOIyCNAfu@hopper.proxy.rlwy.net:16672/railway' });
+pool.query(`CREATE TABLE IF NOT EXISTS campanas (id SERIAL PRIMARY KEY, nota_id INTEGER NOT NULL REFERENCES notas(id), pais VARCHAR(20) NOT NULL, fb_campaign_id TEXT, fb_adset_id TEXT, fb_ad_id TEXT, status VARCHAR(20) DEFAULT 'created', created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW(), UNIQUE(nota_id, pais))`).then(() => { console.log('Tabla creada OK'); pool.end(); }).catch(e => { console.error(e.message); pool.end(); });

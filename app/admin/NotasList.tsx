@@ -39,6 +39,28 @@ export default function NotasList({
   const [notas, setNotas] = useState<NotaRow[]>(notasInitial);
   const [postingId, setPostingId] = useState<number | null>(null);
   const [postearResult, setPostearResult] = useState<PostearResult>(null);
+  const [campanas, setCampanas] = useState<Record<string, Record<string, boolean>>>({});
+
+  const crearCampana = async (notaId: number, pais: string) => {
+    const res = await fetch("/api/fb/campana", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-admin-secret": process.env.NEXT_PUBLIC_ADMIN_SECRET || "",
+      },
+      body: JSON.stringify({ notaId, pais }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      setCampanas((prev) => ({
+        ...prev,
+        [notaId]: { ...prev[notaId], [pais]: true },
+      }));
+      alert(`Campaña ${pais} creada OK`);
+    } else {
+      alert(`Error: ${data.error}`);
+    }
+  };
 
   const handlePostear = async (notaId: number) => {
     setPostearResult(null);
@@ -193,6 +215,31 @@ export default function NotasList({
               Borrar
             </button>
           </div>
+          {nota.fb_post_id && (
+            <div style={{ marginTop: 8 }}>
+              <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>Campañas:</div>
+              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                {["AR", "CL", "CO", "ES", "MX", "PE", "US", "IT", "CA"].map((pais) => (
+                  <button
+                    key={pais}
+                    type="button"
+                    onClick={() => crearCampana(nota.id, pais)}
+                    style={{
+                      fontSize: 11,
+                      padding: "2px 6px",
+                      background: campanas[nota.id]?.[pais] ? "#4CAF50" : "#1877f2",
+                      color: "white",
+                      border: "none",
+                      borderRadius: 3,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {pais}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {postearResult?.notaId === nota.id && (
             <div className="mt-2 w-full">
               {postearResult.postUrl ? (
