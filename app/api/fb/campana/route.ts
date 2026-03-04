@@ -54,8 +54,8 @@ export async function POST(req: NextRequest) {
         name: `${paisConfig.nombre} - Sitio.media - Interacciones`,
         objective: 'POST_ENGAGEMENT',
         status: 'PAUSED',
-        special_ad_categories: JSON.stringify([]),
-        access_token: accessToken,
+        special_ad_categories: '[]',
+        access_token: process.env.FB_PAGE_ACCESS_TOKEN ?? '',
       }),
     });
     const campanaData = await campanaRes.json();
