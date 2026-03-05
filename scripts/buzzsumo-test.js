@@ -3,19 +3,19 @@ const desde = Math.floor(Date.now()/1000) - (365*2*24*60*60);
 const hasta = Math.floor(Date.now()/1000);
 
 const keywords = [
-  '"abuelito" OR "abuelita" OR "anciano" OR "anciana"',
-  '"emotivo" OR "emotiva" OR "conmovedor" OR "conmovedora"',
-  '"increíble" OR "impactante" OR "sorprendente"',
+  'abuelito OR abuelita OR anciano OR anciana',
+  'emotivo OR emotiva OR conmovedor OR conmovedora',
+  'increíble OR impactante OR sorprendente',
   '"la verdadera historia" OR "historia real"',
-  '"viral"',
-  '"jubilado" OR "pensionado" OR "tercera edad"',
+  'viral',
+  'jubilado OR pensionado OR "tercera edad"',
   '"años de matrimonio" OR "años juntos"',
-  '"estudio revela" OR "ciencia descubre" OR "médicos sorprendidos"',
+  '"estudio revela" OR "ciencia descubre"',
   '"cumplió su sueño" OR "sueño cumplido"',
-  '"se arrepiente" OR "confiesa"',
-  '"récord mundial" OR "el más viejo" OR "la más anciana"',
+  '"se arrepiente" OR confiesa',
+  '"récord mundial"',
   '"remedio natural" OR "planta medicinal"',
-  '"hallazgo" OR "descubrimiento"',
+  'hallazgo OR descubrimiento',
   '"animal salva" OR "perro salva" OR "gato salva"'
 ];
 
