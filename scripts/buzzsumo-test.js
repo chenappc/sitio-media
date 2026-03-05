@@ -14,9 +14,8 @@ const keywords = [
   '"cumplió su sueño" OR "sueño cumplido"',
   '"se arrepiente" OR confiesa',
   '"récord mundial"',
-  '"remedio natural" OR "planta medicinal"',
   'hallazgo OR descubrimiento',
-  '"animal salva" OR "perro salva" OR "gato salva"'
+  'gato OR gatos OR perro OR perros OR mascota OR mascotas'
 ];
 
 const EVAL_PROMPT = `Evaluá si este artículo es apto para un portal de noticias hispanohablante dirigido a personas de 50+ años. Debe ser apto para Facebook y AdSense. Respondé SOLO con JSON sin markdown: {"apto": true/false, "razon": "breve razón"}
