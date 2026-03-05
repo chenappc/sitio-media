@@ -228,6 +228,7 @@ export async function POST(req: NextRequest) {
 5. ORIGINALIDAD: Reescribí completamente, nunca copies frases del original. Debe pasar cualquier detector de plagio.
 6. NOMBRES Y LUGARES: Siempre mencioná los nombres propios, personas, lugares, ciudades, países, instituciones y marcas que aparecen en el artículo original. No los omitas ni los reemplaces por referencias vagas como 'una persona', 'un lugar' o 'una institución'. Los nombres propios son parte del valor noticioso y de la viralidad.
 7. MAYÚSCULAS: Respetá estrictamente las reglas del español. Solo van con mayúscula inicial: la primera palabra de una oración, los nombres propios de personas, lugares, instituciones y marcas. No capitalices sustantivos comunes, adjetivos, meses, días de la semana, nacionalidades ni cargos. Si el texto original tiene mayúsculas incorrectas, corrígelas en tu versión.
+8. LIMPIEZA: Ignorá y eliminá cualquier fragmento que parezca contenido publicitario, texto de navegación, widgets, horarios, referencias a "AM" o "PM" sin contexto, frases sueltas sin relación con el tema principal, llamadas a la acción comerciales, o cualquier texto que claramente no pertenezca al artículo periodístico. Si un párrafo no aporta información relevante a la historia principal, omitilo.
 
 Siempre respondé SOLO con JSON válido sin markdown ni backticks.`;
 
