@@ -61,6 +61,12 @@ export default function NotasList({
         [notaId]: { ...prev[notaId], [pais]: true },
       }));
       alert(`Campaña ${pais} creada OK`);
+    } else if (data.already_exists) {
+      setCampanas((prev) => ({
+        ...prev,
+        [notaId]: { ...prev[notaId], [pais]: true },
+      }));
+      alert("Esta campaña ya existe. Si querés recrearla, usá el botón verde para resetearla primero.");
     } else {
       alert(`Error: ${data.error}`);
     }
