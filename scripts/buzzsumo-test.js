@@ -86,7 +86,10 @@ async function run() {
   for (const kw of keywords) {
     console.log('\n=== ' + kw + ' ===');
     const results = await buscar(kw);
-    const filtered = results.filter(a => a.facebook_shares > 1000);
+    const filtered = results
+      .filter(a => a.facebook_shares > 1000)
+      .filter(a => !['youtube.com','tiktok.com','instagram.com','twitter.com','facebook.com'].some(d => a.url.includes(d)))
+      .filter(a => !a.url.match(/\/videos?\//i));
     for (const a of filtered) {
       console.log('  ' + a.facebook_shares + ' FB | ' + a.title + '\n  ' + a.url);
       const evalResult = await evaluarConClaude(a.title, a.url);
