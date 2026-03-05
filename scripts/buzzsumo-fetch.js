@@ -114,6 +114,8 @@ async function run() {
       const evalResult = await evaluarConClaude(a.title, a.url, anthropicKey);
       if (evalResult.error) {
         console.log('  Evaluación: ERROR', evalResult.error);
+      } else if (evalResult.apto === undefined || evalResult.raw !== undefined) {
+        console.log('  Evaluación inválida, descartado');
       } else if (evalResult.apto === true) {
         console.log('  Evaluación: apto=true' + (evalResult.razon ? ', razon: ' + evalResult.razon : ''));
         const res = await pool.query(
