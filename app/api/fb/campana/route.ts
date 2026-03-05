@@ -21,41 +21,41 @@ const EXPAT_BEHAVIOR_IDS = [
 ];
 
 export async function POST(req: NextRequest) {
-  const adminSecret = req.headers.get('x-admin-secret');
-  if (adminSecret !== process.env.ADMIN_SECRET) {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-  }
-
-  const { notaId, pais } = await req.json();
-  if (!notaId || !pais) {
-    return NextResponse.json({ error: 'Faltan parámetros' }, { status: 400 });
-  }
-
-  const notaRes = await pool.query('SELECT * FROM notas WHERE id = $1', [notaId]);
-  const nota = notaRes.rows[0];
-  if (!nota) return NextResponse.json({ error: 'Nota no encontrada' }, { status: 404 });
-  if (!nota.fb_post_id) return NextResponse.json({ error: 'La nota no tiene post de Facebook' }, { status: 400 });
-
-  const adAccountId = process.env.FB_AD_ACCOUNT_ID;
-  const accessToken = process.env.FB_PAGE_ACCESS_TOKEN;
-  const pageId = process.env.FB_PAGE_ID;
-  const paisConfig = PAISES[pais as keyof typeof PAISES];
-  if (!paisConfig) return NextResponse.json({ error: 'País no válido' }, { status: 400 });
-
-  const existingRes = await pool.query(
-    'SELECT * FROM campanas WHERE nota_id = $1 AND pais = $2',
-    [notaId, pais]
-  );
-  const registro = existingRes.rows[0];
-  if (registro?.fb_campaign_id) {
-    return NextResponse.json({ ok: true, already_exists: true, campana: registro });
-  }
-
-  const nombreCampana = `${paisConfig.nombre} - Sitio.media - Interacciones`;
-  const nombreAdset = `${paisConfig.nombre} (55-65+) ${nota.titulo}`;
-  const nombreAd = nota.titulo;
-
   try {
+    const adminSecret = req.headers.get('x-admin-secret');
+    if (adminSecret !== process.env.ADMIN_SECRET) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    const { notaId, pais } = await req.json();
+    if (!notaId || !pais) {
+      return NextResponse.json({ error: 'Faltan parámetros' }, { status: 400 });
+    }
+
+    const notaRes = await pool.query('SELECT * FROM notas WHERE id = $1', [notaId]);
+    const nota = notaRes.rows[0];
+    if (!nota) return NextResponse.json({ error: 'Nota no encontrada' }, { status: 404 });
+    if (!nota.fb_post_id) return NextResponse.json({ error: 'La nota no tiene post de Facebook' }, { status: 400 });
+
+    const adAccountId = process.env.FB_AD_ACCOUNT_ID;
+    const accessToken = process.env.FB_PAGE_ACCESS_TOKEN;
+    const pageId = process.env.FB_PAGE_ID;
+    const paisConfig = PAISES[pais as keyof typeof PAISES];
+    if (!paisConfig) return NextResponse.json({ error: 'País no válido' }, { status: 400 });
+
+    const existingRes = await pool.query(
+      'SELECT * FROM campanas WHERE nota_id = $1 AND pais = $2',
+      [notaId, pais]
+    );
+    const registro = existingRes.rows[0];
+    if (registro?.fb_campaign_id) {
+      return NextResponse.json({ ok: true, already_exists: true, campana: registro });
+    }
+
+    const nombreCampana = `${paisConfig.nombre} - Sitio.media - Interacciones`;
+    const nombreAdset = `${paisConfig.nombre} (55-65+) ${nota.titulo}`;
+    const nombreAd = nota.titulo;
+
     const campaignName = `${paisConfig.nombre} - Sitio.media - Interacciones`;
     const filterJson = JSON.stringify([
       { field: 'name', operator: 'EQUAL', value: campaignName },
@@ -158,8 +158,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, fbCampaignId, fbAdsetId, fbAdId });
 
   } catch (error: unknown) {
+    console.error('Error general en campana route:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : JSON.stringify(error) },
+      {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      },
       { status: 500 }
     );
   }
