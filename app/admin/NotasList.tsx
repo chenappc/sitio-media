@@ -364,7 +364,35 @@ export default function NotasList({
               })}
             </div>
             {cargando && cargando.startsWith(`${notaModal.id}-`) && (
-              <div style={{ fontSize: 12, color: "#666", marginBottom: 12 }}>Creando campaña...</div>
+              <>
+                <style
+                  dangerouslySetInnerHTML={{
+                    __html: "@keyframes progress { from { width: 0% } to { width: 100% } }",
+                  }}
+                />
+                <div
+                  style={{
+                    backgroundColor: "#e5e7eb",
+                    height: 8,
+                    borderRadius: 4,
+                    width: "100%",
+                    marginTop: 12,
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      backgroundColor: "#3b82f6",
+                      height: "100%",
+                      borderRadius: 4,
+                      animation: "progress 8s linear forwards",
+                    }}
+                  />
+                </div>
+                <div style={{ fontSize: 12, color: "#666", marginTop: 4, textAlign: "center" }}>
+                  Creando campaña...
+                </div>
+              </>
             )}
             <button
               type="button"
