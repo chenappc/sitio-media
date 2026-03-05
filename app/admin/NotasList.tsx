@@ -86,7 +86,7 @@ export default function NotasList({
   const handlePaisClick = async (notaId: number, pais: string) => {
     const yaExiste = campanas[notaId]?.[pais];
     if (yaExiste) {
-      if (!confirm(`¿Recrear campaña para ${pais}? Esto borrará el registro anterior.`)) return;
+      if (!confirm(`¿Crear un nuevo anuncio para ${pais} dentro de la campaña existente? Esto borrará el registro anterior y creará un nuevo conjunto de anuncios.`)) return;
     }
     const secret = prompt("Contraseña admin") ?? "";
     if (!secret) return;
