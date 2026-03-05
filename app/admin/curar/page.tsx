@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import styles from "./CurarPage.module.css";
@@ -40,7 +40,7 @@ type CurarResult = {
 
 type CurarMode = "url" | "manual";
 
-export default function CurarPage() {
+function CurarPageContent() {
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<CurarMode>("url");
   const [url, setUrl] = useState("");
@@ -590,5 +590,13 @@ export default function CurarPage() {
         </section>
       )}
     </div>
+  );
+}
+
+export default function CurarPage() {
+  return (
+    <Suspense fallback={<div className="p-6">Cargando…</div>}>
+      <CurarPageContent />
+    </Suspense>
   );
 }

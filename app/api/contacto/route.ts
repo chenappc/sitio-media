@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder");
 const TO_EMAIL = "chenappc@gmail.com";
 const FROM_EMAIL = process.env.RESEND_FROM ?? "sitio.media <onboarding@resend.dev>";
 
