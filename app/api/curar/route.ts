@@ -211,14 +211,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const videoPageWords = ["Reproducir", "Espaciadora", "Pantalla Completa", "Silenciar", "Adelantar", "Retroceder"];
-    const videoWordCount = videoPageWords.filter((w) => cuerpoOriginal.includes(w)).length;
-    if (videoWordCount >= 3) {
-      return NextResponse.json(
-        { error: "El contenido parece ser una página de video, no un artículo de texto. Usá una URL diferente." },
-        { status: 400 }
-      );
-    }
+    const lineasSucias = ["Reproducir", "Espaciadora", "Pantalla Completa", "Silenciar", "Adelantar", "Retroceder", "Subtítulos", "Increase", "Decrease"];
+    const cuerpoLimpio = cuerpoOriginal
+      .split("\n")
+      .filter((linea) => {
+        const matches = lineasSucias.filter((palabra) => linea.includes(palabra)).length;
+        return matches < 2;
+      })
+      .join("\n");
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
@@ -275,7 +275,7 @@ ${tituloOriginal}
 
 Cuerpo original (texto plano). El texto que te paso ya está limpio. Si ves referencias a otras notas o temas que no tienen relación con el tema principal, ignoralas completamente.
 
-${cuerpoOriginal.slice(0, 12000)}
+${cuerpoLimpio.slice(0, 12000)}
 
 Nombre del medio de origen (usar para el párrafo final): ${nombreMedio}
 
