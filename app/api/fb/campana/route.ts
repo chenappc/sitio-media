@@ -59,7 +59,6 @@ export async function POST(req: NextRequest) {
     const campaignName = `${paisConfig.nombre} - Sitio.media - Interacciones`;
     const filterJson = JSON.stringify([
       { field: 'name', operator: 'EQUAL', value: campaignName },
-      { field: 'effective_status', operator: 'IN', value: ['PAUSED'] },
     ]);
     const listUrl = `https://graph.facebook.com/v19.0/${adAccountId}/campaigns?fields=id,name&filtering=${encodeURIComponent(filterJson)}&access_token=${encodeURIComponent(accessToken ?? '')}`;
     const listRes = await fetch(listUrl);
