@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTodasLasNotas, getTotalNotas } from "@/lib/notas";
 import NotasList from "./NotasList";
+import CandidatosSection from "./CandidatosSection";
 import CerrarSesionBtn from "./CerrarSesionBtn";
 
 const NOTAS_PER_PAGE = 20;
@@ -51,6 +52,8 @@ export default async function AdminPage({ searchParams }: Props) {
           </div>
         </div>
       </div>
+
+      <CandidatosSection />
 
       <NotasList
         notas={notas}

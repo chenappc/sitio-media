@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import styles from "./CurarPage.module.css";
 import {
   getAdminSecret as getStoredAdminSecret,
@@ -40,6 +41,7 @@ type CurarResult = {
 type CurarMode = "url" | "manual";
 
 export default function CurarPage() {
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<CurarMode>("url");
   const [url, setUrl] = useState("");
   const [pais, setPais] = useState("general");
@@ -70,6 +72,11 @@ export default function CurarPage() {
     const saved = getStoredAdminSecret();
     if (saved) setSecret(saved);
   }, []);
+
+  useEffect(() => {
+    const urlParam = searchParams.get("url");
+    if (urlParam) setUrl(decodeURIComponent(urlParam));
+  }, [searchParams]);
 
   useEffect(() => {
     return () => {
