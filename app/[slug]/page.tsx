@@ -98,9 +98,9 @@ export default async function NotaPage({ params }: Props) {
         }}
       />
 
-      {/* <div className="mt-8">
+      <div className="mt-8">
         <AdSense slot="8801356773" />
-      </div> */}
+      </div>
 
       <WhatsAppButton titulo={nota.titulo} slug={nota.slug} />
 
