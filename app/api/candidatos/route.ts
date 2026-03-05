@@ -12,7 +12,14 @@ export async function GET(req: NextRequest) {
   if (!auth(req)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
+  const countOnly = req.nextUrl.searchParams.get("count") === "true";
   try {
+    if (countOnly) {
+      const { rows } = await pool.query<{ count: string }>(
+        `SELECT COUNT(*)::int AS count FROM candidatos_buzzsumo WHERE status = 'pendiente'`
+      );
+      return NextResponse.json({ count: Number(rows[0]?.count ?? 0) });
+    }
     const { rows } = await pool.query(
       `SELECT id, titulo, url, thumbnail, total_facebook_shares, keyword, status, nota_id, created_at
        FROM candidatos_buzzsumo

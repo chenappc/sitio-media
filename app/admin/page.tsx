@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getTodasLasNotas, getTotalNotas } from "@/lib/notas";
 import NotasList from "./NotasList";
-import CandidatosSection from "./CandidatosSection";
+import CandidatosLink from "./CandidatosLink";
 import CerrarSesionBtn from "./CerrarSesionBtn";
 
 const NOTAS_PER_PAGE = 20;
@@ -31,6 +31,7 @@ export default async function AdminPage({ searchParams }: Props) {
         <div className="flex items-center gap-4">
           <CerrarSesionBtn />
           <div className="flex gap-2">
+            <CandidatosLink />
             <Link
               href="/admin-stories"
               className="rounded border border-[var(--negro)]/30 px-4 py-2 text-sm font-semibold text-[var(--negro)] hover:bg-[var(--negro)]/5"
@@ -52,8 +53,6 @@ export default async function AdminPage({ searchParams }: Props) {
           </div>
         </div>
       </div>
-
-      <CandidatosSection />
 
       <NotasList
         notas={notas}
