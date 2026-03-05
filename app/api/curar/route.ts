@@ -211,6 +211,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const videoPageWords = ["Reproducir", "Espaciadora", "Pantalla Completa", "Silenciar", "Adelantar", "Retroceder"];
+    const videoWordCount = videoPageWords.filter((w) => cuerpoOriginal.includes(w)).length;
+    if (videoWordCount >= 3) {
+      return NextResponse.json(
+        { error: "El contenido parece ser una página de video, no un artículo de texto. Usá una URL diferente." },
+        { status: 400 }
+      );
+    }
+
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
