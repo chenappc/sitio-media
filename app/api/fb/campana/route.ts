@@ -8,7 +8,7 @@ const PAISES = {
   ES: { nombre: 'ES', geo: 'ES' },
   MX: { nombre: 'MX', geo: 'MX' },
   PE: { nombre: 'PE', geo: 'PE' },
-  US: { nombre: 'US', geo: 'US', idioma: ['ES','ES-ES'] },
+  US: { nombre: 'US(Spa)', geo: 'US', idioma: ['ES','ES-ES'] },
   IT: { nombre: 'IT(Spa)', geo: 'IT', idioma: ['ES','ES-ES'] },
   CA: { nombre: 'CA(Spa)', geo: 'CA', idioma: ['ES','ES-ES'] },
 };
@@ -57,7 +57,10 @@ export async function POST(req: NextRequest) {
 
   try {
     const campaignName = `${paisConfig.nombre} - Sitio.media - Interacciones`;
-    const filterJson = JSON.stringify([{ field: 'name', operator: 'EQUAL', value: campaignName }]);
+    const filterJson = JSON.stringify([
+      { field: 'name', operator: 'EQUAL', value: campaignName },
+      { field: 'effective_status', operator: 'IN', value: ['PAUSED'] },
+    ]);
     const listUrl = `https://graph.facebook.com/v19.0/${adAccountId}/campaigns?fields=id,name&filtering=${encodeURIComponent(filterJson)}&access_token=${encodeURIComponent(accessToken ?? '')}`;
     const listRes = await fetch(listUrl);
     const listData = (await listRes.json()) as { data?: { id: string }[]; error?: { message: string } };
