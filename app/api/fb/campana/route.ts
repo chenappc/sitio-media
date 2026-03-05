@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
         daily_budget: 100,
         bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
         targeting,
-        status: 'PAUSED',
+        status: 'ACTIVE',
         access_token: accessToken,
       }),
     });
@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
         name: nombreAd,
         adset_id: fbAdsetId,
         creative: { object_story_id: `${pageId}_${nota.fb_post_id}` },
-        status: 'PAUSED',
+        status: 'ACTIVE',
         access_token: accessToken,
       }),
     });
