@@ -227,6 +227,7 @@ export async function POST(req: NextRequest) {
 4. VIRALIDAD: Mantené los elementos que hicieron viral la nota: el gancho emocional, el dato sorprendente, el conflicto o la curiosidad. No los suavices ni los elimines.
 5. ORIGINALIDAD: Reescribí completamente, nunca copies frases del original. Debe pasar cualquier detector de plagio.
 6. NOMBRES Y LUGARES: Siempre mencioná los nombres propios, personas, lugares, ciudades, países, instituciones y marcas que aparecen en el artículo original. No los omitas ni los reemplaces por referencias vagas como 'una persona', 'un lugar' o 'una institución'. Los nombres propios son parte del valor noticioso y de la viralidad.
+7. MAYÚSCULAS: Respetá estrictamente las reglas del español. Solo van con mayúscula inicial: la primera palabra de una oración, los nombres propios de personas, lugares, instituciones y marcas. No capitalices sustantivos comunes, adjetivos, meses, días de la semana, nacionalidades ni cargos. Si el texto original tiene mayúsculas incorrectas, corrígelas en tu versión.
 
 Siempre respondé SOLO con JSON válido sin markdown ni backticks.`;
 
@@ -266,6 +267,8 @@ Cuerpo original (texto plano). El texto que te paso ya está limpio. Si ves refe
 ${cuerpoOriginal.slice(0, 12000)}
 
 Nombre del medio de origen (usar para el párrafo final): ${nombreMedio}
+
+IMPORTANTE SOBRE MAYÚSCULAS: Revisá que tu respuesta no tenga mayúsculas incorrectas. En español solo van en mayúscula la primera letra de una oración y los nombres propios. Palabras como "Doctor", "Presidente", "Enero", "Lunes", "Argentino" NO van en mayúscula salvo que inicien una oración.
 
 Devuelve ÚNICAMENTE un objeto JSON con estas tres claves (sin markdown, sin \`\`\`):
 - "titulo": título curado en español del país, manteniendo el gancho viral, máximo 80 caracteres. IMPORTANTE: El titular NO debe mencionar nombres propios de personas, solo referencias genéricas (ej.: "Un joven", "La mujer", "La pareja").
