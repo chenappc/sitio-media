@@ -165,6 +165,18 @@ export async function updateNota(id: number, input: ActualizarNotaInput): Promis
   }
 }
 
+export async function updateNotaImagenUrl(id: number, imagen_url: string): Promise<boolean> {
+  try {
+    const res = await pool.query("UPDATE notas SET imagen_url = $1 WHERE id = $2", [
+      imagen_url,
+      id,
+    ]);
+    return (res.rowCount ?? 0) > 0;
+  } catch {
+    return false;
+  }
+}
+
 export async function deleteNota(id: number): Promise<boolean> {
   try {
     const res = await pool.query("DELETE FROM notas WHERE id = $1", [id]);

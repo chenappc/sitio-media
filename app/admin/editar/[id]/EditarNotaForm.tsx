@@ -24,6 +24,8 @@ export default function EditarNotaForm({ nota }: { nota: Nota }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
+  const [uploadImagenLoading, setUploadImagenLoading] = useState(false);
+  const [imagenActualizada, setImagenActualizada] = useState(false);
   const [form, setForm] = useState({
     adminSecret: "",
     titulo: nota.titulo,
@@ -155,16 +157,58 @@ export default function EditarNotaForm({ nota }: { nota: Nota }) {
           />
         </div>
         <div>
-          <label htmlFor="imagen_url" className="block text-sm font-medium text-[var(--negro)]/80">
-            URL de imagen
+          <label className="block text-sm font-medium text-[var(--negro)]/80">
+            Imagen principal
           </label>
+          {form.imagen_url ? (
+            <img
+              src={form.imagen_url}
+              alt="Preview"
+              className="mt-1 max-h-[200px] w-auto rounded border border-[var(--negro)]/10 object-contain"
+            />
+          ) : null}
           <input
-            id="imagen_url"
-            type="url"
-            value={form.imagen_url}
-            onChange={(e) => setForm((f) => ({ ...f, imagen_url: e.target.value }))}
-            className="mt-1 w-full rounded border border-[var(--negro)]/20 px-3 py-2 text-[var(--negro)]"
+            type="file"
+            accept="image/*"
+            className="mt-2 block w-full text-sm text-[var(--negro)]/80 file:mr-2 file:rounded file:border-0 file:bg-[var(--rojo)]/10 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-[var(--rojo)]"
+            disabled={uploadImagenLoading}
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file || !form.adminSecret) return;
+              setImagenActualizada(false);
+              setUploadImagenLoading(true);
+              try {
+                const fd = new FormData();
+                fd.append("file", file);
+                fd.append("notaId", String(nota.id));
+                const res = await fetch("/api/notas/upload-imagen", {
+                  method: "POST",
+                  headers: { "x-admin-secret": form.adminSecret },
+                  body: fd,
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                  setError(data.error ?? "Error al subir imagen");
+                  return;
+                }
+                if (data.ok && data.imagen_url) {
+                  setForm((f) => ({ ...f, imagen_url: data.imagen_url }));
+                  setImagenActualizada(true);
+                }
+              } catch (err) {
+                setError(err instanceof Error ? err.message : "Error de red");
+              } finally {
+                setUploadImagenLoading(false);
+                e.target.value = "";
+              }
+            }}
           />
+          {uploadImagenLoading && (
+            <p className="mt-1 text-sm text-[var(--negro)]/60">Subiendo imagen…</p>
+          )}
+          {imagenActualizada && (
+            <p className="mt-1 text-sm font-medium text-green-700">Imagen actualizada</p>
+          )}
         </div>
         <div>
           <label htmlFor="imagen_alt" className="block text-sm font-medium text-[var(--negro)]/80">
