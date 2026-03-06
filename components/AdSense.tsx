@@ -2,13 +2,15 @@
 
 import { useEffect, useRef } from "react";
 
-const CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT ?? "ca-pub-5212469313751329";
+// const CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT ?? "ca-pub-5212469313751329";
+const CLIENT = "ca-pub-5594467574381530";
 
 type AdSenseProps = {
   slot?: string;
 };
 
-const DEFAULT_SLOT = "8857811296";
+// const DEFAULT_SLOT = "8857811296";
+const DEFAULT_SLOT = "7922354756";
 
 export default function AdSense({ slot = DEFAULT_SLOT }: AdSenseProps) {
   const insRef = useRef<HTMLModElement>(null);

@@ -2,8 +2,9 @@
 
 import { useEffect } from "react";
 
-const ADSENSE_SRC =
-  "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5212469313751329";
+// const ADSENSE_SRC =
+//   "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5212469313751329";
+const ADSENSE_SRC = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5594467574381530";
 
 export default function AdSenseScript() {
   useEffect(() => {
