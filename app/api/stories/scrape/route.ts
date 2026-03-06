@@ -9,6 +9,17 @@ import slugify from "slugify";
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
 const UA = "Mozilla/5.0 (compatible; sitio-media-bot/1.0)";
 
+const CODE_OR_NOISE = /JavaScript|CSS|código|script|function\(|var\s|const\s|let\s|\{|\}|querySelector|getElementById/i;
+
+function filterParrafos(arr: string[]): string[] {
+  return arr.filter((p) => {
+    const t = p.trim();
+    if (t.length < 30) return false;
+    if (CODE_OR_NOISE.test(t)) return false;
+    return true;
+  });
+}
+
 function auth(req: NextRequest): boolean {
   const secret = req.headers.get("x-admin-secret");
   return !!ADMIN_SECRET && secret === ADMIN_SECRET;
@@ -101,9 +112,29 @@ export async function POST(req: NextRequest) {
             continue;
           }
 
-          let parrafos: string[] = parrafosRaw;
-          if (parrafosRaw.length > 0) {
+          const parrafosFiltrados = filterParrafos(parrafosRaw);
+          let tituloRewritten = titulo;
+          let parrafos: string[] = parrafosFiltrados;
+          if (parrafosFiltrados.length > 0 || titulo) {
             try {
+              const payload = titulo
+                ? { titulo, parrafos: parrafosFiltrados }
+                : { parrafos: parrafosFiltrados };
+              const prompt = titulo
+                ? `Reescribí el título y los párrafos siguientes.
+
+TÍTULO (obligatorio):
+- Reescribí el título por completo, no copies el original.
+- El título debe tener sentido propio sin conocer la historia (el lector no sabe de qué trata).
+- Debe ser intrigante y generar curiosidad, estilo viral.
+- Máximo 12 palabras.
+- No uses el nombre del sitio fuente ni la URL.
+
+PÁRRAFOS:
+- Mantené el hilo narrativo. No copies el texto original; reescribilo con tus propias palabras manteniendo hechos y secuencia.
+
+Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": ["string", ...] }.\n\n${JSON.stringify(payload)}`
+                : `Reescribí estos párrafos manteniendo el hilo narrativo. No copies el texto original; reescribilo con tus propias palabras manteniendo hechos y secuencia. Devolvé SOLO un JSON array de strings: ["párrafo1", "párrafo2", ...].\n\n${JSON.stringify(parrafosFiltrados)}`;
               const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
                 method: "POST",
                 headers: {
@@ -114,25 +145,29 @@ export async function POST(req: NextRequest) {
                 body: JSON.stringify({
                   model: "claude-haiku-4-5-20251001",
                   max_tokens: 2048,
-                  messages: [{
-                    role: "user",
-                    content: `Reescribí estos párrafos manteniendo el hilo narrativo de la historia. No copies el texto original, reescribilo con tus propias palabras manteniendo los hechos y la secuencia. Devolvé SOLO un JSON array de strings, un string por párrafo.\n\n${JSON.stringify(parrafosRaw)}`,
-                  }],
+                  messages: [{ role: "user", content: prompt }],
                 }),
               });
               const data = await claudeRes.json().catch(() => ({}));
               const text = (data.content?.[0]?.text ?? "").trim();
-              const jsonMatch = text.match(/\[[\s\S]*\]/);
-              if (jsonMatch) {
-                parrafos = JSON.parse(jsonMatch[0]) as string[];
+              if (titulo) {
+                const objMatch = text.match(/\{[\s\S]*\}/);
+                if (objMatch) {
+                  const parsed = JSON.parse(objMatch[0]) as { titulo?: string; parrafos?: string[] };
+                  if (typeof parsed.titulo === "string" && parsed.titulo.trim()) tituloRewritten = parsed.titulo.trim();
+                  if (Array.isArray(parsed.parrafos)) parrafos = parsed.parrafos.filter((x): x is string => typeof x === "string");
+                }
+              } else {
+                const jsonMatch = text.match(/\[[\s\S]*\]/);
+                if (jsonMatch) parrafos = JSON.parse(jsonMatch[0]) as string[];
               }
             } catch {
-              // keep parrafosRaw
+              // keep tituloRewritten and parrafosFiltrados
             }
           }
 
           let imagenUrl: string | null = null;
-          const descripcion = titulo && parrafos[0] ? `${titulo}. ${parrafos[0].slice(0, 500)}` : (titulo || parrafos[0]?.slice(0, 800) || "Escena narrativa");
+          const descripcion = tituloRewritten && parrafos[0] ? `${tituloRewritten}. ${parrafos[0].slice(0, 500)}` : (tituloRewritten || parrafos[0]?.slice(0, 800) || "Escena narrativa");
           try {
             const dallRes = await fetch("https://api.openai.com/v1/images/generations", {
               method: "POST",
@@ -170,7 +205,7 @@ export async function POST(req: NextRequest) {
 
           try {
             if (p === paginaInicio) {
-              const baseSlug = slugify(titulo || "story", { lower: true, strict: true });
+              const baseSlug = slugify(tituloRewritten || "story", { lower: true, strict: true });
               let slug = baseSlug;
               let n = 0;
               for (;;) {
@@ -180,7 +215,7 @@ export async function POST(req: NextRequest) {
                 slug = `${baseSlug}-${n}`;
               }
               storySlug = slug;
-              storyId = await createStory(slug, titulo || `Story ${p}`, total);
+              storyId = await createStory(slug, tituloRewritten || `Story ${p}`, total);
             }
             if (storyId != null) {
               await addStoryPagina(storyId, p, imagenUrl, parrafos);
