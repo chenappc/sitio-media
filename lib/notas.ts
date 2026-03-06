@@ -68,7 +68,12 @@ function extraerPalabrasTitulo(titulo: string): string[] {
   return [...new Set(palabras)].slice(0, 10);
 }
 
-/** Notas publicadas por relevancia (palabras del título) y luego por fecha; completa con recientes hasta limit. */
+/** Incrementa el contador de visitas de una nota. */
+export async function incrementarVisitas(id: number): Promise<void> {
+  await pool.query("UPDATE notas SET visitas = COALESCE(visitas, 0) + 1 WHERE id = $1", [id]);
+}
+
+/** Mix: 2 con más visitas + 2 más relevantes por título; sin repetir ni incluir la nota actual. Completa con recientes hasta limit. */
 export async function getNotasRelacionadas(
   slug: string,
   titulo: string,
@@ -76,28 +81,48 @@ export async function getNotasRelacionadas(
 ): Promise<NotaRelacionada[]> {
   try {
     const palabras = extraerPalabrasTitulo(titulo);
-    let rows: NotaRelacionada[] = [];
+    const seenIds = new Set<number>();
 
+    const byVisitas = await pool.query<NotaRelacionada>(
+      `SELECT id, slug, titulo, imagen_url, fecha
+       FROM notas
+       WHERE publicado = true AND slug != $1
+       ORDER BY COALESCE(visitas, 0) DESC, fecha DESC
+       LIMIT 2`,
+      [slug]
+    );
+    const rows: NotaRelacionada[] = byVisitas.rows.map((r) => {
+      seenIds.add(r.id);
+      return { id: r.id, slug: r.slug, titulo: r.titulo, imagen_url: r.imagen_url, fecha: r.fecha };
+    });
+
+    let byRelevance: NotaRelacionada[] = [];
     if (palabras.length > 0) {
-      const res = await pool.query<NotaRelacionada & { match_count: string }>(
+      const excludeIds = rows.length > 0 ? [slug, palabras, [...seenIds]] as const : [slug, palabras];
+      const relevanceRes = await pool.query<NotaRelacionada & { match_count: string }>(
         `SELECT id, slug, titulo, imagen_url, fecha,
-                (SELECT count(*) FROM unnest($1::text[]) w WHERE n.titulo ILIKE '%' || w || '%') AS match_count
+                (SELECT count(*) FROM unnest($2::text[]) w WHERE n.titulo ILIKE '%' || w || '%') AS match_count
          FROM notas n
-         WHERE n.publicado = true AND n.slug != $2
-           AND (SELECT count(*) FROM unnest($1::text[]) w WHERE n.titulo ILIKE '%' || w || '%') > 0
+         WHERE n.publicado = true AND n.slug != $1
+           AND (SELECT count(*) FROM unnest($2::text[]) w WHERE n.titulo ILIKE '%' || w || '%') > 0
+           ${rows.length > 0 ? "AND n.id != ALL($3::int[])" : ""}
          ORDER BY match_count DESC, n.fecha DESC
-         LIMIT $3`,
-        [palabras, slug, limit]
+         LIMIT 2`,
+        excludeIds.length === 3 ? [slug, palabras, excludeIds[2]] : [slug, palabras]
       );
-      rows = res.rows.map((r) => ({ id: r.id, slug: r.slug, titulo: r.titulo, imagen_url: r.imagen_url, fecha: r.fecha }));
+      byRelevance = relevanceRes.rows
+        .filter((r) => !seenIds.has(r.id))
+        .map((r) => {
+          seenIds.add(r.id);
+          return { id: r.id, slug: r.slug, titulo: r.titulo, imagen_url: r.imagen_url, fecha: r.fecha };
+        });
     }
+    const merged = [...rows, ...byRelevance];
 
-    if (rows.length < limit) {
-      const ids = rows.map((r) => r.id);
-      const restLimit = limit - rows.length;
-      const restParams = ids.length > 0 ? [slug, ids, restLimit] : [slug, restLimit];
+    if (merged.length < limit) {
+      const restIds = merged.length > 0 ? [slug, [...seenIds], limit - merged.length] : [slug, limit - merged.length];
       const restQuery =
-        ids.length > 0
+        merged.length > 0
           ? `SELECT id, slug, titulo, imagen_url, fecha
              FROM notas
              WHERE publicado = true AND slug != $1 AND id != ALL($2::int[])
@@ -108,11 +133,14 @@ export async function getNotasRelacionadas(
              WHERE publicado = true AND slug != $1
              ORDER BY fecha DESC
              LIMIT $2`;
-      const restRes = await pool.query<NotaRelacionada>(restQuery, restParams);
-      rows = [...rows, ...restRes.rows];
+      const restRes = await pool.query<NotaRelacionada>(
+        restQuery,
+        merged.length > 0 ? restIds : [slug, limit - merged.length]
+      );
+      merged.push(...restRes.rows);
     }
 
-    return rows.slice(0, limit);
+    return merged.slice(0, limit);
   } catch {
     return [];
   }
@@ -152,11 +180,11 @@ export async function getTodasLasNotas(opts?: {
     const hasPagination =
       typeof limit === "number" && limit > 0 && typeof offset === "number" && offset >= 0;
     const query = hasPagination
-      ? `SELECT id, slug, titulo, entradilla, shares_buzzsumo, publicado, fecha, fb_post_id, fb_post_url
+      ? `SELECT id, slug, titulo, entradilla, shares_buzzsumo, publicado, fecha, fb_post_id, fb_post_url, COALESCE(visitas, 0) AS visitas
          FROM notas
          ORDER BY fecha DESC
          LIMIT $1 OFFSET $2`
-      : `SELECT id, slug, titulo, entradilla, shares_buzzsumo, publicado, fecha, fb_post_id, fb_post_url
+      : `SELECT id, slug, titulo, entradilla, shares_buzzsumo, publicado, fecha, fb_post_id, fb_post_url, COALESCE(visitas, 0) AS visitas
          FROM notas
          ORDER BY fecha DESC`;
     const res = await pool.query<Nota>(query, hasPagination ? [limit, offset] : []);

@@ -19,6 +19,7 @@ type NotaRow = {
   fecha: Date;
   fb_post_id?: string | null;
   fb_post_url?: string | null;
+  visitas?: number;
 };
 
 type PostearResult = { notaId: number; postUrl?: string; error?: string } | null;
@@ -212,6 +213,7 @@ export default function NotasList({
             </Link>
             <p className="text-sm text-[var(--negro)]/60">
               {formatHora(nota.fecha)}
+              {typeof nota.visitas === "number" && ` · Visitas: ${nota.visitas.toLocaleString()}`}
             </p>
           </div>
           <span

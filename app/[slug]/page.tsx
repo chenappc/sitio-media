@@ -4,7 +4,7 @@ import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
-import { getNotaBySlug, getNotasRelacionadas } from "@/lib/notas";
+import { getNotaBySlug, getNotasRelacionadas, incrementarVisitas } from "@/lib/notas";
 import AdSense from "@/components/AdSense";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import type { Metadata } from "next";
@@ -59,6 +59,7 @@ export default async function NotaPage({ params }: Props) {
   const { slug } = await params;
   const nota = await getNotaBySlug(slug);
   if (!nota) notFound();
+  await incrementarVisitas(nota.id);
   const relacionadas = await getNotasRelacionadas(nota.slug, nota.titulo, 4);
 
   return (
@@ -106,7 +107,7 @@ export default async function NotaPage({ params }: Props) {
 
       {relacionadas.length > 0 && (
         <section className="mt-10">
-          <h2 className="font-serif text-xl font-bold text-[var(--negro)] mb-4">
+          <h2 className="font-serif text-2xl font-bold text-[var(--negro)] mb-4 md:text-3xl">
             También te puede interesar
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -129,7 +130,7 @@ export default async function NotaPage({ params }: Props) {
                     <div className="absolute inset-0 bg-[var(--negro)]/10" />
                   )}
                 </div>
-                <p className="mt-2 px-0 py-0 font-semibold text-[var(--negro)] text-base line-clamp-2 group-hover:text-[var(--rojo)]">
+                <p className="mt-2 px-0 py-0 font-serif text-base font-bold text-[var(--negro)] line-clamp-2 group-hover:text-[var(--rojo)]">
                   {r.titulo}
                 </p>
               </Link>
