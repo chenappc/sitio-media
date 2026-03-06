@@ -129,7 +129,7 @@ export default async function NotaPage({ params }: Props) {
                     <div className="absolute inset-0 bg-[var(--negro)]/10" />
                   )}
                 </div>
-                <p className="mt-2 px-0 py-0 font-semibold text-[var(--negro)] text-sm line-clamp-2 group-hover:text-[var(--rojo)]">
+                <p className="mt-2 px-0 py-0 font-semibold text-[var(--negro)] text-base line-clamp-2 group-hover:text-[var(--rojo)]">
                   {r.titulo}
                 </p>
               </Link>
