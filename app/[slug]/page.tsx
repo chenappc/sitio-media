@@ -108,7 +108,7 @@ export default async function NotaPage({ params }: Props) {
       {relacionadas.length > 0 && (
         <section className="mt-10">
           <h2 className="font-serif text-2xl font-bold text-[var(--negro)] mb-4 md:text-3xl">
-            También te puede interesar
+            También te puede interesar:
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {relacionadas.map((r) => (
