@@ -103,7 +103,7 @@ export default function AdminStoriesPage() {
             if (data.total != null) setProgressTotal(data.total);
             if (data.pagina != null) setProgressCurrent(data.pagina);
             if (data.mensaje != null) {
-              setLogLines((prev) => [...prev, { text: data.mensaje, isError: data.status === "error" }]);
+              setLogLines((prev) => [...prev, { text: String(data.mensaje), isError: data.status === "error" }]);
             }
             if (data.done === true) {
               setLogLines((prev) => [...prev, { text: "¡Story creada!" }]);
