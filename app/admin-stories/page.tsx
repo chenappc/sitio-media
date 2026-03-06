@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { getAdminSecret } from "@/app/admin/CerrarSesionBtn";
 
 type StoryRow = {
   id: number;
@@ -12,17 +13,20 @@ type StoryRow = {
   created_at?: string;
 };
 
+type LogLine = { text: string; isError?: boolean };
+
 export default function AdminStoriesPage() {
   const [urlBase, setUrlBase] = useState("");
   const [paginaInicio, setPaginaInicio] = useState(1);
   const [paginaFin, setPaginaFin] = useState(1);
   const [progressCurrent, setProgressCurrent] = useState(0);
   const [progressTotal, setProgressTotal] = useState(0);
-  const [logLines, setLogLines] = useState<string[]>([]);
+  const [logLines, setLogLines] = useState<LogLine[]>([]);
   const [stories, setStories] = useState<StoryRow[]>([]);
   const [loadingStories, setLoadingStories] = useState(true);
+  const [scraping, setScraping] = useState(false);
 
-  useEffect(() => {
+  const fetchStories = useCallback(() => {
     fetch("/api/stories")
       .then((r) => r.json())
       .then((data) => {
@@ -32,12 +36,92 @@ export default function AdminStoriesPage() {
       .finally(() => setLoadingStories(false));
   }, []);
 
-  const handleScrapear = () => {
-    setProgressTotal(paginaFin - paginaInicio + 1);
+  useEffect(() => {
+    fetchStories();
+  }, [fetchStories]);
+
+  const handleScrapear = async () => {
+    const base = urlBase.trim();
+    const inicio = Math.max(1, paginaInicio);
+    const fin = Math.max(inicio, paginaFin);
+    if (!base) {
+      setLogLines((prev) => [...prev, { text: "Completá la URL base.", isError: true }]);
+      return;
+    }
+    const secret = getAdminSecret();
+    if (!secret) {
+      setLogLines((prev) => [...prev, { text: "Ingresá la contraseña admin (en /admin) primero.", isError: true }]);
+      return;
+    }
+
+    setScraping(true);
+    setProgressTotal(fin - inicio + 1);
     setProgressCurrent(0);
     setLogLines([]);
-    // Placeholder: sin funcionalidad aún
-    setLogLines((prev) => [...prev, "Scrapear y generar: sin implementar aún."]);
+
+    try {
+      const res = await fetch("/api/stories/scrape", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-secret": secret,
+        },
+        body: JSON.stringify({ urlBase: base, paginaInicio: inicio, paginaFin: fin }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        setLogLines((prev) => [...prev, { text: err.error || "Error al iniciar scrape", isError: true }]);
+        setScraping(false);
+        return;
+      }
+      const reader = res.body?.getReader();
+      if (!reader) {
+        setLogLines((prev) => [...prev, { text: "No se pudo leer el stream", isError: true }]);
+        setScraping(false);
+        return;
+      }
+      const dec = new TextDecoder();
+      let buf = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const parts = buf.split("\n\n");
+        buf = parts.pop() ?? "";
+        for (const part of parts) {
+          const line = part.split("\n").find((l) => l.startsWith("data: "));
+          if (!line) continue;
+          try {
+            const data = JSON.parse(line.slice(6)) as {
+              pagina?: number;
+              total?: number;
+              status?: string;
+              mensaje?: string;
+              done?: boolean;
+              storySlug?: string;
+            };
+            if (data.total != null) setProgressTotal(data.total);
+            if (data.pagina != null) setProgressCurrent(data.pagina);
+            if (data.mensaje != null) {
+              setLogLines((prev) => [...prev, { text: data.mensaje, isError: data.status === "error" }]);
+            }
+            if (data.done === true) {
+              setLogLines((prev) => [...prev, { text: "¡Story creada!" }]);
+              fetchStories();
+            }
+          } catch {
+            // ignore parse
+          }
+        }
+      }
+    } catch (e) {
+      setLogLines((prev) => [
+        ...prev,
+        { text: e instanceof Error ? e.message : String(e), isError: true },
+      ]);
+    } finally {
+      setScraping(false);
+    }
   };
 
   const totalProgress = progressTotal > 0 ? progressTotal : 1;
@@ -93,9 +177,10 @@ export default function AdminStoriesPage() {
           <button
             type="button"
             onClick={handleScrapear}
-            className="rounded bg-[var(--rojo)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+            disabled={scraping}
+            className="rounded bg-[var(--rojo)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Scrapear y generar
+            {scraping ? "Procesando…" : "Scrapear y generar"}
           </button>
         </div>
         {(progressTotal > 0 || logLines.length > 0) && (
@@ -120,7 +205,9 @@ export default function AdminStoriesPage() {
             {logLines.length > 0 && (
               <div className="mt-2 max-h-40 overflow-y-auto rounded border border-[var(--negro)]/10 bg-[var(--negro)]/5 p-2 font-mono text-xs">
                 {logLines.map((line, i) => (
-                  <div key={i}>{line}</div>
+                  <div key={i} className={line.isError ? "text-red-600" : ""}>
+                    {line.text}
+                  </div>
                 ))}
               </div>
             )}
