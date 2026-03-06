@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { getAdminSecret } from "@/app/admin/CerrarSesionBtn";
 
 type StoryRow = {
@@ -25,6 +26,9 @@ export default function AdminStoriesPage() {
   const [stories, setStories] = useState<StoryRow[]>([]);
   const [loadingStories, setLoadingStories] = useState(true);
   const [scraping, setScraping] = useState(false);
+  const [publishingId, setPublishingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const router = useRouter();
 
   const fetchStories = useCallback(() => {
     fetch("/api/stories")
@@ -121,6 +125,56 @@ export default function AdminStoriesPage() {
       ]);
     } finally {
       setScraping(false);
+    }
+  };
+
+  const handlePublicar = async (s: StoryRow) => {
+    const secret = getAdminSecret();
+    if (!secret) {
+      setLogLines((prev) => [...prev, { text: "Ingresá la contraseña admin primero.", isError: true }]);
+      return;
+    }
+    const nextStatus = s.status === "published" ? "draft" : "published";
+    setPublishingId(s.id);
+    try {
+      const res = await fetch("/api/stories", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+        body: JSON.stringify({ id: s.id, status: nextStatus }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setLogLines((prev) => [...prev, { text: data.error || "Error al actualizar", isError: true }]);
+        return;
+      }
+      fetchStories();
+    } finally {
+      setPublishingId(null);
+    }
+  };
+
+  const handleBorrar = async (s: StoryRow) => {
+    if (!confirm("¿Borrar esta story?")) return;
+    const secret = getAdminSecret();
+    if (!secret) {
+      setLogLines((prev) => [...prev, { text: "Ingresá la contraseña admin primero.", isError: true }]);
+      return;
+    }
+    setDeletingId(s.id);
+    try {
+      const res = await fetch("/api/stories", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+        body: JSON.stringify({ id: s.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setLogLines((prev) => [...prev, { text: data.error || "Error al borrar", isError: true }]);
+        return;
+      }
+      fetchStories();
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -235,30 +289,36 @@ export default function AdminStoriesPage() {
                     · {s.total_paginas} págs · {s.status}
                   </span>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    className="rounded border border-[var(--negro)]/20 px-2 py-1 text-xs font-medium hover:bg-[var(--negro)]/5"
+                    onClick={() => router.push(`/stories/${s.slug}/1`)}
+                    className="rounded border border-[var(--negro)]/20 px-2 py-1 text-xs font-medium hover:bg-[var(--negro)]/5 text-[var(--negro)]"
                   >
                     Ver
                   </button>
                   <button
                     type="button"
-                    className="rounded border border-[var(--negro)]/20 px-2 py-1 text-xs font-medium hover:bg-[var(--negro)]/5"
+                    onClick={() => router.push(`/stories/${s.slug}/1`)}
+                    className="rounded border border-[var(--negro)]/20 px-2 py-1 text-xs font-medium hover:bg-[var(--negro)]/5 text-[var(--negro)]"
                   >
                     Editar
                   </button>
                   <button
                     type="button"
-                    className="rounded border border-green-600/50 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-50"
+                    onClick={() => handlePublicar(s)}
+                    disabled={publishingId !== null}
+                    className="rounded border border-green-600/50 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-50 disabled:opacity-50"
                   >
-                    Publicar
+                    {publishingId === s.id ? "…" : s.status === "published" ? "Despublicar" : "Publicar"}
                   </button>
                   <button
                     type="button"
-                    className="rounded border border-[var(--rojo)]/50 px-2 py-1 text-xs font-medium text-[var(--rojo)] hover:bg-[var(--rojo)]/10"
+                    onClick={() => handleBorrar(s)}
+                    disabled={deletingId !== null}
+                    className="rounded border border-[var(--rojo)]/50 px-2 py-1 text-xs font-medium text-[var(--rojo)] hover:bg-[var(--rojo)]/10 disabled:opacity-50"
                   >
-                    Borrar
+                    {deletingId === s.id ? "…" : "Borrar"}
                   </button>
                 </div>
               </li>
