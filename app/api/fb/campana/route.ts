@@ -13,6 +13,8 @@ const PAISES = {
   CA: { nombre: 'CA(Spa)', geo: 'CA', idioma: ['ES','ES-ES'] },
 };
 
+const LATAM = ['AR', 'CL', 'CO', 'MX', 'PE'];
+
 const EXPAT_BEHAVIOR_IDS = [
   '6018797127383','6019366943583','6019520122583','6019673525983',
   '6019673762183','6019673777983','6019673808383','6023676072183',
@@ -105,22 +107,26 @@ export async function POST(req: NextRequest) {
       targeting.locales = [1002];
     }
 
+    const isLatam = LATAM.includes(paisConfig.geo);
+    const adsetBody: Record<string, unknown> = {
+      name: nombreAdset,
+      campaign_id: fbCampaignId,
+      billing_event: 'IMPRESSIONS',
+      optimization_goal: 'POST_ENGAGEMENT',
+      destination_type: 'ON_POST',
+      daily_budget: 100,
+      bid_strategy: isLatam ? 'LOWEST_COST_WITH_BID_CAP' : 'LOWEST_COST_WITHOUT_CAP',
+      targeting,
+      status: 'ACTIVE',
+      access_token: accessToken,
+    };
+    if (isLatam) adsetBody.bid_amount = '1';
+
     console.log('Usando campaign_id:', fbCampaignId);
     const adsetRes = await fetch(`https://graph.facebook.com/v19.0/${adAccountId}/adsets`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: nombreAdset,
-        campaign_id: fbCampaignId,
-        billing_event: 'IMPRESSIONS',
-        optimization_goal: 'POST_ENGAGEMENT',
-        destination_type: 'ON_POST',
-        daily_budget: 100,
-        bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
-        targeting,
-        status: 'ACTIVE',
-        access_token: accessToken,
-      }),
+      body: JSON.stringify(adsetBody),
     });
     const adsetData = await adsetRes.json();
     if (adsetData.error) {
