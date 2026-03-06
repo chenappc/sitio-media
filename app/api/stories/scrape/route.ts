@@ -217,6 +217,30 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
             })));
           }
 
+          if (!imagenUrl && imagenPrincipal) {
+            try {
+              controller.enqueue(enc.encode(sseMessage({ mensaje: `Usando imagen original como fallback...` })));
+              const imgBuf = await fetch(imagenPrincipal, { headers: { "User-Agent": UA } }).then((r) => r.arrayBuffer());
+              const buf = Buffer.from(imgBuf);
+              imagenUrl = await new Promise<string>((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream(
+                  { folder: "sitio-media/stories" },
+                  (err, result) => {
+                    if (err) reject(err);
+                    else resolve(result!.secure_url);
+                  }
+                );
+                Readable.from(buf).pipe(uploadStream);
+              });
+              controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen fallback subida: ${imagenUrl}` })));
+            } catch (e) {
+              controller.enqueue(enc.encode(sseMessage({
+                status: "error",
+                mensaje: `Error imagen fallback: ${e instanceof Error ? e.message : String(e)}`,
+              })));
+            }
+          }
+
           try {
             if (p === paginaInicio) {
               const baseSlug = slugify(tituloRewritten || "story", { lower: true, strict: true });
