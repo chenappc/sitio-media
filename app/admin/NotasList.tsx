@@ -422,7 +422,7 @@ export default function NotasList({
               Anterior
             </a>
           ) : (
-            <span className="rounded border border-[var(--negro)]/10 px-4 py-2 text-sm text-[var(--negro)]/40 cursor-not-allowed">
+            <span className="rounded border border-[var(--negro)]/10 px-4 py-2 text-sm text-[var(--negro)]/40 opacity-40 cursor-not-allowed">
               Anterior
             </span>
           )}
@@ -434,7 +434,7 @@ export default function NotasList({
               Siguiente
             </a>
           ) : (
-            <span className="rounded border border-[var(--negro)]/10 px-4 py-2 text-sm text-[var(--negro)]/40 cursor-not-allowed">
+            <span className="rounded border border-[var(--negro)]/10 px-4 py-2 text-sm text-[var(--negro)]/40 opacity-40 cursor-not-allowed">
               Siguiente
             </span>
           )}

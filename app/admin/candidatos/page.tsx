@@ -176,7 +176,7 @@ export default function CandidatosPage() {
                     type="button"
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage <= 1}
-                    className="rounded border border-[var(--negro)]/30 px-3 py-1.5 text-sm disabled:opacity-50"
+                    className="rounded border border-[var(--negro)]/30 px-3 py-1.5 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Anterior
                   </button>
@@ -187,7 +187,7 @@ export default function CandidatosPage() {
                     type="button"
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={currentPage >= totalPages}
-                    className="rounded border border-[var(--negro)]/30 px-3 py-1.5 text-sm disabled:opacity-50"
+                    className="rounded border border-[var(--negro)]/30 px-3 py-1.5 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Siguiente
                   </button>
