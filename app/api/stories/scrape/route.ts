@@ -174,6 +174,7 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
 
           const descripcion = `Photorealistic photograph, journalistic style, natural lighting, high resolution. Scene: ${temaBase}. No text, no watermarks, no logos. Cinematic composition, emotionally engaging, warm tones.`;
           try {
+            controller.enqueue(enc.encode(sseMessage({ mensaje: `Generando imagen DALL-E para página ${p}...` })));
             const dallRes = await fetch("https://api.openai.com/v1/images/generations", {
               method: "POST",
               headers: {
@@ -189,8 +190,10 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
               }),
             });
             const dallData = await dallRes.json().catch(() => ({}));
+            controller.enqueue(enc.encode(sseMessage({ mensaje: `DALL-E response: ${JSON.stringify(dallData).slice(0, 300)}` })));
             const imgUrl = dallData.data?.[0]?.url;
             if (imgUrl) {
+              controller.enqueue(enc.encode(sseMessage({ mensaje: `Subiendo imagen a Cloudinary...` })));
               const imgBuf = await fetch(imgUrl).then((r) => r.arrayBuffer());
               const buf = Buffer.from(imgBuf);
               imagenUrl = await new Promise<string>((resolve, reject) => {
@@ -203,6 +206,7 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
                 );
                 Readable.from(buf).pipe(uploadStream);
               });
+              controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen subida: ${imagenUrl}` })));
             }
           } catch (e) {
             controller.enqueue(enc.encode(sseMessage({
