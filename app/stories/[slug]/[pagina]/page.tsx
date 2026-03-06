@@ -74,31 +74,46 @@ export default async function StoryPaginaPage({ params }: Props) {
             className="mt-8 border-t border-[var(--negro)]/10 pt-6"
             aria-label="Navegación entre páginas"
           >
-            {hasAnterior && (
-              <p className="mb-2">
+            {hasAnterior && hasSiguiente ? (
+              <div className="flex gap-2">
                 <Link
                   href={`/stories/${slug}/${numero - 1}`}
-                  className="text-sm text-[var(--negro)]/70 hover:underline no-underline"
+                  className="flex-1 rounded-sm bg-[var(--negro)] py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
                 >
                   ← Anterior
                 </Link>
-              </p>
-            )}
-            {hasSiguiente ? (
+                <Link
+                  href={`/stories/${slug}/${numero + 1}`}
+                  className="flex-1 rounded-sm bg-[var(--negro)] py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
+                >
+                  Próximo →
+                </Link>
+              </div>
+            ) : hasSiguiente ? (
               <Link
                 href={`/stories/${slug}/${numero + 1}`}
                 className="block w-full rounded-sm bg-[var(--negro)] py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
               >
                 Próximo →
               </Link>
-            ) : (
-              <Link
-                href="/"
-                className="block w-full rounded-sm bg-[var(--negro)] py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
-              >
-                Volver al inicio
-              </Link>
-            )}
+            ) : hasAnterior ? (
+              <>
+                <Link
+                  href={`/stories/${slug}/${numero - 1}`}
+                  className="block w-full rounded-sm bg-[var(--negro)] py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
+                >
+                  ← Anterior
+                </Link>
+                <p className="mt-3 text-center">
+                  <Link
+                    href="/"
+                    className="text-sm text-[var(--negro)]/70 hover:underline no-underline"
+                  >
+                    Volver al inicio
+                  </Link>
+                </p>
+              </>
+            ) : null}
           </nav>
         </main>
 
