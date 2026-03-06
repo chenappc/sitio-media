@@ -167,7 +167,12 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
           }
 
           let imagenUrl: string | null = null;
-          const descripcion = tituloRewritten && parrafos[0] ? `${tituloRewritten}. ${parrafos[0].slice(0, 500)}` : (tituloRewritten || parrafos[0]?.slice(0, 800) || "Escena narrativa");
+          const temaBase =
+            tituloRewritten && parrafos[0]
+              ? `${tituloRewritten}. ${parrafos[0].slice(0, 300)}`
+              : (tituloRewritten || parrafos[0]?.slice(0, 400) || "Escena narrativa");
+
+          const descripcion = `Photorealistic photograph, journalistic style, natural lighting, high resolution. Scene: ${temaBase}. No text, no watermarks, no logos. Cinematic composition, emotionally engaging, warm tones.`;
           try {
             const dallRes = await fetch("https://api.openai.com/v1/images/generations", {
               method: "POST",
