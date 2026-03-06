@@ -81,3 +81,32 @@ export async function getStoryPagina(
     return { story: null, pagina: null };
   }
 }
+
+/** Crea una story y devuelve su id. */
+export async function createStory(
+  slug: string,
+  titulo: string,
+  totalPaginas: number
+): Promise<number> {
+  const res = await pool.query<{ id: number }>(
+    `INSERT INTO stories (slug, titulo, status, total_paginas)
+     VALUES ($1, $2, 'draft', $3)
+     RETURNING id`,
+    [slug, titulo, totalPaginas]
+  );
+  return res.rows[0].id;
+}
+
+/** Inserta una página de una story. */
+export async function addStoryPagina(
+  storyId: number,
+  numero: number,
+  imagenUrl: string | null,
+  parrafos: unknown[]
+): Promise<void> {
+  await pool.query(
+    `INSERT INTO story_paginas (story_id, numero, imagen_url, parrafos)
+     VALUES ($1, $2, $3, $4)`,
+    [storyId, numero, imagenUrl, JSON.stringify(parrafos)]
+  );
+}
