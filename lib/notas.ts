@@ -57,22 +57,62 @@ export type NotaRelacionada = {
   fecha: Date;
 };
 
-/** Notas publicadas distintas a la actual, ordenadas por fecha DESC (las más recientes). */
+/** Extrae palabras de más de 4 caracteres del título (sin acentos/símbolos) para búsqueda. */
+function extraerPalabrasTitulo(titulo: string): string[] {
+  const palabras = titulo
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .split(/\s+/)
+    .map((w) => w.replace(/\W/g, "").toLowerCase())
+    .filter((w) => w.length > 4);
+  return [...new Set(palabras)].slice(0, 10);
+}
+
+/** Notas publicadas por relevancia (palabras del título) y luego por fecha; completa con recientes hasta limit. */
 export async function getNotasRelacionadas(
   slug: string,
-  _titulo: string,
+  titulo: string,
   limit = 4
 ): Promise<NotaRelacionada[]> {
   try {
-    const res = await pool.query<NotaRelacionada>(
-      `SELECT id, slug, titulo, imagen_url, fecha
-       FROM notas
-       WHERE publicado = true AND slug != $1
-       ORDER BY fecha DESC
-       LIMIT $2`,
-      [slug, limit]
-    );
-    return res.rows;
+    const palabras = extraerPalabrasTitulo(titulo);
+    let rows: NotaRelacionada[] = [];
+
+    if (palabras.length > 0) {
+      const res = await pool.query<NotaRelacionada & { match_count: string }>(
+        `SELECT id, slug, titulo, imagen_url, fecha,
+                (SELECT count(*) FROM unnest($1::text[]) w WHERE n.titulo ILIKE '%' || w || '%') AS match_count
+         FROM notas n
+         WHERE n.publicado = true AND n.slug != $2
+           AND (SELECT count(*) FROM unnest($1::text[]) w WHERE n.titulo ILIKE '%' || w || '%') > 0
+         ORDER BY match_count DESC, n.fecha DESC
+         LIMIT $3`,
+        [palabras, slug, limit]
+      );
+      rows = res.rows.map((r) => ({ id: r.id, slug: r.slug, titulo: r.titulo, imagen_url: r.imagen_url, fecha: r.fecha }));
+    }
+
+    if (rows.length < limit) {
+      const ids = rows.map((r) => r.id);
+      const restLimit = limit - rows.length;
+      const restParams = ids.length > 0 ? [slug, ids, restLimit] : [slug, restLimit];
+      const restQuery =
+        ids.length > 0
+          ? `SELECT id, slug, titulo, imagen_url, fecha
+             FROM notas
+             WHERE publicado = true AND slug != $1 AND id != ALL($2::int[])
+             ORDER BY fecha DESC
+             LIMIT $3`
+          : `SELECT id, slug, titulo, imagen_url, fecha
+             FROM notas
+             WHERE publicado = true AND slug != $1
+             ORDER BY fecha DESC
+             LIMIT $2`;
+      const restRes = await pool.query<NotaRelacionada>(restQuery, restParams);
+      rows = [...rows, ...restRes.rows];
+    }
+
+    return rows.slice(0, limit);
   } catch {
     return [];
   }

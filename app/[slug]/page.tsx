@@ -57,11 +57,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function NotaPage({ params }: Props) {
   const { slug } = await params;
-  const [nota, relacionadas] = await Promise.all([
-    getNotaBySlug(slug),
-    getNotasRelacionadas(slug, "", 4),
-  ]);
+  const nota = await getNotaBySlug(slug);
   if (!nota) notFound();
+  const relacionadas = await getNotasRelacionadas(nota.slug, nota.titulo, 4);
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-6">
@@ -111,7 +109,7 @@ export default async function NotaPage({ params }: Props) {
           <h2 className="font-serif text-xl font-bold text-[var(--negro)] mb-4">
             También te puede interesar
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {relacionadas.map((r) => (
               <Link
                 key={r.id}
@@ -125,7 +123,7 @@ export default async function NotaPage({ params }: Props) {
                       alt=""
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-200"
-                      sizes="(max-width: 768px) 50vw, 25vw"
+                      sizes="(max-width: 768px) 100vw, 50vw"
                     />
                   ) : (
                     <div className="absolute inset-0 bg-[var(--negro)]/10" />
@@ -133,9 +131,6 @@ export default async function NotaPage({ params }: Props) {
                 </div>
                 <p className="mt-2 px-0 py-0 font-semibold text-[var(--negro)] text-sm line-clamp-2 group-hover:text-[var(--rojo)]">
                   {r.titulo}
-                </p>
-                <p className="mt-0.5 text-xs text-[var(--negro)]/50">
-                  {formatHora(r.fecha)}
                 </p>
               </Link>
             ))}
