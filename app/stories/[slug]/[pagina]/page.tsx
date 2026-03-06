@@ -97,22 +97,20 @@ export default async function StoryPaginaPage({ params }: Props) {
                 Próximo →
               </Link>
             ) : hasAnterior ? (
-              <>
+              <div className="space-y-2">
                 <Link
                   href={`/stories/${slug}/${numero - 1}`}
                   className="block w-full rounded-sm bg-[var(--negro)] py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
                 >
                   ← Anterior
                 </Link>
-                <p className="mt-3 text-center">
-                  <Link
-                    href="/"
-                    className="text-sm text-[var(--negro)]/70 hover:underline no-underline"
-                  >
-                    Volver al inicio
-                  </Link>
-                </p>
-              </>
+                <Link
+                  href="/"
+                  className="block w-full rounded-sm bg-[var(--negro)] py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
+                >
+                  Más historias
+                </Link>
+              </div>
             ) : null}
           </nav>
         </main>
