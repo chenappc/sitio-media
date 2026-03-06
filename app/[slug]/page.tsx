@@ -94,6 +94,8 @@ export default async function NotaPage({ params }: Props) {
         {nota.entradilla}
       </p>
 
+      <WhatsAppButton titulo={nota.titulo} slug={nota.slug} />
+
       <div
         className={`prose prose-lg mt-6 max-w-none prose-a:text-[var(--rojo)] prose-a:no-underline hover:prose-a:underline ${styles.cuerpo}`}
         dangerouslySetInnerHTML={{
@@ -138,8 +140,6 @@ export default async function NotaPage({ params }: Props) {
           </div>
         </section>
       )}
-
-      <WhatsAppButton titulo={nota.titulo} slug={nota.slug} />
 
       {nota.fuente_url && (
         <p style={{ fontSize: 14, color: "#666", marginTop: 24 }}>

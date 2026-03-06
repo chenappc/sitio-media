@@ -6,10 +6,9 @@ export default function WhatsAppButton({ titulo, slug }: { titulo: string; slug:
       href={`https://wa.me/?text=${encodeURIComponent(titulo + " " + "https://www.sitio.media/" + slug)}`}
       target="_blank"
       rel="noopener noreferrer"
+      className="w-full"
       style={{
         display: "block",
-        width: "100%",
-        maxWidth: "320px",
         marginTop: "1.5rem",
         padding: "14px 20px",
         background: "#128c7e",
