@@ -65,6 +65,7 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       const enc = new TextEncoder();
+      let lastDalleCall = 0;
       try {
         for (let p = paginaInicio; p <= paginaFin; p++) {
           const url = `${urlBase.replace(/\/$/, "")}/${p}/`;
@@ -167,55 +168,20 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
           }
 
           let imagenUrl: string | null = null;
-          const descripcionImagen = await (async () => {
-            if (!imagenPrincipal) return null;
-            try {
-              controller.enqueue(enc.encode(sseMessage({ mensaje: `Analizando imagen original con Claude...` })));
-              const claudeVisionRes = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "x-api-key": anthropicKey,
-                  "anthropic-version": "2023-06-01",
-                },
-                body: JSON.stringify({
-                  model: "claude-haiku-4-5-20251001",
-                  max_tokens: 300,
-                  messages: [{
-                    role: "user",
-                    content: [
-                      {
-                        type: "image",
-                        source: {
-                          type: "url",
-                          url: imagenPrincipal,
-                        },
-                      },
-                      {
-                        type: "text",
-                        text: "Describe this image in one sentence focusing on the main subject, setting, mood and visual elements. Be specific and visual. Reply only with the description, no preamble.",
-                      },
-                    ],
-                  }],
-                }),
-              });
-              const visionData = await claudeVisionRes.json().catch(() => ({}));
-              const desc = visionData.content?.[0]?.text?.trim() ?? null;
-              if (desc) controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen descrita: ${desc}` })));
-              return desc;
-            } catch {
-              return null;
-            }
-          })();
+          const temaBase = tituloRewritten && parrafos[0]
+            ? `${tituloRewritten}. ${parrafos[0].slice(0, 300)}`
+            : (tituloRewritten || parrafos[0]?.slice(0, 400) || "Escena narrativa");
 
-          const temaBase = descripcionImagen
-            ? `${descripcionImagen}. Context: ${tituloRewritten}`
-            : (tituloRewritten && parrafos[0]
-              ? `${tituloRewritten}. ${parrafos[0].slice(0, 300)}`
-              : (tituloRewritten || parrafos[0]?.slice(0, 400) || "Escena narrativa"));
-
-          const descripcion = `Photorealistic photograph, journalistic style, natural lighting, high resolution. Scene: ${temaBase}. No text, no words, no letters, no signs, no watermarks, no logos. Cinematic composition, emotionally engaging, warm tones.`;
+          const descripcion = `Ultra-realistic photography, Canon EOS R5, 85mm lens, f/2.8 aperture, natural golden hour lighting. Subject: ${temaBase}. Style: documentary photojournalism, National Geographic quality. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. Real human faces, real environments, cinematic depth of field, emotionally powerful composition.`;
           try {
+            const now = Date.now();
+            const elapsed = now - lastDalleCall;
+            if (lastDalleCall > 0 && elapsed < 65000) {
+              const wait = 65000 - elapsed;
+              controller.enqueue(enc.encode(sseMessage({ mensaje: `Esperando ${Math.ceil(wait / 1000)}s para DALL-E rate limit...` })));
+              await new Promise((r) => setTimeout(r, wait));
+            }
+            lastDalleCall = Date.now();
             controller.enqueue(enc.encode(sseMessage({ mensaje: `Generando imagen DALL-E para página ${p}...` })));
             const dallRes = await fetch("https://api.openai.com/v1/images/generations", {
               method: "POST",
