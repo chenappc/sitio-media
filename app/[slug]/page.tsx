@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import { getNotaBySlug } from "@/lib/notas";
+import Link from "next/link";
+import { getNotaBySlug, getNotasRelacionadas } from "@/lib/notas";
 import AdSense from "@/components/AdSense";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import type { Metadata } from "next";
@@ -56,7 +57,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function NotaPage({ params }: Props) {
   const { slug } = await params;
-  const nota = await getNotaBySlug(slug);
+  const [nota, relacionadas] = await Promise.all([
+    getNotaBySlug(slug),
+    getNotasRelacionadas(slug, "", 4),
+  ]);
   if (!nota) notFound();
 
   return (
@@ -101,6 +105,43 @@ export default async function NotaPage({ params }: Props) {
       <div className="mt-8">
         <AdSense slot="8801356773" />
       </div>
+
+      {relacionadas.length > 0 && (
+        <section className="mt-10">
+          <h2 className="font-serif text-xl font-bold text-[var(--negro)] mb-4">
+            También te puede interesar
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {relacionadas.map((r) => (
+              <Link
+                key={r.id}
+                href={`/${r.slug}`}
+                className="group block rounded-lg overflow-hidden bg-[var(--negro)]/5"
+              >
+                <div className="relative aspect-video w-full overflow-hidden">
+                  {r.imagen_url ? (
+                    <Image
+                      src={r.imagen_url}
+                      alt=""
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-200"
+                      sizes="(max-width: 768px) 50vw, 25vw"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-[var(--negro)]/10" />
+                  )}
+                </div>
+                <p className="mt-2 px-0 py-0 font-semibold text-[var(--negro)] text-sm line-clamp-2 group-hover:text-[var(--rojo)]">
+                  {r.titulo}
+                </p>
+                <p className="mt-0.5 text-xs text-[var(--negro)]/50">
+                  {formatHora(r.fecha)}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       <WhatsAppButton titulo={nota.titulo} slug={nota.slug} />
 

@@ -49,6 +49,35 @@ export async function getNotaBySlug(slug: string): Promise<Nota | null> {
   }
 }
 
+export type NotaRelacionada = {
+  id: number;
+  slug: string;
+  titulo: string;
+  imagen_url: string | null;
+  fecha: Date;
+};
+
+/** Notas publicadas distintas a la actual, ordenadas por fecha DESC (las más recientes). */
+export async function getNotasRelacionadas(
+  slug: string,
+  _titulo: string,
+  limit = 4
+): Promise<NotaRelacionada[]> {
+  try {
+    const res = await pool.query<NotaRelacionada>(
+      `SELECT id, slug, titulo, imagen_url, fecha
+       FROM notas
+       WHERE publicado = true AND slug != $1
+       ORDER BY fecha DESC
+       LIMIT $2`,
+      [slug, limit]
+    );
+    return res.rows;
+  } catch {
+    return [];
+  }
+}
+
 export async function getTodasNotas(): Promise<Nota[]> {
   try {
     const res = await pool.query<Nota>(
