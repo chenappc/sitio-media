@@ -205,7 +205,12 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
               });
             }
           } catch (e) {
-            // optional: still save page without image
+            controller.enqueue(enc.encode(sseMessage({
+              pagina: p,
+              total,
+              status: "error",
+              mensaje: `Error DALL-E/Cloudinary: ${e instanceof Error ? e.message : String(e)}`,
+            })));
           }
 
           try {
