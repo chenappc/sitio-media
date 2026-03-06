@@ -107,6 +107,19 @@ export default async function NotaPage({ params }: Props) {
         <AdSense slot="8801356773" />
       </div>
 
+      {nota.fuente_url && (
+        <p style={{ fontSize: 14, color: "#666", marginTop: 24 }}>
+          Fuente:{" "}
+          <a
+            href={nota.fuente_url}
+            target="_blank"
+            rel="nofollow noopener noreferrer"
+          >
+            {nota.fuente_nombre || "Enlace externo"}
+          </a>
+        </p>
+      )}
+
       {relacionadas.length > 0 && (
         <section className="mt-10">
           <h2 className="font-serif text-2xl font-bold text-[var(--negro)] mb-4 md:text-3xl">
@@ -139,19 +152,6 @@ export default async function NotaPage({ params }: Props) {
             ))}
           </div>
         </section>
-      )}
-
-      {nota.fuente_url && (
-        <p style={{ fontSize: 14, color: "#666", marginTop: 24 }}>
-          Fuente:{" "}
-          <a
-            href={nota.fuente_url}
-            target="_blank"
-            rel="nofollow noopener noreferrer"
-          >
-            {nota.fuente_nombre || "Enlace externo"}
-          </a>
-        </p>
       )}
     </article>
   );
