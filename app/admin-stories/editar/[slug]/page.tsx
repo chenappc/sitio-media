@@ -198,7 +198,7 @@ export default function AdminStoriesEditarPage() {
           urlBase: base,
           paginaInicio: inicio,
           paginaFin: fin,
-          storyId: story.id,
+          storyId: story?.id,
         }),
       });
       if (!res.ok) {
