@@ -245,7 +245,7 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
               ? `${tituloRewritten}. ${parrafos[0].slice(0, 300)}`
               : (tituloRewritten || parrafos[0]?.slice(0, 400) || "Escena narrativa"));
 
-          const descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${descripcionProtagonista ? ` Main character physical appearance: ${descripcionProtagonista}.` : ""} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. STRICT RULES - DO NOT INCLUDE UNDER ANY CIRCUMSTANCES: no weapons of any kind, no guns, no rifles, no pistols, no knives, no firearms, no ammunition, no holsters, no weapon accessories, no violence, no fighting, no threatening poses. Also: no text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols.`;
+          const descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${descripcionProtagonista ? ` Main character physical appearance: ${descripcionProtagonista}.` : ""} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols.`;
           try {
             const now = Date.now();
             const elapsed = now - lastDalleCall;
