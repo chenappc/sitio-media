@@ -37,6 +37,8 @@ export async function POST(req: NextRequest) {
   let urlBase: string;
   let paginaInicio: number;
   let paginaFin: number;
+  let initialStoryId: number | null = null;
+  let initialStorySlug: string = "";
   try {
     const body = await req.json();
     urlBase = String(body.urlBase ?? "").trim();
@@ -44,6 +46,17 @@ export async function POST(req: NextRequest) {
     paginaFin = Math.max(paginaInicio, parseInt(String(body.paginaFin ?? 1), 10) || 1);
     if (!urlBase) {
       return NextResponse.json({ error: "Falta urlBase" }, { status: 400 });
+    }
+    if (body.storyId != null) {
+      const sid = parseInt(String(body.storyId), 10);
+      if (!Number.isNaN(sid)) {
+        const row = await pool.query<{ slug: string }>("SELECT slug FROM stories WHERE id = $1", [sid]);
+        if (row.rows.length === 0) {
+          return NextResponse.json({ error: "Story no encontrada" }, { status: 404 });
+        }
+        initialStoryId = sid;
+        initialStorySlug = row.rows[0].slug;
+      }
     }
   } catch {
     return NextResponse.json({ error: "Body JSON inválido" }, { status: 400 });
@@ -67,6 +80,10 @@ export async function POST(req: NextRequest) {
       const enc = new TextEncoder();
       let lastDalleCall = 0;
       let descripcionProtagonista: string | null = null;
+      if (initialStoryId != null) {
+        storyId = initialStoryId;
+        storySlug = initialStorySlug;
+      }
       try {
         for (let p = paginaInicio; p <= paginaFin; p++) {
           const url = `${urlBase.replace(/\/$/, "")}/${p}/`;
@@ -323,7 +340,7 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
           }
 
           try {
-            if (p === paginaInicio) {
+            if (p === paginaInicio && storyId == null) {
               const baseSlug = slugify(tituloRewritten || "story", { lower: true, strict: true });
               let slug = baseSlug;
               let n = 0;

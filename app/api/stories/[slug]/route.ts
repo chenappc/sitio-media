@@ -14,6 +14,7 @@ export async function GET(
     return NextResponse.json({ error: "Story no encontrada" }, { status: 404 });
   }
   return NextResponse.json({
+    id: story.id,
     slug: story.slug,
     titulo: story.titulo,
     status: story.status,

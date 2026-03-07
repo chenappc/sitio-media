@@ -13,6 +13,7 @@ type PaginaEditar = {
 };
 
 type StoryEditar = {
+  id: number;
   slug: string;
   titulo: string;
   status: string;
@@ -193,7 +194,12 @@ export default function AdminStoriesEditarPage() {
           "Content-Type": "application/json",
           "x-admin-secret": secret,
         },
-        body: JSON.stringify({ urlBase: base, paginaInicio: inicio, paginaFin: fin }),
+        body: JSON.stringify({
+          urlBase: base,
+          paginaInicio: inicio,
+          paginaFin: fin,
+          storyId: story.id,
+        }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: res.statusText }));
