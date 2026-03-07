@@ -46,13 +46,14 @@ export default async function StoryPaginaPage({ params }: Props) {
           </h1>
 
           {paginaData.imagen_url && (
-            <div className="relative mt-4 aspect-video w-full max-h-80 overflow-hidden rounded-sm bg-[var(--negro)]/5">
+            <div className="relative mt-4 w-full">
               <Image
                 src={paginaData.imagen_url}
-                alt=""
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 672px"
+                alt={story.titulo}
+                width={1024}
+                height={1024}
+                className="w-full h-auto"
+                priority
               />
             </div>
           )}

@@ -193,7 +193,10 @@ export async function POST(req: NextRequest) {
             : (titulo || String(parrafos[0] ?? "").slice(0, 400) || "Escena narrativa"));
 
         controller.enqueue(enc.encode(sseMessage({ mensaje: "Generando imagen con DALL-E..." })));
-        const descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${descripcionProtagonista ? ` Main character physical appearance: ${descripcionProtagonista}.` : ""} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols.`;
+        const imagenTienePersona = descripcionVisual
+          ? /\b(man|woman|person|people|elder|elderly|old|young|hombre|mujer|persona|anciano|anciana)\b/i.test(descripcionVisual)
+          : false;
+        const descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${imagenTienePersona && descripcionProtagonista ? ` Main character physical appearance: ${descripcionProtagonista}.` : ""} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols.`;
 
         const dallRes = await fetch("https://api.openai.com/v1/images/generations", {
           method: "POST",
