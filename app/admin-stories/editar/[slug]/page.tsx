@@ -31,6 +31,7 @@ export default function AdminStoriesEditarPage() {
   const [pageLogs, setPageLogs] = useState<Record<number, string[]>>({});
   const [pageProgress, setPageProgress] = useState<Record<number, "idle" | "loading" | "done" | "error">>({});
   const [regeneratingPagina, setRegeneratingPagina] = useState<number | null>(null);
+  const [urlBaseOriginal, setUrlBaseOriginal] = useState("");
   const [urlBaseAgregar, setUrlBaseAgregar] = useState("");
   const [paginaInicioAgregar, setPaginaInicioAgregar] = useState(1);
   const [paginaFinAgregar, setPaginaFinAgregar] = useState(1);
@@ -78,7 +79,13 @@ export default function AdminStoriesEditarPage() {
           "Content-Type": "application/json",
           "x-admin-secret": secret,
         },
-        body: JSON.stringify({ storySlug: slug, pagina: numero }),
+        body: JSON.stringify({
+          storySlug: slug,
+          pagina: numero,
+          ...(urlBaseOriginal.trim()
+            ? { urlPagina: `${urlBaseOriginal.trim().replace(/\/$/, "")}/${numero}/` }
+            : {}),
+        }),
       });
       const contentType = res.headers.get("content-type") ?? "";
       if (!res.ok) {
@@ -252,14 +259,27 @@ export default function AdminStoriesEditarPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="font-serif text-2xl font-bold text-[var(--negro)]">{story.titulo}</h1>
-        <Link
-          href="/admin-stories"
-          className="rounded border border-[var(--negro)]/20 px-4 py-2 text-sm font-medium text-[var(--negro)] hover:bg-[var(--negro)]/5 no-underline"
-        >
-          ← Volver
-        </Link>
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+          <h1 className="font-serif text-2xl font-bold text-[var(--negro)]">{story.titulo}</h1>
+          <Link
+            href="/admin-stories"
+            className="rounded border border-[var(--negro)]/20 px-4 py-2 text-sm font-medium text-[var(--negro)] hover:bg-[var(--negro)]/5 no-underline"
+          >
+            ← Volver
+          </Link>
+        </div>
+        <div className="mt-3">
+          <label className="mb-1 block text-sm text-[var(--negro)]/70">URL base del sitio original</label>
+          <input
+            type="text"
+            value={urlBaseOriginal}
+            onChange={(e) => setUrlBaseOriginal(e.target.value)}
+            placeholder="https://www.consejosytrucos.co/online/es-farmerrevenge/"
+            className="w-full rounded border border-[var(--negro)]/20 px-3 py-2 text-sm"
+          />
+          <p className="mt-0.5 text-xs text-[var(--negro)]/50">Opcional. Si está definida, al regenerar imagen se usará la imagen original de esa URL para guiar a DALL-E.</p>
+        </div>
       </div>
 
       <section className="mb-8 rounded-lg border border-[var(--negro)]/10 bg-white p-4 shadow-sm">

@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Readable } from "stream";
+import * as cheerio from "cheerio";
 import cloudinary from "@/lib/cloudinary";
 import { getStoryBySlug, getStoryPagina, updateStoryPaginaImagen } from "@/lib/stories";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
+const UA = "Mozilla/5.0 (compatible; sitio-media-bot/1.0)";
 
 function auth(req: NextRequest): boolean {
   const secret = req.headers.get("x-admin-secret");
@@ -30,10 +32,12 @@ export async function POST(req: NextRequest) {
 
   let storySlug: string;
   let pagina: number;
+  let urlPagina: string | undefined;
   try {
     const body = await req.json();
     storySlug = String(body.storySlug ?? "").trim();
     pagina = Math.max(1, parseInt(String(body.pagina ?? 1), 10) || 1);
+    urlPagina = typeof body.urlPagina === "string" && body.urlPagina.trim() ? body.urlPagina.trim() : undefined;
     if (!storySlug) {
       return NextResponse.json({ error: "Falta storySlug" }, { status: 400 });
     }
@@ -123,9 +127,70 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        const temaBase = titulo && parrafos[0]
-          ? `${titulo}. ${String(parrafos[0]).slice(0, 300)}`
-          : (titulo || String(parrafos[0] ?? "").slice(0, 400) || "Escena narrativa");
+        let imagenPrincipal: string | null = null;
+        if (urlPagina) {
+          try {
+            const res = await fetch(urlPagina, { headers: { "User-Agent": UA } });
+            const html = await res.text();
+            const $ = cheerio.load(html);
+            $("img").each((_, el) => {
+              if (imagenPrincipal) return;
+              const src = $(el).attr("data-layzr") || $(el).attr("data-lazy-src") || $(el).attr("data-src") || $(el).attr("src") || "";
+              if (!src || src.startsWith("data:")) return;
+              if (/logo|icon|avatar|sprite|pixel|1x1|tracking|badge|button/i.test(src)) return;
+              if (/logo|icon|avatar/i.test($(el).attr("class") || "")) return;
+              try {
+                imagenPrincipal = new URL(src, urlPagina).href;
+              } catch {
+                imagenPrincipal = src;
+              }
+            });
+          } catch {
+            // ignorar
+          }
+        }
+
+        let descripcionVisual: string | null = null;
+        if (imagenPrincipal) {
+          try {
+            controller.enqueue(enc.encode(sseMessage({ mensaje: "Analizando imagen original..." })));
+            const visionRes = await fetch("https://api.anthropic.com/v1/messages", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-api-key": anthropicKey,
+                "anthropic-version": "2023-06-01",
+              },
+              body: JSON.stringify({
+                model: "claude-haiku-4-5-20251001",
+                max_tokens: 150,
+                messages: [{
+                  role: "user",
+                  content: [
+                    { type: "image", source: { type: "url", url: imagenPrincipal } },
+                    {
+                      type: "text",
+                      text: "Describe only the neutral visual elements of this image: setting, environment, people's clothing and physical appearance, objects, colors, lighting, mood. Do NOT mention any actions, conflicts, weapons, or narrative context. Do NOT mention text, logos, brands or websites. Reply in one sentence, only a calm visual description of what you literally see.",
+                    },
+                  ],
+                }],
+              }),
+            });
+            const visionData = await visionRes.json().catch(() => ({}));
+            descripcionVisual = visionData.content?.[0]?.text?.trim() ?? null;
+            if (descripcionVisual) {
+              controller.enqueue(enc.encode(sseMessage({ mensaje: `Visual: ${descripcionVisual}` })));
+            }
+          } catch {
+            // ignorar
+          }
+        }
+
+        const temaBase = descripcionVisual
+          ? descripcionVisual
+          : (titulo && parrafos[0]
+            ? `${titulo}. ${String(parrafos[0]).slice(0, 300)}`
+            : (titulo || String(parrafos[0] ?? "").slice(0, 400) || "Escena narrativa"));
 
         controller.enqueue(enc.encode(sseMessage({ mensaje: "Generando imagen con DALL-E..." })));
         const descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${descripcionProtagonista ? ` Main character physical appearance: ${descripcionProtagonista}.` : ""} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols.`;
