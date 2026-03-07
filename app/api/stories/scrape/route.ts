@@ -88,17 +88,24 @@ export async function POST(req: NextRequest) {
                 }
               }
             }
-            const firstImg = $("article img, .content img, main img, .post img, img").first();
-            if (firstImg.length) {
-              const src = firstImg.attr("src");
-              if (src) {
-                try {
-                  imagenPrincipal = new URL(src, url).href;
-                } catch {
-                  imagenPrincipal = src;
-                }
+            imagenPrincipal = null;
+            $("img").each((_, el) => {
+              if (imagenPrincipal) return;
+              const src =
+                $(el).attr("data-layzr") ||
+                $(el).attr("data-lazy-src") ||
+                $(el).attr("data-src") ||
+                $(el).attr("src") || "";
+              if (!src) return;
+              if (src.startsWith("data:")) return;
+              if (/logo|icon|avatar|sprite|pixel|1x1|tracking|badge|button/i.test(src)) return;
+              if (/logo|icon|avatar/i.test($(el).attr("class") || "")) return;
+              try {
+                imagenPrincipal = new URL(src, url).href;
+              } catch {
+                imagenPrincipal = src;
               }
-            }
+            });
             $("p").each((_, el) => {
               const text = $(el).text().trim();
               if (text.length >= 50) parrafosRaw.push(text);
@@ -167,10 +174,49 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
             }
           }
 
+          let descripcionVisual: string | null = null;
+          if (imagenPrincipal) {
+            try {
+              controller.enqueue(enc.encode(sseMessage({ mensaje: `Analizando imagen con Claude vision...` })));
+              const visionRes = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-api-key": anthropicKey,
+                  "anthropic-version": "2023-06-01",
+                },
+                body: JSON.stringify({
+                  model: "claude-haiku-4-5-20251001",
+                  max_tokens: 150,
+                  messages: [{
+                    role: "user",
+                    content: [
+                      {
+                        type: "image",
+                        source: { type: "url", url: imagenPrincipal },
+                      },
+                      {
+                        type: "text",
+                        text: "Describe only the visual elements of this image: setting, people, objects, colors, lighting, mood. Do NOT mention any text, logos, brands or websites visible in the image. Reply in one sentence, only the visual description.",
+                      },
+                    ],
+                  }],
+                }),
+              });
+              const visionData = await visionRes.json().catch(() => ({}));
+              descripcionVisual = visionData.content?.[0]?.text?.trim() ?? null;
+              if (descripcionVisual) controller.enqueue(enc.encode(sseMessage({ mensaje: `Visual: ${descripcionVisual}` })));
+            } catch {
+              // ignorar, usar texto como fallback
+            }
+          }
+
           let imagenUrl: string | null = null;
-          const temaBase = tituloRewritten && parrafos[0]
-            ? `${tituloRewritten}. ${parrafos[0].slice(0, 300)}`
-            : (tituloRewritten || parrafos[0]?.slice(0, 400) || "Escena narrativa");
+          const temaBase = descripcionVisual
+            ? descripcionVisual
+            : (tituloRewritten && parrafos[0]
+              ? `${tituloRewritten}. ${parrafos[0].slice(0, 300)}`
+              : (tituloRewritten || parrafos[0]?.slice(0, 400) || "Escena narrativa"));
 
           const descripcion = `Ultra-realistic photography, Canon EOS R5, 85mm lens, f/2.8 aperture, natural golden hour lighting. Subject: ${temaBase}. Style: documentary photojournalism, National Geographic quality. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. Real human faces, real environments, cinematic depth of field, emotionally powerful composition.`;
           try {
