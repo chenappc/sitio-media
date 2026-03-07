@@ -22,7 +22,7 @@ export async function getStoryBySlug(slug: string): Promise<{
 }> {
   try {
     const storyRes = await pool.query<Story>(
-      `SELECT id, slug, titulo, status, total_paginas, created_at, updated_at
+      `SELECT id, slug, titulo, status, total_paginas, url_base, created_at, updated_at
        FROM stories
        WHERE slug = $1`,
       [slug]
@@ -55,7 +55,7 @@ export async function getStoryPagina(
 ): Promise<{ story: Story | null; pagina: StoryPagina | null }> {
   try {
     const storyRes = await pool.query<Story>(
-      `SELECT id, slug, titulo, status, total_paginas, created_at, updated_at
+      `SELECT id, slug, titulo, status, total_paginas, url_base, created_at, updated_at
        FROM stories
        WHERE slug = $1`,
       [slug]
@@ -86,13 +86,14 @@ export async function getStoryPagina(
 export async function createStory(
   slug: string,
   titulo: string,
-  totalPaginas: number
+  totalPaginas: number,
+  urlBase?: string | null
 ): Promise<number> {
   const res = await pool.query<{ id: number }>(
-    `INSERT INTO stories (slug, titulo, status, total_paginas)
-     VALUES ($1, $2, 'draft', $3)
+    `INSERT INTO stories (slug, titulo, status, total_paginas, url_base)
+     VALUES ($1, $2, 'draft', $3, $4)
      RETURNING id`,
-    [slug, titulo, totalPaginas]
+    [slug, titulo, totalPaginas, urlBase ?? null]
   );
   return res.rows[0].id;
 }

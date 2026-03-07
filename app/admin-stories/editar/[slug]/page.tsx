@@ -18,6 +18,7 @@ type StoryEditar = {
   titulo: string;
   status: string;
   total_paginas: number;
+  url_base?: string | null;
   paginas: PaginaEditar[];
 };
 
@@ -48,7 +49,10 @@ export default function AdminStoriesEditarPage() {
         if (!r.ok) throw new Error(r.status === 404 ? "Story no encontrada" : "Error al cargar");
         return r.json();
       })
-      .then((data: StoryEditar) => setStory(data))
+      .then((data: StoryEditar) => {
+        setStory(data);
+        setUrlBaseOriginal(data.url_base ?? "");
+      })
       .catch((e) => setError(e instanceof Error ? e.message : "Error"))
       .finally(() => setLoading(false));
   }, [slug]);

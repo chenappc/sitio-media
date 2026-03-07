@@ -19,6 +19,7 @@ export async function GET(
     titulo: story.titulo,
     status: story.status,
     total_paginas: story.total_paginas,
+    url_base: story.url_base ?? null,
     paginas: paginas.map((p) => ({
       numero: p.numero,
       imagen_url: p.imagen_url,

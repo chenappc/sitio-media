@@ -50,8 +50,8 @@ export default async function StoryPaginaPage({ params }: Props) {
               <Image
                 src={paginaData.imagen_url}
                 alt={story.titulo}
-                width={1024}
-                height={1024}
+                width={600}
+                height={600}
                 className="w-full h-auto"
                 priority
               />

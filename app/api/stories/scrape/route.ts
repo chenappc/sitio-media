@@ -62,6 +62,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Body JSON inválido" }, { status: 400 });
   }
 
+  if (initialStoryId != null && urlBase) {
+    await pool.query("UPDATE stories SET url_base = $1 WHERE id = $2", [urlBase, initialStoryId]);
+  }
+
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
   const openaiKey = process.env.OPENAI_API_KEY;
   if (!anthropicKey || !openaiKey) {
@@ -354,7 +358,7 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
                 slug = `${baseSlug}-${n}`;
               }
               storySlug = slug;
-              storyId = await createStory(slug, tituloRewritten || `Story ${p}`, total);
+              storyId = await createStory(slug, tituloRewritten || `Story ${p}`, total, urlBase || null);
             }
             if (storyId != null) {
               await addStoryPagina(storyId, p, imagenUrl, parrafos);
