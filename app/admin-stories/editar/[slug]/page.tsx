@@ -32,7 +32,8 @@ export default function AdminStoriesEditarPage() {
   const [pageProgress, setPageProgress] = useState<Record<number, "idle" | "loading" | "done" | "error">>({});
   const [regeneratingPagina, setRegeneratingPagina] = useState<number | null>(null);
   const [urlBaseAgregar, setUrlBaseAgregar] = useState("");
-  const [paginaAgregar, setPaginaAgregar] = useState(1);
+  const [paginaInicioAgregar, setPaginaInicioAgregar] = useState(1);
+  const [paginaFinAgregar, setPaginaFinAgregar] = useState(1);
   const [agregando, setAgregando] = useState(false);
   const [logLines, setLogLines] = useState<LogLine[]>([]);
 
@@ -165,7 +166,8 @@ export default function AdminStoriesEditarPage() {
 
   const handleAgregarPaginas = async () => {
     const base = urlBaseAgregar.trim();
-    const num = Math.max(1, paginaAgregar);
+    const inicio = Math.max(1, paginaInicioAgregar);
+    const fin = Math.max(inicio, paginaFinAgregar);
     if (!base) {
       setLogLines((prev) => [...prev, { text: "Completá la URL base.", isError: true }]);
       return;
@@ -184,7 +186,7 @@ export default function AdminStoriesEditarPage() {
           "Content-Type": "application/json",
           "x-admin-secret": secret,
         },
-        body: JSON.stringify({ urlBase: base, paginaInicio: num, paginaFin: num }),
+        body: JSON.stringify({ urlBase: base, paginaInicio: inicio, paginaFin: fin }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: res.statusText }));
@@ -334,15 +336,27 @@ export default function AdminStoriesEditarPage() {
               className="w-full rounded border border-[var(--negro)]/20 px-3 py-2 text-sm"
             />
           </div>
-          <div>
-            <label className="mb-1 block text-sm text-[var(--negro)]/70">Número de página a agregar</label>
-            <input
-              type="number"
-              min={1}
-              value={paginaAgregar}
-              onChange={(e) => setPaginaAgregar(parseInt(e.target.value, 10) || 1)}
-              className="w-24 rounded border border-[var(--negro)]/20 px-3 py-2 text-sm"
-            />
+          <div className="flex gap-4">
+            <div>
+              <label className="mb-1 block text-sm text-[var(--negro)]/70">Página inicio</label>
+              <input
+                type="number"
+                min={1}
+                value={paginaInicioAgregar}
+                onChange={(e) => setPaginaInicioAgregar(parseInt(e.target.value, 10) || 1)}
+                className="w-24 rounded border border-[var(--negro)]/20 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-[var(--negro)]/70">Página fin</label>
+              <input
+                type="number"
+                min={1}
+                value={paginaFinAgregar}
+                onChange={(e) => setPaginaFinAgregar(parseInt(e.target.value, 10) || 1)}
+                className="w-24 rounded border border-[var(--negro)]/20 px-3 py-2 text-sm"
+              />
+            </div>
           </div>
           <button
             type="button"
