@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       const enc = new TextEncoder();
       let lastDalleCall = 0;
+      let descripcionProtagonista: string | null = null;
       try {
         for (let p = paginaInicio; p <= paginaFin; p++) {
           const url = `${urlBase.replace(/\/$/, "")}/${p}/`;
@@ -211,6 +212,32 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
             }
           }
 
+          if (p === paginaInicio && parrafos.length > 0) {
+            try {
+              const extractRes = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-api-key": anthropicKey,
+                  "anthropic-version": "2023-06-01",
+                },
+                body: JSON.stringify({
+                  model: "claude-haiku-4-5-20251001",
+                  max_tokens: 100,
+                  messages: [{
+                    role: "user",
+                    content: `From this text, extract a brief physical description of the main character (age, appearance, clothing, distinguishing features). If no clear physical description exists, infer from context. Reply in one sentence in English, only the physical description, no preamble:\n\n${parrafos.slice(0, 3).join(" ")}`,
+                  }],
+                }),
+              });
+              const extractData = await extractRes.json().catch(() => ({}));
+              descripcionProtagonista = extractData.content?.[0]?.text?.trim() ?? null;
+              if (descripcionProtagonista) controller.enqueue(enc.encode(sseMessage({ mensaje: `Protagonista: ${descripcionProtagonista}` })));
+            } catch {
+              // ignorar
+            }
+          }
+
           let imagenUrl: string | null = null;
           const temaBase = descripcionVisual
             ? descripcionVisual
@@ -218,7 +245,7 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
               ? `${tituloRewritten}. ${parrafos[0].slice(0, 300)}`
               : (tituloRewritten || parrafos[0]?.slice(0, 400) || "Escena narrativa"));
 
-          const descripcion = `Ultra-realistic photography, Canon EOS R5, 85mm lens, f/2.8 aperture, natural golden hour lighting. Subject: ${temaBase}. Style: documentary photojournalism, National Geographic quality. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. Real human faces, real environments, cinematic depth of field, emotionally powerful composition.`;
+          const descripcion = `Ultra-realistic photography, Canon EOS R5, 85mm lens, f/2.8 aperture, natural golden hour lighting. Scene: ${temaBase}.${descripcionProtagonista ? ` Main character: ${descripcionProtagonista}.` : ""} Style: documentary photojournalism, National Geographic quality. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. Real human faces, real environments, cinematic depth of field, emotionally powerful composition.`;
           try {
             const now = Date.now();
             const elapsed = now - lastDalleCall;
