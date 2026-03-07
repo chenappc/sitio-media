@@ -37,6 +37,11 @@ export default async function StoryPaginaPage({ params }: Props) {
   const hasSiguiente = numero < totalPaginas;
   const midIndex = parrafos.length > 1 ? Math.floor(parrafos.length / 2) : 0;
 
+  const optimizarImagenCloudinary = (url: string) => {
+    if (!url || !url.includes("res.cloudinary.com")) return url;
+    return url.replace("/upload/", "/upload/w_600,c_fit,q_auto/");
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <div className="mx-auto flex max-w-5xl gap-6 px-4 py-6">
@@ -48,7 +53,7 @@ export default async function StoryPaginaPage({ params }: Props) {
           {paginaData.imagen_url && (
             <div className="relative mt-4 w-full">
               <Image
-                src={paginaData.imagen_url}
+                src={optimizarImagenCloudinary(paginaData.imagen_url)}
                 alt={story.titulo}
                 width={600}
                 height={600}
