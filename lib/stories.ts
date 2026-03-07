@@ -110,3 +110,15 @@ export async function addStoryPagina(
     [storyId, numero, imagenUrl, JSON.stringify(parrafos)]
   );
 }
+
+/** Actualiza solo la imagen de una página. */
+export async function updateStoryPaginaImagen(
+  storyId: number,
+  numero: number,
+  imagenUrl: string
+): Promise<void> {
+  await pool.query(
+    `UPDATE story_paginas SET imagen_url = $1 WHERE story_id = $2 AND numero = $3`,
+    [imagenUrl, storyId, numero]
+  );
+}

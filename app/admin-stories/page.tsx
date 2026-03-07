@@ -299,7 +299,7 @@ export default function AdminStoriesPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => router.push(`/stories/${s.slug}/1`)}
+                    onClick={() => router.push(`/admin-stories/editar/${s.slug}`)}
                     className="rounded border border-[var(--negro)]/20 px-2 py-1 text-xs font-medium hover:bg-[var(--negro)]/5 text-[var(--negro)]"
                   >
                     Editar
