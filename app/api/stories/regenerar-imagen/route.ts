@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
         let imagenPrincipal: string | null = null;
         if (urlPagina) {
           try {
-            const res = await fetch(urlPagina, { headers: { "User-Agent": UA } });
+            const res = await fetch(`${urlPagina}?_=${Date.now()}`, { headers: { "User-Agent": UA, "Cache-Control": "no-cache" } });
             const html = await res.text();
             const $ = cheerio.load(html);
             $("img").each((_, el) => {
