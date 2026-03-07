@@ -198,7 +198,7 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
                       },
                       {
                         type: "text",
-                        text: "Describe only the visual elements of this image: setting, people, objects, colors, lighting, mood. Do NOT mention any text, logos, brands or websites visible in the image. Reply in one sentence, only the visual description.",
+                        text: "Describe only the neutral visual elements of this image: setting, environment, people's clothing and physical appearance, objects, colors, lighting, mood. Do NOT mention any actions, conflicts, weapons, or narrative context. Do NOT mention text, logos, brands or websites. Reply in one sentence, only a calm visual description of what you literally see.",
                       },
                     ],
                   }],
@@ -245,7 +245,7 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
               ? `${tituloRewritten}. ${parrafos[0].slice(0, 300)}`
               : (tituloRewritten || parrafos[0]?.slice(0, 400) || "Escena narrativa"));
 
-          const descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Subject: ${temaBase}.${descripcionProtagonista ? ` Main character: ${descripcionProtagonista}.` : ""} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols, no weapons, no guns, no knives, no firearms.`;
+          const descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${descripcionProtagonista ? ` Main character physical appearance: ${descripcionProtagonista}.` : ""} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. STRICT RULES - DO NOT INCLUDE UNDER ANY CIRCUMSTANCES: no weapons of any kind, no guns, no rifles, no pistols, no knives, no firearms, no ammunition, no holsters, no weapon accessories, no violence, no fighting, no threatening poses. Also: no text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols.`;
           try {
             const now = Date.now();
             const elapsed = now - lastDalleCall;
