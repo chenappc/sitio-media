@@ -63,10 +63,10 @@ export default async function StoryPaginaPage({ params }: Props) {
             </div>
           )}
 
-          <div className="mt-6 space-y-4 text-[var(--negro)]">
+          <div className="mt-6 space-y-6 text-[var(--negro)]">
             {parrafos.map((texto, i) => (
               <div key={i}>
-                <p className="text-base leading-relaxed">{texto}</p>
+                <p className="text-xl leading-relaxed">{texto}</p>
                 {i === midIndex && midIndex > 0 && (
                   <div className="my-4 min-h-[90px] rounded-sm bg-[var(--negro)]/5">
                     {/* AdSense - agregar código */}
