@@ -84,13 +84,15 @@ export default async function StoryPaginaPage({ params }: Props) {
               <div className="flex gap-2">
                 <Link
                   href={`/stories/${slug}/${numero - 1}`}
-                  className="flex-1 rounded-sm bg-[var(--negro)] py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
+                  className="flex-1 rounded-sm py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
+                  style={{ backgroundColor: "#1a56db" }}
                 >
                   ← Anterior
                 </Link>
                 <Link
                   href={`/stories/${slug}/${numero + 1}`}
-                  className="flex-1 rounded-sm bg-[var(--negro)] py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
+                  className="flex-1 rounded-sm py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
+                  style={{ backgroundColor: "#1a56db" }}
                 >
                   Próximo →
                 </Link>
@@ -98,7 +100,8 @@ export default async function StoryPaginaPage({ params }: Props) {
             ) : hasSiguiente ? (
               <Link
                 href={`/stories/${slug}/${numero + 1}`}
-                className="block w-full rounded-sm bg-[var(--negro)] py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
+                className="block w-full rounded-sm py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
+                style={{ backgroundColor: "#1a56db" }}
               >
                 Próximo →
               </Link>
@@ -106,13 +109,15 @@ export default async function StoryPaginaPage({ params }: Props) {
               <div className="space-y-2">
                 <Link
                   href={`/stories/${slug}/${numero - 1}`}
-                  className="block w-full rounded-sm bg-[var(--negro)] py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
+                  className="block w-full rounded-sm py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
+                style={{ backgroundColor: "#1a56db" }}
                 >
                   ← Anterior
                 </Link>
                 <Link
                   href="/"
-                  className="block w-full rounded-sm bg-[var(--negro)] py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
+                  className="block w-full rounded-sm py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
+                style={{ backgroundColor: "#1a56db" }}
                 >
                   Más historias
                 </Link>
