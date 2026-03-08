@@ -47,3 +47,36 @@
     font-size: 0.8125rem;
   }
 }
+
+.nav {
+  background-color: #1a1a1a;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.navInner {
+  max-width: 56rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 1rem;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.navLink {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.7);
+  text-decoration: none;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.navLink:hover {
+  color: white;
+}
+
+.navLinkActive {
+  color: white;
+  border-bottom-color: #d62828;
+}

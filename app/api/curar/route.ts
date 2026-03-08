@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Readable } from "stream";
 import sharp from "sharp";
 import cloudinary from "@/lib/cloudinary";
+import pool from "@/lib/db";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET ?? "sitio2026";
 const CLAUDE_MODEL = "claude-sonnet-4-20250514";
@@ -394,6 +395,18 @@ Devuelve ÚNICAMENTE un objeto JSON con estas tres claves (sin markdown, sin \`\
               return "Fuente";
             }
           })();
+
+    // Marcar candidato como aprobado si existe
+    if (urlClean) {
+      try {
+        await pool.query(
+          `UPDATE candidatos_buzzsumo SET status = 'aprobado' WHERE url = $1 AND status = 'pendiente'`,
+          [urlClean]
+        );
+      } catch (e) {
+        console.error("Error actualizando candidato:", e);
+      }
+    }
 
     return NextResponse.json({
       titulo,
