@@ -170,7 +170,7 @@ export async function POST(req: NextRequest) {
                     { type: "image", source: { type: "url", url: imagenPrincipal } },
                     {
                       type: "text",
-                      text: "Describe only the neutral visual elements of this image: setting, environment, people's clothing and physical appearance, objects, colors, lighting, mood. Do NOT mention any actions, conflicts, weapons, or narrative context. Do NOT mention text, logos, brands or websites. Reply in one sentence, only a calm visual description of what you literally see.",
+                      text: "Describe all the visual elements of this image in one sentence: all people present (their age, appearance, clothing), their positions and interactions with each other, the setting, objects, colors, and lighting. Do NOT mention actions involving conflict or violence. Do NOT mention text, logos, brands or websites. Be specific about how many people are in the scene and what they are doing together.",
                     },
                   ],
                 }],
