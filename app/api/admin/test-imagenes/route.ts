@@ -67,6 +67,7 @@ async function generarGemini(prompt: string): Promise<string | null> {
 }
 
 async function generarGemini25(prompt: string): Promise<string | null> {
+  console.log("GEMINI 2.5 iniciando...");
   try {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${process.env.GOOGLE_API_KEY}`,
@@ -86,7 +87,8 @@ async function generarGemini25(prompt: string): Promise<string | null> {
     if (!imagePart) return null;
     const buf = Buffer.from(imagePart.inlineData.data, "base64");
     return await uploadBufferToCloudinary(buf, "sitio-media/test");
-  } catch {
+  } catch (err) {
+    console.log("GEMINI 2.5 ERROR:", err instanceof Error ? err.message : JSON.stringify(err));
     return null;
   }
 }
