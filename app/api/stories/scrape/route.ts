@@ -381,6 +381,10 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
             }
             if (storyId != null) {
               await addStoryPagina(storyId, p, imagenUrl, parrafos);
+              await pool.query(
+                `UPDATE stories SET total_paginas = (SELECT COUNT(*) FROM story_paginas WHERE story_id = $1), updated_at = NOW() WHERE id = $1`,
+                [storyId]
+              );
             }
           } catch (e) {
             controller.enqueue(enc.encode(sseMessage({
