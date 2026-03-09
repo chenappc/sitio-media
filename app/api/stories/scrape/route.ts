@@ -274,7 +274,7 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
           try {
             controller.enqueue(enc.encode(sseMessage({ mensaje: `Generando imagen con Gemini 2.5 para página ${p}...` })));
 
-            const geminiRes = await fetch(
+            const geminiRes: Response = await fetch(
               `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${process.env.GOOGLE_API_KEY}`,
               {
                 method: "POST",
@@ -300,9 +300,12 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
               }
             );
 
-            const geminiData = await geminiRes.json().catch(() => ({}));
-            const parts = geminiData.candidates?.[0]?.content?.parts ?? [];
-            const imagePart = parts.find((part: { inlineData?: { mimeType?: string; data?: string } }) =>
+            type GeminiPart = { inlineData?: { mimeType?: string; data?: string } };
+            const geminiData = (await geminiRes.json().catch(() => ({}))) as {
+              candidates?: Array<{ content?: { parts?: GeminiPart[] } }>;
+            };
+            const parts: GeminiPart[] = geminiData.candidates?.[0]?.content?.parts ?? [];
+            const imagePart = parts.find((part: GeminiPart) =>
               part.inlineData?.mimeType?.startsWith("image/")
             );
 
