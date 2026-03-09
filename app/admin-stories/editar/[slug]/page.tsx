@@ -39,6 +39,32 @@ export default function AdminStoriesEditarPage() {
   const [paginaFinAgregar, setPaginaFinAgregar] = useState(1);
   const [agregando, setAgregando] = useState(false);
   const [logLines, setLogLines] = useState<LogLine[]>([]);
+  const [tituloEditando, setTituloEditando] = useState(false);
+  const [tituloNuevo, setTituloNuevo] = useState("");
+  const [guardandoTitulo, setGuardandoTitulo] = useState(false);
+
+  const handleGuardarTitulo = async () => {
+    const secret = getAdminSecret();
+    if (!secret || !story) return;
+    setGuardandoTitulo(true);
+    try {
+      const res = await fetch("/api/stories", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+        body: JSON.stringify({ id: story.id, titulo: tituloNuevo.trim() }),
+      });
+      if (res.ok) {
+        setStory({ ...story, titulo: tituloNuevo.trim() });
+        setTituloEditando(false);
+      } else {
+        alert("Error al guardar título");
+      }
+    } catch {
+      alert("Error al guardar título");
+    } finally {
+      setGuardandoTitulo(false);
+    }
+  };
 
   const fetchStory = useCallback(() => {
     if (!slug) return;
@@ -271,7 +297,40 @@ export default function AdminStoriesEditarPage() {
     <div className="mx-auto max-w-4xl px-4 py-6">
       <div className="mb-6">
         <div className="flex items-center justify-between">
-          <h1 className="font-serif text-2xl font-bold text-[var(--negro)]">{story.titulo}</h1>
+          {tituloEditando ? (
+            <div className="flex flex-1 items-center gap-2">
+              <input
+                type="text"
+                value={tituloNuevo}
+                onChange={(e) => setTituloNuevo(e.target.value)}
+                className="flex-1 rounded border border-[var(--negro)]/20 px-3 py-2 font-serif text-xl font-bold"
+                autoFocus
+              />
+              <button
+                onClick={handleGuardarTitulo}
+                disabled={guardandoTitulo || !tituloNuevo.trim()}
+                className="rounded bg-[var(--rojo)] px-3 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {guardandoTitulo ? "..." : "Guardar"}
+              </button>
+              <button
+                onClick={() => setTituloEditando(false)}
+                className="rounded border border-[var(--negro)]/20 px-3 py-2 text-sm hover:bg-[var(--negro)]/5"
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-1 items-center gap-2">
+              <h1 className="font-serif text-2xl font-bold text-[var(--negro)]">{story.titulo}</h1>
+              <button
+                onClick={() => { setTituloNuevo(story.titulo); setTituloEditando(true); }}
+                className="rounded border border-[var(--negro)]/20 px-2 py-1 text-xs hover:bg-[var(--negro)]/5"
+              >
+                ✏️ Editar título
+              </button>
+            </div>
+          )}
           <Link
             href="/admin-stories"
             className="rounded border border-[var(--negro)]/20 px-4 py-2 text-sm font-medium text-[var(--negro)] hover:bg-[var(--negro)]/5 no-underline"
