@@ -71,8 +71,14 @@ export async function POST(req: NextRequest) {
     if (!prompt) return NextResponse.json({ error: "Prompt requerido" }, { status: 400 });
 
     const [dalle_url, gemini_url] = await Promise.all([
-      generarDalle(prompt),
-      generarGemini(prompt),
+      Promise.race([
+        generarDalle(prompt),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 60000)),
+      ]),
+      Promise.race([
+        generarGemini(prompt),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 60000)),
+      ]),
     ]);
 
     return NextResponse.json({ dalle_url, gemini_url });
