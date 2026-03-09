@@ -130,11 +130,9 @@ export default async function StoryPaginaPage({ params }: Props) {
           <div className="sticky top-6 space-y-4">
             <div className="flex min-h-[250px] w-full items-center justify-center rounded-sm bg-[var(--negro)]/5 text-[var(--negro)]/30">
               {/* AdSense sidebar */}
-              <span>Ad</span>
             </div>
             <div className="flex min-h-[600px] w-[160px] items-center justify-center rounded-sm bg-[var(--negro)]/5 text-[var(--negro)]/30">
               {/* AdSense sidebar */}
-              <span>Ad</span>
             </div>
           </div>
         </aside>
