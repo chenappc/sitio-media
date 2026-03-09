@@ -67,10 +67,10 @@ export async function POST(req: NextRequest) {
   }
 
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  const openaiKey = process.env.OPENAI_API_KEY;
-  if (!anthropicKey || !openaiKey) {
+  const googleApiKey = process.env.GOOGLE_API_KEY;
+  if (!anthropicKey || !googleApiKey) {
     return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY u OPENAI_API_KEY no configuradas" },
+      { error: "ANTHROPIC_API_KEY o GOOGLE_API_KEY no configuradas" },
       { status: 500 }
     );
   }
@@ -82,7 +82,6 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       const enc = new TextEncoder();
-      let lastDalleCall = 0;
       let descripcionProtagonista: string | null = null;
       if (initialStoryId != null) {
         storyId = initialStoryId;
@@ -271,36 +270,29 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
             : false;
           const descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${imagenTienePersona && descripcionProtagonista ? ` Main character physical appearance: ${descripcionProtagonista}.` : ""} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols.`;
           try {
-            const now = Date.now();
-            const elapsed = now - lastDalleCall;
-            if (lastDalleCall > 0 && elapsed < 65000) {
-              const wait = 65000 - elapsed;
-              controller.enqueue(enc.encode(sseMessage({ mensaje: `Esperando ${Math.ceil(wait / 1000)}s para DALL-E rate limit...` })));
-              await new Promise((r) => setTimeout(r, wait));
-            }
-            lastDalleCall = Date.now();
-            controller.enqueue(enc.encode(sseMessage({ mensaje: `Generando imagen DALL-E para página ${p}...` })));
-            const dallRes = await fetch("https://api.openai.com/v1/images/generations", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${openaiKey}`,
-              },
-              body: JSON.stringify({
-                model: "dall-e-3",
-                prompt: descripcion,
-                n: 1,
-                size: "1024x1024",
-                quality: "standard",
-              }),
-            });
-            const dallData = await dallRes.json().catch(() => ({}));
-            controller.enqueue(enc.encode(sseMessage({ mensaje: `DALL-E response: ${JSON.stringify(dallData).slice(0, 300)}` })));
-            const imgUrl = dallData.data?.[0]?.url;
-            if (imgUrl) {
+            controller.enqueue(enc.encode(sseMessage({ mensaje: `Generando imagen con Gemini 2.5 para página ${p}...` })));
+
+            const geminiRes = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${process.env.GOOGLE_API_KEY}`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  contents: [{ parts: [{ text: descripcion }] }],
+                  generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
+                }),
+              }
+            );
+
+            const geminiData = await geminiRes.json().catch(() => ({}));
+            const parts = geminiData.candidates?.[0]?.content?.parts ?? [];
+            const imagePart = parts.find((part: { inlineData?: { mimeType?: string; data?: string } }) =>
+              part.inlineData?.mimeType?.startsWith("image/")
+            );
+
+            if (imagePart?.inlineData?.data) {
               controller.enqueue(enc.encode(sseMessage({ mensaje: `Subiendo imagen a Cloudinary...` })));
-              const imgBuf = await fetch(imgUrl).then((r) => r.arrayBuffer());
-              const buf = Buffer.from(imgBuf);
+              const buf = Buffer.from(imagePart.inlineData.data, "base64");
               imagenUrl = await new Promise<string>((resolve, reject) => {
                 const uploadStream = cloudinary.uploader.upload_stream(
                   { folder: "sitio-media/stories" },
@@ -312,13 +304,15 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
                 Readable.from(buf).pipe(uploadStream);
               });
               controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen subida: ${imagenUrl}` })));
+            } else {
+              throw new Error("Gemini no devolvió imagen");
             }
           } catch (e) {
             controller.enqueue(enc.encode(sseMessage({
               pagina: p,
               total,
               status: "error",
-              mensaje: `Error DALL-E/Cloudinary: ${e instanceof Error ? e.message : String(e)}`,
+              mensaje: `Error Gemini/Cloudinary: ${e instanceof Error ? e.message : String(e)}`,
             })));
           }
 
