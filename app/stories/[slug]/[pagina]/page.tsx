@@ -115,7 +115,7 @@ export default async function StoryPaginaPage({ params }: Props) {
                   ← Anterior
                 </Link>
                 <Link
-                  href="/"
+                  href="/stories"
                   className="block w-full rounded-sm py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
                 style={{ backgroundColor: "#1a56db" }}
                 >
