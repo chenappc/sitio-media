@@ -80,6 +80,7 @@ async function generarGemini25(prompt: string): Promise<string | null> {
       }
     );
     const data = await res.json();
+    console.log("GEMINI 2.5 RESPONSE:", JSON.stringify(data).slice(0, 500));
     const parts = data.candidates?.[0]?.content?.parts ?? [];
     const imagePart = parts.find((p: any) => p.inlineData?.mimeType?.startsWith("image/"));
     if (!imagePart) return null;
