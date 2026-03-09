@@ -28,13 +28,20 @@ export default async function StoriesPage() {
                 href={`/stories/${story.slug}/1`}
                 className="flex gap-4 group items-start"
               >
+                {(story as any).imagen_portada && (
+                  <div className="relative w-24 h-24 flex-shrink-0 rounded overflow-hidden">
+                    <Image
+                      src={(story as any).imagen_portada}
+                      alt={story.titulo}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <h2 className="font-serif text-lg font-bold leading-snug group-hover:text-[var(--rojo)] transition-colors line-clamp-3">
                     {story.titulo}
                   </h2>
-                  <p className="text-sm text-[var(--negro)]/50 mt-1">
-                    {story.total_paginas} páginas
-                  </p>
                 </div>
               </Link>
             </li>
