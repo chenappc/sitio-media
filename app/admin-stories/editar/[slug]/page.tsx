@@ -42,6 +42,8 @@ export default function AdminStoriesEditarPage() {
   const [tituloEditando, setTituloEditando] = useState(false);
   const [tituloNuevo, setTituloNuevo] = useState("");
   const [guardandoTitulo, setGuardandoTitulo] = useState(false);
+  const [pageDescripciones, setPageDescripciones] = useState<Record<number, string>>({});
+  const [editandoDescripcion, setEditandoDescripcion] = useState<number | null>(null);
 
   const handleGuardarTitulo = async () => {
     const secret = getAdminSecret();
@@ -115,6 +117,9 @@ export default function AdminStoriesEditarPage() {
           pagina: numero,
           ...(urlBaseOriginal.trim()
             ? { urlPagina: `${urlBaseOriginal.trim().replace(/\/$/, "")}/${numero}/` }
+            : {}),
+          ...(pageDescripciones[numero]?.trim()
+            ? { descripcionCustom: pageDescripciones[numero].trim() }
             : {}),
         }),
       });
@@ -387,6 +392,30 @@ export default function AdminStoriesEditarPage() {
                   >
                     {regeneratingPagina === p.numero ? "Generando..." : "Regenerar imagen"}
                   </button>
+                  {editandoDescripcion === p.numero ? (
+                    <div className="mt-2 w-[200px]">
+                      <textarea
+                        value={pageDescripciones[p.numero] ?? ""}
+                        onChange={(e) => setPageDescripciones(prev => ({ ...prev, [p.numero]: e.target.value }))}
+                        className="w-full rounded border border-[var(--negro)]/20 p-1.5 text-xs"
+                        rows={4}
+                        placeholder="Describí la escena en inglés..."
+                      />
+                      <button
+                        onClick={() => setEditandoDescripcion(null)}
+                        className="mt-1 text-xs text-[var(--negro)]/50 hover:text-[var(--negro)]"
+                      >
+                        ✓ Listo
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setEditandoDescripcion(p.numero)}
+                      className="mt-1 text-xs text-[var(--negro)]/50 hover:text-[var(--negro)]"
+                    >
+                      {pageDescripciones[p.numero]?.trim() ? "✏️ Editar prompt" : "+ Prompt custom"}
+                    </button>
+                  )}
                   {progress === "loading" && (
                     <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--negro)]/10">
                       <div className="h-full w-1/3 animate-pulse rounded-full bg-[var(--rojo)]" />

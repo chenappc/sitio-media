@@ -33,11 +33,13 @@ export async function POST(req: NextRequest) {
   let storySlug: string;
   let pagina: number;
   let urlPagina: string | undefined;
+  let descripcionCustom: string | undefined;
   try {
     const body = await req.json();
     storySlug = String(body.storySlug ?? "").trim();
     pagina = Math.max(1, parseInt(String(body.pagina ?? 1), 10) || 1);
     urlPagina = typeof body.urlPagina === "string" && body.urlPagina.trim() ? body.urlPagina.trim() : undefined;
+    descripcionCustom = typeof body.descripcionCustom === "string" ? body.descripcionCustom : undefined;
     if (!storySlug) {
       return NextResponse.json({ error: "Falta storySlug" }, { status: 400 });
     }
@@ -69,6 +71,11 @@ export async function POST(req: NextRequest) {
           : [];
         const titulo = story.titulo;
 
+        let descripcion: string;
+        if (descripcionCustom?.trim()) {
+          descripcion = descripcionCustom.trim() + ". No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels.";
+          controller.enqueue(enc.encode(sseMessage({ mensaje: "Usando prompt custom" })));
+        } else {
         let descripcionProtagonista: string | null = null;
         if (pagina === 1 && parrafos.length > 0) {
           try {
@@ -196,7 +203,8 @@ export async function POST(req: NextRequest) {
         const imagenTienePersona = descripcionVisual
           ? /\b(man|woman|person|people|elder|elderly|old|young|hombre|mujer|persona|anciano|anciana)\b/i.test(descripcionVisual)
           : false;
-        const descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${imagenTienePersona && descripcionProtagonista ? ` Main character physical appearance: ${descripcionProtagonista}.` : ""} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols.`;
+        descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${imagenTienePersona && descripcionProtagonista ? ` Main character physical appearance: ${descripcionProtagonista}.` : ""} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels.`;
+        }
 
         const geminiRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${googleApiKey}`,

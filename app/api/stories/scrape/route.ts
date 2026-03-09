@@ -87,6 +87,8 @@ export async function POST(req: NextRequest) {
         storyId = initialStoryId;
         storySlug = initialStorySlug;
       }
+      let imagenReferenciaBase64: string | null = null;
+      let imagenReferenciaMimeType: string = "image/png";
       try {
         for (let p = paginaInicio; p <= paginaFin; p++) {
           const url = `${urlBase.replace(/\/$/, "")}/${p}/`;
@@ -268,7 +270,7 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
           const imagenTienePersona = descripcionVisual
             ? /\b(man|woman|person|people|elder|elderly|old|young|hombre|mujer|persona|anciano|anciana)\b/i.test(descripcionVisual)
             : false;
-          const descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${imagenTienePersona && descripcionProtagonista ? ` Main character physical appearance: ${descripcionProtagonista}.` : ""} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols.`;
+          const descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${imagenTienePersona && descripcionProtagonista ? ` Main character physical appearance: ${descripcionProtagonista}.` : ""} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels.`;
           try {
             controller.enqueue(enc.encode(sseMessage({ mensaje: `Generando imagen con Gemini 2.5 para página ${p}...` })));
 
@@ -278,7 +280,21 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  contents: [{ parts: [{ text: descripcion }] }],
+                  contents: [{
+                    parts: [
+                      ...(imagenReferenciaBase64 ? [{
+                        inlineData: {
+                          mimeType: imagenReferenciaMimeType,
+                          data: imagenReferenciaBase64,
+                        },
+                      }] : []),
+                      {
+                        text: imagenReferenciaBase64
+                          ? `${descripcion} IMPORTANT: Maintain the exact same protagonist appearance as shown in the reference image. Same face, same age, same hair, same clothing style.`
+                          : descripcion,
+                      },
+                    ],
+                  }],
                   generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
                 }),
               }
@@ -304,6 +320,12 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
                 Readable.from(buf).pipe(uploadStream);
               });
               controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen subida: ${imagenUrl}` })));
+              // Guardar primera imagen con persona como referencia
+              if (!imagenReferenciaBase64 && imagenTienePersona && imagePart?.inlineData?.data) {
+                imagenReferenciaBase64 = imagePart.inlineData.data;
+                imagenReferenciaMimeType = imagePart.inlineData.mimeType ?? "image/png";
+                controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen de referencia del protagonista guardada (página ${p})` })));
+              }
             } else {
               throw new Error("Gemini no devolvió imagen");
             }
