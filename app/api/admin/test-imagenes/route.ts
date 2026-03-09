@@ -66,12 +66,36 @@ async function generarGemini(prompt: string): Promise<string | null> {
   }
 }
 
+async function generarGemini25(prompt: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${process.env.GOOGLE_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
+        }),
+      }
+    );
+    const data = await res.json();
+    const parts = data.candidates?.[0]?.content?.parts ?? [];
+    const imagePart = parts.find((p: any) => p.inlineData?.mimeType?.startsWith("image/"));
+    if (!imagePart) return null;
+    const buf = Buffer.from(imagePart.inlineData.data, "base64");
+    return await uploadBufferToCloudinary(buf, "sitio-media/test");
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { prompt } = await req.json();
     if (!prompt) return NextResponse.json({ error: "Prompt requerido" }, { status: 400 });
 
-    const [dalle_url, gemini_url] = await Promise.all([
+    const [dalle_url, gemini_url, gemini25_url] = await Promise.all([
       Promise.race([
         generarDalle(prompt),
         new Promise<null>((resolve) => setTimeout(() => resolve(null), 60000)),
@@ -80,12 +104,17 @@ export async function POST(req: NextRequest) {
         generarGemini(prompt),
         new Promise<null>((resolve) => setTimeout(() => resolve(null), 60000)),
       ]),
+      Promise.race([
+        generarGemini25(prompt),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 60000)),
+      ]),
     ]);
 
     console.log("DALLE URL:", dalle_url);
     console.log("GEMINI URL:", gemini_url);
+    console.log("GEMINI 2.5 URL:", gemini25_url);
 
-    return NextResponse.json({ dalle_url, gemini_url });
+    return NextResponse.json({ dalle_url, gemini_url, gemini25_url });
   } catch (err) {
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }

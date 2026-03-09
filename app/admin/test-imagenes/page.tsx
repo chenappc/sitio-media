@@ -6,6 +6,7 @@ export default function TestImagenesPage() {
   const [loading, setLoading] = useState(false);
   const [dalleUrl, setDalleUrl] = useState<string | null>(null);
   const [geminiUrl, setGeminiUrl] = useState<string | null>(null);
+  const [gemini25Url, setGemini25Url] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleTest = async () => {
@@ -14,6 +15,7 @@ export default function TestImagenesPage() {
     setError(null);
     setDalleUrl(null);
     setGeminiUrl(null);
+    setGemini25Url(null);
     try {
       console.log("Enviando prompt:", prompt);
       const res = await fetch("/api/admin/test-imagenes", {
@@ -26,6 +28,7 @@ export default function TestImagenesPage() {
       else {
         setDalleUrl(data.dalle_url ?? null);
         setGeminiUrl(data.gemini_url ?? null);
+        setGemini25Url(data.gemini25_url ?? null);
       }
     } catch (err) {
       setError(`Error: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
@@ -51,8 +54,8 @@ export default function TestImagenesPage() {
         {loading ? "Generando (puede tardar 1-2 min)..." : "Generar con ambos"}
       </button>
       {error && <p className="text-red-600 mt-4">{error}</p>}
-      {(dalleUrl || geminiUrl) && (
-        <div className="mt-8 grid grid-cols-2 gap-6">
+      {(dalleUrl || geminiUrl || gemini25Url) && (
+        <div className="mt-8 grid grid-cols-3 gap-6">
           <div>
             <h2 className="font-bold text-lg mb-2">DALL-E 3</h2>
             {dalleUrl ? (
@@ -65,6 +68,14 @@ export default function TestImagenesPage() {
             <h2 className="font-bold text-lg mb-2">Gemini 2.0</h2>
             {geminiUrl ? (
               <img src={geminiUrl} alt="Gemini" className="w-full rounded" />
+            ) : (
+              <p className="text-gray-500 text-sm">No disponible</p>
+            )}
+          </div>
+          <div>
+            <h2 className="font-bold text-lg mb-2">Gemini 2.5</h2>
+            {gemini25Url ? (
+              <img src={gemini25Url} alt="Gemini 2.5" className="w-full rounded" />
             ) : (
               <p className="text-gray-500 text-sm">No disponible</p>
             )}
