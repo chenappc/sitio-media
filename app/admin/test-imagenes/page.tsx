@@ -15,6 +15,7 @@ export default function TestImagenesPage() {
     setDalleUrl(null);
     setGeminiUrl(null);
     try {
+      console.log("Enviando prompt:", prompt);
       const res = await fetch("/api/admin/test-imagenes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -26,8 +27,8 @@ export default function TestImagenesPage() {
         setDalleUrl(data.dalle_url ?? null);
         setGeminiUrl(data.gemini_url ?? null);
       }
-    } catch {
-      setError("Error al generar imágenes");
+    } catch (err) {
+      setError(`Error: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
     } finally {
       setLoading(false);
     }
