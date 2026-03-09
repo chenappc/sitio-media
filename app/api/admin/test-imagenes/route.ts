@@ -55,6 +55,7 @@ async function generarGemini(prompt: string): Promise<string | null> {
       }
     );
     const data = await res.json();
+    console.log("GEMINI RESPONSE:", JSON.stringify(data).slice(0, 500));
     const parts = data.candidates?.[0]?.content?.parts ?? [];
     const imagePart = parts.find((p: any) => p.inlineData?.mimeType?.startsWith("image/"));
     if (!imagePart) return null;
@@ -80,6 +81,9 @@ export async function POST(req: NextRequest) {
         new Promise<null>((resolve) => setTimeout(() => resolve(null), 60000)),
       ]),
     ]);
+
+    console.log("DALLE URL:", dalle_url);
+    console.log("GEMINI URL:", gemini_url);
 
     return NextResponse.json({ dalle_url, gemini_url });
   } catch (err) {
