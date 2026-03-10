@@ -116,38 +116,20 @@ export async function POST(req: NextRequest) {
           if (p === 4 && !protagonistaFijo && contextoPaginas.trim()) {
             try {
               controller.enqueue(enc.encode(sseMessage({ mensaje: "Extrayendo protagonistas fijos desde contexto (páginas 1-3)..." })));
-              const protPromptText = `You are analyzing a story. Your task is to identify the MAIN RECURRING PROTAGONISTS and describe them with PRECISE VISUAL details for consistent image generation.
+              const protPromptText = `You are analyzing a story. Based ONLY on the narrative text below, identify the MAIN RECURRING PROTAGONISTS — characters that are central to the entire story.
 
-CRITICAL INSTRUCTION: The story text mentions characters by name. Match each NAMED character to their visual appearance in the reference image. If a character is mentioned by name doing something (e.g. 'Zachary fed the tigers', 'Luna nursed the cubs'), find that character in the reference image and describe their exact appearance. Do NOT describe unnamed background figures or extras.
+For each named protagonist (humans with a proper name, or animals with a proper name like Luna or Rex), provide a detailed physical description that will be used to generate consistent images:
+- For humans: infer ethnicity and appearance from context clues in the text (names, locations, cultural references). Provide: estimated ethnicity, age range, hair color and style, eye color if mentioned, distinctive features, typical clothing based on their role (e.g. zookeeper → khaki uniform)
+- For animals with a proper name: species, breed if mentioned, coat color if mentioned, size, distinctive traits
 
-NAMED CHARACTERS ARE ALWAYS MAIN PROTAGONISTS:
-- Humans with a proper name (e.g. Zachary, Maria, John)
-- Animals with a proper name (e.g. Luna, Rex, Pablo) — note: generic references like 'the tiger' or 'the dog' without a name are NOT named characters
+If physical appearance is NOT described in the text, make reasonable inferences based on the character's role, name, and story context. Be specific and consistent — choose ONE appearance and stick to it.
 
-For each NAMED protagonist found in both the story text and reference image, provide ONE detailed paragraph with:
-- Their name and role in the story
-- For humans: exact ethnicity and skin tone AS VISIBLE IN THE IMAGE, age range, hair color and style, eye color, facial hair if any, distinctive facial features, typical clothing colors and style AS VISIBLE IN THE IMAGE
-- For animals WITH A PROPER NAME: exact species, breed AS VISIBLE IN THE IMAGE, coat color and pattern (be extremely specific: e.g. 'tan/fawn large dog with white chest, black muzzle and dark ears'), size, distinctive markings AS VISIBLE IN THE IMAGE
-
-IMPORTANT: Only include characters that are BOTH named in the story text AND visible in the reference image. Do not invent appearances. Do not describe extras or background figures.
+ONLY include characters that are explicitly named in the story text. Do not include unnamed extras.
 
 Story text (first 3 pages):
 ${contextoPaginas.trim()}
 
-Respond in English, number each protagonist.`;
-              const protContent = imagenReferenciaBase64
-                ? [
-                    {
-                      type: "image",
-                      source: {
-                        type: "base64",
-                        media_type: imagenReferenciaMimeType,
-                        data: imagenReferenciaBase64,
-                      },
-                    },
-                    { type: "text", text: protPromptText },
-                  ]
-                : protPromptText;
+Respond in English, number each protagonist, one paragraph each.`;
               const protRes = await fetch("https://api.anthropic.com/v1/messages", {
                 method: "POST",
                 headers: {
@@ -158,7 +140,7 @@ Respond in English, number each protagonist.`;
                 body: JSON.stringify({
                   model: "claude-haiku-4-5-20251001",
                   max_tokens: 300,
-                  messages: [{ role: "user", content: protContent }],
+                  messages: [{ role: "user", content: protPromptText }],
                 }),
               });
               const protData = await protRes.json().catch(() => ({}));
