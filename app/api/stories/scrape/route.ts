@@ -220,7 +220,7 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
                       },
                       {
                         type: "text",
-                        text: "Describe all the visual elements of this image in one sentence: all people present (their age, appearance, clothing), their positions and interactions with each other, the setting, objects, colors, and lighting. Do NOT mention actions involving conflict or violence. Do NOT mention text, logos, brands or websites. Be specific about how many people are in the scene and what they are doing together.",
+                        text: "Describe all the visual elements of this image in one sentence: all people and animals present (their species, breed, size, color, distinctive features, age, appearance, clothing for humans), their positions and interactions with each other, the setting, objects, colors, and lighting. Do NOT mention actions involving conflict or violence. Do NOT mention text, logos, brands or websites. Be specific about how many people and animals are in the scene and what they are doing together.",
                       },
                     ],
                   }],
@@ -268,7 +268,7 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
               : (tituloRewritten || parrafos[0]?.slice(0, 400) || "Escena narrativa"));
 
           const imagenTienePersona = descripcionVisual
-            ? /\b(man|woman|person|people|elder|elderly|old|young|hombre|mujer|persona|anciano|anciana)\b/i.test(descripcionVisual)
+            ? /\b(man|woman|person|people|elder|elderly|old|young|hombre|mujer|persona|anciano|anciana|dog|cat|horse|bird|animal|pet|puppy|kitten|perro|gato|caballo|pájaro|animal|mascota|cachorro|tiger|lion|bear|wolf|tigre|león|oso|lobo)\b/i.test(descripcionVisual)
             : false;
           const descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${imagenTienePersona && descripcionProtagonista ? ` Main character physical appearance: ${descripcionProtagonista}.` : ""} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels.`;
           try {
