@@ -20,6 +20,23 @@ function filterParrafos(arr: string[]): string[] {
   });
 }
 
+const SPLIT_SCREEN_PATTERNS = [
+  "composite image",
+  "split screen",
+  "two scenes",
+  "left side",
+  "right side",
+  "collage",
+  "split image",
+  "two photos",
+  "divided",
+];
+
+function descripcionVisualIndicaSplitScreen(descripcionVisual: string): boolean {
+  const lower = descripcionVisual.toLowerCase();
+  return SPLIT_SCREEN_PATTERNS.some((p) => lower.includes(p));
+}
+
 const HUMAN_FOREGROUND_PATTERNS = [
   /\b(a man|a woman|a person)\b/i,
   /\bman with\b/i,
@@ -281,6 +298,7 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
           const imagenTienePersonaAfterVisual = descripcionVisual
             ? /\b(man|woman|person|people|elder|elderly|old|young|hombre|mujer|persona|anciano|anciana|dog|cat|horse|bird|animal|pet|puppy|kitten|perro|gato|caballo|pájaro|animal|mascota|cachorro|tiger|lion|bear|wolf|tigre|león|oso|lobo)\b/i.test(descripcionVisual)
             : false;
+          const descripcionVisualIndicaSplit = descripcionVisual ? descripcionVisualIndicaSplitScreen(descripcionVisual) : false;
 
           if (p === 4 && !protagonistaFijo && (contextoPaginas.trim() || descripcionVisual || imagenReferenciaHumanoBase64 || imagenReferenciaAnimalBase64)) {
             try {
@@ -446,7 +464,7 @@ ${descripcionVisual!.trim()}`;
                 Readable.from(buf).pipe(uploadStream);
               });
               controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen subida: ${imagenUrl}` })));
-              if (imagenTienePersona && imagePart?.inlineData?.data) {
+              if (imagenTienePersona && imagePart?.inlineData?.data && !descripcionVisualIndicaSplit) {
                 const refData = imagePart.inlineData.data;
                 const refMime = imagePart.inlineData.mimeType ?? "image/png";
                 if (humanoEnPrimerPlano && !imagenReferenciaHumanoBase64) {
