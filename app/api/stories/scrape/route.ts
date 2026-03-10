@@ -20,6 +20,26 @@ function filterParrafos(arr: string[]): string[] {
   });
 }
 
+function extractNombres(texto: string): string[] {
+  const matches = texto.match(/\b[A-Z][a-z]{2,}(?:\s[A-Z][a-z]+)?\b/g) ?? [];
+  const blacklist = new Set([
+    "The", "This", "That", "When", "While", "After", "Before", "Since", "There", "Their", "These", "Those", "With",
+    "From", "Into", "Upon", "Each", "They", "Then", "Also", "Just", "Very", "More", "Some", "Such", "Both", "Even",
+    "Here", "Where", "What", "Which", "Your", "Have", "Been", "Will", "Would", "Could", "Should",
+    "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
+    "January", "February", "March", "April", "June", "July", "August", "September", "October", "November", "December",
+  ]);
+
+  const set = new Set<string>();
+  for (const m of matches) {
+    const name = m.trim();
+    if (!name) continue;
+    if (blacklist.has(name)) continue;
+    set.add(name);
+  }
+  return Array.from(set);
+}
+
 function auth(req: NextRequest): boolean {
   const secret = req.headers.get("x-admin-secret");
   return !!ADMIN_SECRET && secret === ADMIN_SECRET;
@@ -88,6 +108,8 @@ export async function POST(req: NextRequest) {
       let imagenReferenciaMimeType: string = "image/png";
       let imagenReferenciaUrlToSave: string | null = null;
       let contextoPaginas: string = "";
+      let contextoPrimeras3: string = "";
+      let nombresYaVistos = new Set<string>();
       if (initialStoryId != null) {
         storyId = initialStoryId;
         storySlug = initialStorySlug;
@@ -148,6 +170,7 @@ Respond in English, number each protagonist, one paragraph each.`;
               if (extracted) {
                 protagonistaFijo = extracted;
                 controller.enqueue(enc.encode(sseMessage({ mensaje: `Protagonistas fijos: ${extracted.slice(0, 80)}...` })));
+                nombresYaVistos = new Set<string>(extractNombres(contextoPrimeras3));
                 if (storyId != null) {
                   await pool.query(
                     "UPDATE stories SET descripcion_protagonista = $1, updated_at = NOW() WHERE id = $2",
@@ -263,6 +286,66 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
               }
             } catch {
               // keep tituloRewritten and parrafosFiltrados
+            }
+          }
+
+          const pageText = `Page ${p}:\n` + parrafos.join("\n");
+          contextoPaginas += (contextoPaginas ? "\n\n" : "") + pageText;
+          if (p <= 3) {
+            contextoPrimeras3 += (contextoPrimeras3 ? "\n\n" : "") + pageText;
+          }
+
+          if (p >= 5) {
+            const nombresPagina = extractNombres(pageText);
+            const nuevos = nombresPagina.filter((n) => !nombresYaVistos.has(n));
+            if (nuevos.length > 0) {
+              nuevos.forEach((n) => nombresYaVistos.add(n));
+              controller.enqueue(enc.encode(sseMessage({
+                mensaje: `Nuevos personajes detectados en página ${p}: ${nuevos.join(", ")}. Actualizando protagonistas...`,
+              })));
+              try {
+                const protPromptText = `You are analyzing a story. Based ONLY on the narrative text below, identify the MAIN RECURRING PROTAGONISTS — characters that are central to the entire story.
+
+For each named protagonist (humans with a proper name, or animals with a proper name like Luna or Rex), provide a detailed physical description that will be used to generate consistent images:
+- For humans: infer ethnicity and appearance from context clues in the text (names, locations, cultural references). Provide: estimated ethnicity, age range, hair color and style, eye color if mentioned, distinctive features, typical clothing based on their role (e.g. zookeeper → khaki uniform)
+- For animals with a proper name: species, breed if mentioned, coat color if mentioned, size, distinctive traits
+
+If physical appearance is NOT described in the text, make reasonable inferences based on the character's role, name, and story context. Be specific and consistent — choose ONE appearance and stick to it.
+
+ONLY include characters that are explicitly named in the story text. Do not include unnamed extras.
+
+Story text (pages so far):
+${contextoPaginas.trim()}
+
+Respond in English, number each protagonist, one paragraph each.`;
+
+                const protRes = await fetch("https://api.anthropic.com/v1/messages", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": anthropicKey,
+                    "anthropic-version": "2023-06-01",
+                  },
+                  body: JSON.stringify({
+                    model: "claude-haiku-4-5-20251001",
+                    max_tokens: 300,
+                    messages: [{ role: "user", content: protPromptText }],
+                  }),
+                });
+                const protData = await protRes.json().catch(() => ({}));
+                const extracted = protData.content?.[0]?.text?.trim();
+                if (extracted) {
+                  protagonistaFijo = extracted;
+                  if (storyId != null) {
+                    await pool.query(
+                      "UPDATE stories SET descripcion_protagonista = $1, updated_at = NOW() WHERE id = $2",
+                      [protagonistaFijo, storyId]
+                    );
+                  }
+                }
+              } catch {
+                // ignorar
+              }
             }
           }
 
@@ -511,10 +594,6 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
             status: "ok",
             mensaje: `Página ${p} procesada`,
           })));
-
-          if (p <= 3 && parrafos.length > 0) {
-            contextoPaginas += (contextoPaginas ? "\n\n" : "") + `Page ${p}:\n` + parrafos.join("\n");
-          }
         }
 
         controller.enqueue(enc.encode(sseMessage({ done: true, storySlug })));
