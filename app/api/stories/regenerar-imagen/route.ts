@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
 
         let descripcion: string;
         if (descripcionCustom?.trim()) {
-          descripcion = descripcionCustom.trim() + ". No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels.";
+          descripcion = descripcionCustom.trim() + ". No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels. Single image only, no split screen, no collage, no grid, no multiple panels, no divided image, no side by side comparison, no before and after, one single unified scene.";
           controller.enqueue(enc.encode(sseMessage({ mensaje: "Usando prompt custom" })));
         } else {
         let descripcionProtagonista: string | null = null;
@@ -203,7 +203,7 @@ export async function POST(req: NextRequest) {
         const imagenTienePersona = descripcionVisual
           ? /\b(man|woman|person|people|elder|elderly|old|young|hombre|mujer|persona|anciano|anciana)\b/i.test(descripcionVisual)
           : false;
-        descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${imagenTienePersona && descripcionProtagonista ? ` Main character physical appearance: ${descripcionProtagonista}.` : ""} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels.`;
+        descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${imagenTienePersona && descripcionProtagonista ? ` Main character physical appearance: ${descripcionProtagonista}.` : ""} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels. Single image only, no split screen, no collage, no grid, no multiple panels, no divided image, no side by side comparison, no before and after, one single unified scene.`;
         }
 
         const geminiRes = await fetch(
