@@ -87,6 +87,7 @@ export async function POST(req: NextRequest) {
       let imagenReferenciaBase64: string | null = null;
       let imagenReferenciaMimeType: string = "image/png";
       let imagenReferenciaUrlToSave: string | null = null;
+      let contextoPaginas: string = "";
       if (initialStoryId != null) {
         storyId = initialStoryId;
         storySlug = initialStorySlug;
@@ -261,6 +262,18 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
           if (imagenTienePersonaAfterVisual && !protagonistaFijo && descripcionVisual?.trim()) {
             try {
               controller.enqueue(enc.encode(sseMessage({ mensaje: "Extrayendo descripción fija del protagonista..." })));
+              const protPrompt = contextoPaginas.trim()
+                ? `You are analyzing a story. Based on the narrative text and the image description below, identify ONLY the main recurring protagonists (not extras or secondary characters). For each protagonist provide a precise physical description: for humans: ethnicity, approximate age, hair color and style, eye color, distinctive facial features, typical clothing. For animals: species, breed, size, coat color and pattern, distinctive markings. Number each protagonist. Be very specific. Respond in English.
+
+Story context (first pages):
+${contextoPaginas.trim()}
+
+Image description:
+${descripcionVisual}`
+                : `Based on the image description below, identify ONLY the main recurring protagonist(s) (person or animal). Provide a precise physical description: for humans: ethnicity, approximate age, hair color and style, eye color, distinctive facial features, typical clothing. For animals: species, breed, size, coat color and pattern, distinctive markings. Be very specific. Respond in English in one paragraph.
+
+Image description:
+${descripcionVisual}`;
               const protRes = await fetch("https://api.anthropic.com/v1/messages", {
                 method: "POST",
                 headers: {
@@ -271,10 +284,7 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
                 body: JSON.stringify({
                   model: "claude-haiku-4-5-20251001",
                   max_tokens: 200,
-                  messages: [{
-                    role: "user",
-                    content: `From this image description, extract a precise physical description of the main protagonist (person or animal) that will remain consistent throughout all images. Include: for humans: ethnicity, approximate age, hair color and style, eye color, distinctive facial features, typical clothing style. For animals: species, breed, size, coat color and pattern, distinctive markings. Be very specific. Respond in English in one paragraph. Description: ${descripcionVisual}`,
-                  }],
+                  messages: [{ role: "user", content: protPrompt }],
                 }),
               });
               const protData = await protRes.json().catch(() => ({}));
@@ -490,6 +500,10 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
             status: "ok",
             mensaje: `Página ${p} procesada`,
           })));
+
+          if (p <= 3 && parrafos.length > 0) {
+            contextoPaginas += (contextoPaginas ? "\n\n" : "") + `Page ${p}:\n` + parrafos.join("\n");
+          }
         }
 
         controller.enqueue(enc.encode(sseMessage({ done: true, storySlug })));
