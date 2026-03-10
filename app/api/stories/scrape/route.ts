@@ -116,12 +116,25 @@ export async function POST(req: NextRequest) {
           if (p === 4 && !protagonistaFijo && contextoPaginas.trim()) {
             try {
               controller.enqueue(enc.encode(sseMessage({ mensaje: "Extrayendo protagonistas fijos desde contexto (páginas 1-3)..." })));
-              const protPrompt = `You are analyzing a story. Based on the narrative text of the first pages, identify the 2-3 MAIN recurring protagonists (the characters central to the entire story, not extras). For each one provide a precise physical description that will be used to maintain visual consistency: for humans: ethnicity, approximate age, hair color and style, eye color, distinctive facial features, typical clothing style. For animals: species, breed, size, coat color and pattern, distinctive markings. Number each protagonist. Be very specific and detailed. Only include characters explicitly mentioned as main characters in the story text. Do NOT invent characters not mentioned in the text.
+              const protPromptText = `You are analyzing a story. Based on the narrative text of the first pages, identify the 2-3 MAIN recurring protagonists (the characters central to the entire story, not extras). For each one provide a precise physical description that will be used to maintain visual consistency: for humans: ethnicity, approximate age, hair color and style, eye color, distinctive facial features, typical clothing style. For animals: species, breed, size, coat color and pattern, distinctive markings. Number each protagonist. Be very specific and detailed. Only include characters explicitly mentioned as main characters in the story text. Do NOT invent characters not mentioned in the text.
 
 Story text (first 3 pages):
 ${contextoPaginas.trim()}
 
-Respond in English, one paragraph per protagonist.`;
+Respond in English, one paragraph per protagonist.${imagenReferenciaBase64 ? " Also use the reference image above to accurately describe the physical appearance of any protagonists visible in it." : ""}`;
+              const protContent = imagenReferenciaBase64
+                ? [
+                    {
+                      type: "image",
+                      source: {
+                        type: "base64",
+                        media_type: imagenReferenciaMimeType,
+                        data: imagenReferenciaBase64,
+                      },
+                    },
+                    { type: "text", text: protPromptText },
+                  ]
+                : protPromptText;
               const protRes = await fetch("https://api.anthropic.com/v1/messages", {
                 method: "POST",
                 headers: {
@@ -132,7 +145,7 @@ Respond in English, one paragraph per protagonist.`;
                 body: JSON.stringify({
                   model: "claude-haiku-4-5-20251001",
                   max_tokens: 300,
-                  messages: [{ role: "user", content: protPrompt }],
+                  messages: [{ role: "user", content: protContent }],
                 }),
               });
               const protData = await protRes.json().catch(() => ({}));
