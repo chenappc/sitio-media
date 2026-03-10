@@ -263,6 +263,59 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
             ? /\b(man|woman|person|people|elder|elderly|old|young|hombre|mujer|persona|anciano|anciana|dog|cat|horse|bird|animal|pet|puppy|kitten|perro|gato|caballo|pájaro|animal|mascota|cachorro|tiger|lion|bear|wolf|tigre|león|oso|lobo)\b/i.test(descripcionVisual)
             : false;
 
+          if (p === 4 && !protagonistaFijo && (contextoPaginas.trim() || descripcionVisual)) {
+            try {
+              controller.enqueue(enc.encode(sseMessage({ mensaje: "Extrayendo protagonistas fijos (página 4, una sola vez)..." })));
+              const hasContexto = contextoPaginas.trim().length > 0;
+              const protPromptText = hasContexto
+                ? `You are analyzing a story. Based ONLY on the narrative text below, identify the MAIN RECURRING PROTAGONISTS — characters that are central to the entire story.
+
+For each named protagonist (humans with a proper name, or animals with a proper name like Luna or Rex), provide a detailed physical description that will be used to generate consistent images:
+- For humans: infer ethnicity and appearance from context clues in the text (names, locations, cultural references). Provide: estimated ethnicity, age range, hair color and style, eye color if mentioned, distinctive features, typical clothing based on their role (e.g. zookeeper → khaki uniform)
+- For animals with a proper name: species, breed if mentioned, coat color if mentioned, size, distinctive traits
+
+If physical appearance is NOT described in the text, make reasonable inferences based on the character's role, name, and story context. Be specific and consistent — choose ONE appearance and stick to it.
+
+ONLY include characters that are explicitly named in the story text. Do not include unnamed extras.
+
+Story text (first pages):
+${contextoPaginas.trim()}
+
+Respond in English, number each protagonist, one paragraph each.`
+                : `Based on the following image description of a story scene, identify the main character(s) visible and provide a precise physical description for each that will be used to keep visual consistency across images. For humans: ethnicity, age range, hair, clothing, distinctive features. For animals: species, breed, color, size, markings. Respond in English, one paragraph per character.
+
+Image description (page 4):
+${descripcionVisual!.trim()}`;
+              const protRes = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-api-key": anthropicKey,
+                  "anthropic-version": "2023-06-01",
+                },
+                body: JSON.stringify({
+                  model: "claude-haiku-4-5-20251001",
+                  max_tokens: 300,
+                  messages: [{ role: "user", content: protPromptText }],
+                }),
+              });
+              const protData = await protRes.json().catch(() => ({}));
+              const extracted = protData.content?.[0]?.text?.trim();
+              if (extracted) {
+                protagonistaFijo = extracted;
+                controller.enqueue(enc.encode(sseMessage({ mensaje: `Protagonistas fijos: ${extracted.slice(0, 80)}...` })));
+                if (storyId != null) {
+                  await pool.query(
+                    "UPDATE stories SET descripcion_protagonista = $1, updated_at = NOW() WHERE id = $2",
+                    [protagonistaFijo, storyId]
+                  );
+                }
+              }
+            } catch {
+              // ignorar
+            }
+          }
+
           if (p === paginaInicio && parrafos.length > 0) {
             try {
               const extractRes = await fetch("https://api.anthropic.com/v1/messages", {
