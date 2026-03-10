@@ -20,6 +20,21 @@ function filterParrafos(arr: string[]): string[] {
   });
 }
 
+const HUMAN_FOREGROUND_PATTERNS = [
+  /\b(a man|a woman|a person)\b/i,
+  /\bman with\b/i,
+  /\bwoman with\b/i,
+  /\bwearing\b/i,
+  /\bshirt\b/i,
+  /\bstanding\b/i,
+  /\bsitting\b/i,
+];
+
+function descripcionVisualTieneHumanoEnPrimerPlano(descripcionVisual: string): boolean {
+  const count = HUMAN_FOREGROUND_PATTERNS.filter((re) => re.test(descripcionVisual)).length;
+  return count >= 2;
+}
+
 function auth(req: NextRequest): boolean {
   const secret = req.headers.get("x-admin-secret");
   return !!ADMIN_SECRET && secret === ADMIN_SECRET;
@@ -84,8 +99,10 @@ export async function POST(req: NextRequest) {
       const enc = new TextEncoder();
       let descripcionProtagonista: string | null = null;
       let protagonistaFijo: string | null = null;
-      let imagenReferenciaBase64: string | null = null;
-      let imagenReferenciaMimeType: string = "image/png";
+      let imagenReferenciaHumanoBase64: string | null = null;
+      let imagenReferenciaHumanoMimeType: string = "image/png";
+      let imagenReferenciaAnimalBase64: string | null = null;
+      let imagenReferenciaAnimalMimeType: string = "image/png";
       let imagenReferenciaUrlToSave: string | null = null;
       let contextoPaginas: string = "";
       if (initialStoryId != null) {
@@ -102,9 +119,11 @@ export async function POST(req: NextRequest) {
             const imgRes = await fetch(imagenRefUrl, { headers: { "User-Agent": UA } });
             if (imgRes.ok) {
               const buf = Buffer.from(await imgRes.arrayBuffer());
-              imagenReferenciaBase64 = buf.toString("base64");
+              const b64 = buf.toString("base64");
               const contentType = imgRes.headers.get("content-type") ?? "";
-              imagenReferenciaMimeType = contentType.startsWith("image/") ? contentType.split(";")[0].trim() : "image/png";
+              const mime = contentType.startsWith("image/") ? contentType.split(";")[0].trim() : "image/png";
+              imagenReferenciaHumanoBase64 = b64;
+              imagenReferenciaHumanoMimeType = mime;
             }
           } catch {
             // ignorar, seguir sin referencia
@@ -263,29 +282,41 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
             ? /\b(man|woman|person|people|elder|elderly|old|young|hombre|mujer|persona|anciano|anciana|dog|cat|horse|bird|animal|pet|puppy|kitten|perro|gato|caballo|pájaro|animal|mascota|cachorro|tiger|lion|bear|wolf|tigre|león|oso|lobo)\b/i.test(descripcionVisual)
             : false;
 
-          if (p === 4 && !protagonistaFijo && (contextoPaginas.trim() || descripcionVisual)) {
+          if (p === 4 && !protagonistaFijo && (contextoPaginas.trim() || descripcionVisual || imagenReferenciaHumanoBase64 || imagenReferenciaAnimalBase64)) {
             try {
               controller.enqueue(enc.encode(sseMessage({ mensaje: "Extrayendo protagonistas fijos (página 4, una sola vez)..." })));
               const hasContexto = contextoPaginas.trim().length > 0;
               const protPromptText = hasContexto
-                ? `You are analyzing a story. Based ONLY on the narrative text below, identify the MAIN RECURRING PROTAGONISTS — characters that are central to the entire story.
+                ? `You are analyzing a story. Based on the narrative text below and the reference image(s) provided (first = human protagonist if present, second = animal protagonist if present), identify the MAIN RECURRING PROTAGONISTS and describe them with precise visual details for consistent image generation.
 
-For each named protagonist (humans with a proper name, or animals with a proper name like Luna or Rex), provide a detailed physical description that will be used to generate consistent images:
-- For humans: infer ethnicity and appearance from context clues in the text (names, locations, cultural references). Provide: estimated ethnicity, age range, hair color and style, eye color if mentioned, distinctive features, typical clothing based on their role (e.g. zookeeper → khaki uniform)
-- For animals with a proper name: species, breed if mentioned, coat color if mentioned, size, distinctive traits
+For each protagonist visible in the reference image(s) or named in the text: provide a detailed physical description. For humans: ethnicity, age range, hair color and style, eye color, distinctive features, clothing as visible or inferred. For animals: species, breed, coat color and pattern, size, distinctive markings.
 
-If physical appearance is NOT described in the text, make reasonable inferences based on the character's role, name, and story context. Be specific and consistent — choose ONE appearance and stick to it.
-
-ONLY include characters that are explicitly named in the story text. Do not include unnamed extras.
+If reference images are provided, use them to describe the exact appearance of the character(s). Be specific and consistent.
 
 Story text (first pages):
 ${contextoPaginas.trim()}
 
 Respond in English, number each protagonist, one paragraph each.`
-                : `Based on the following image description of a story scene, identify the main character(s) visible and provide a precise physical description for each that will be used to keep visual consistency across images. For humans: ethnicity, age range, hair, clothing, distinctive features. For animals: species, breed, color, size, markings. Respond in English, one paragraph per character.
+                : (imagenReferenciaHumanoBase64 || imagenReferenciaAnimalBase64)
+                  ? `You are analyzing reference image(s) of story protagonists. The first image shows the human protagonist (if any), the second shows the animal protagonist (if any). Describe each visible character with precise physical details for consistent image generation: for humans (ethnicity, age, hair, clothing, distinctive features), for animals (species, breed, color, size, markings). Respond in English, one paragraph per character.`
+                  : `Based on the following image description of a story scene, identify the main character(s) visible and provide a precise physical description for each that will be used to keep visual consistency across images. For humans: ethnicity, age range, hair, clothing, distinctive features. For animals: species, breed, color, size, markings. Respond in English, one paragraph per character.
 
 Image description (page 4):
 ${descripcionVisual!.trim()}`;
+              const protContent: Array<{ type: "image"; source: { type: "base64"; media_type: string; data: string } } | { type: "text"; text: string }> = [];
+              if (imagenReferenciaHumanoBase64) {
+                protContent.push({
+                  type: "image",
+                  source: { type: "base64", media_type: imagenReferenciaHumanoMimeType, data: imagenReferenciaHumanoBase64 },
+                });
+              }
+              if (imagenReferenciaAnimalBase64) {
+                protContent.push({
+                  type: "image",
+                  source: { type: "base64", media_type: imagenReferenciaAnimalMimeType, data: imagenReferenciaAnimalBase64 },
+                });
+              }
+              protContent.push({ type: "text", text: protPromptText });
               const protRes = await fetch("https://api.anthropic.com/v1/messages", {
                 method: "POST",
                 headers: {
@@ -296,7 +327,7 @@ ${descripcionVisual!.trim()}`;
                 body: JSON.stringify({
                   model: "claude-haiku-4-5-20251001",
                   max_tokens: 300,
-                  messages: [{ role: "user", content: protPromptText }],
+                  messages: [{ role: "user", content: protContent }],
                 }),
               });
               const protData = await protRes.json().catch(() => ({}));
@@ -352,6 +383,9 @@ ${descripcionVisual!.trim()}`;
           const imagenTienePersona = descripcionVisual
             ? /\b(man|woman|person|people|elder|elderly|old|young|hombre|mujer|persona|anciano|anciana|dog|cat|horse|bird|animal|pet|puppy|kitten|perro|gato|caballo|pájaro|animal|mascota|cachorro|tiger|lion|bear|wolf|tigre|león|oso|lobo)\b/i.test(descripcionVisual)
             : false;
+          const humanoEnPrimerPlano = descripcionVisual ? descripcionVisualTieneHumanoEnPrimerPlano(descripcionVisual) : false;
+          const imagenReferenciaParaGemini = imagenReferenciaHumanoBase64 ?? imagenReferenciaAnimalBase64;
+          const imagenReferenciaMimeParaGemini = imagenReferenciaHumanoBase64 ? imagenReferenciaHumanoMimeType : imagenReferenciaAnimalMimeType;
           const protagonistaLine =
             p <= 3
               ? ""
@@ -361,7 +395,7 @@ ${descripcionVisual!.trim()}`;
           const descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${protagonistaLine} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels. Single image only, no split screen, no collage, no grid, no multiple panels, no divided image, no side by side comparison, no before and after, one single unified scene.`;
           try {
             controller.enqueue(enc.encode(sseMessage({ mensaje: `Generando imagen con Gemini 2.5 para página ${p}...` })));
-            controller.enqueue(enc.encode(sseMessage({ mensaje: `DEBUG: imagenReferenciaBase64=${imagenReferenciaBase64 ? "SÍ (" + imagenReferenciaMimeType + ")" : "NO"}, protagonistaFijo=${protagonistaFijo ? "SÍ: " + protagonistaFijo.slice(0, 300) + "..." : "NO"}` })));
+            controller.enqueue(enc.encode(sseMessage({ mensaje: `DEBUG: refHumano=${imagenReferenciaHumanoBase64 ? "SÍ" : "NO"}, refAnimal=${imagenReferenciaAnimalBase64 ? "SÍ" : "NO"}, protagonistaFijo=${protagonistaFijo ? "SÍ: " + protagonistaFijo.slice(0, 300) + "..." : "NO"}` })));
 
             const geminiRes: Response = await fetch(
               `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${process.env.GOOGLE_API_KEY}`,
@@ -371,14 +405,14 @@ ${descripcionVisual!.trim()}`;
                 body: JSON.stringify({
                   contents: [{
                     parts: [
-                      ...(imagenReferenciaBase64 ? [{
+                      ...(imagenReferenciaParaGemini ? [{
                         inlineData: {
-                          mimeType: imagenReferenciaMimeType,
-                          data: imagenReferenciaBase64,
+                          mimeType: imagenReferenciaMimeParaGemini,
+                          data: imagenReferenciaParaGemini,
                         },
                       }] : []),
                       {
-                        text: imagenReferenciaBase64
+                        text: imagenReferenciaParaGemini
                           ? `${descripcion} IMPORTANT: Maintain the exact same protagonist appearance as shown in the reference image. Same face, same age, same hair, same clothing style.`
                           : descripcion,
                       },
@@ -412,27 +446,52 @@ ${descripcionVisual!.trim()}`;
                 Readable.from(buf).pipe(uploadStream);
               });
               controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen subida: ${imagenUrl}` })));
-              // Guardar primera imagen con persona como referencia
-              if (!imagenReferenciaBase64 && imagenTienePersona && imagePart?.inlineData?.data) {
-                imagenReferenciaBase64 = imagePart.inlineData.data;
-                imagenReferenciaMimeType = imagePart.inlineData.mimeType ?? "image/png";
-                try {
-                  const refBuf = Buffer.from(imagePart.inlineData.data, "base64");
-                  const refUrl = await new Promise<string>((resolve, reject) => {
-                    const uploadStream = cloudinary.uploader.upload_stream(
-                      { folder: "sitio-media/stories/referencias" },
-                      (err, result) => {
-                        if (err) reject(err);
-                        else resolve(result!.secure_url);
-                      }
-                    );
-                    Readable.from(refBuf).pipe(uploadStream);
-                  });
-                  imagenReferenciaUrlToSave = refUrl;
-                } catch {
-                  // ignorar fallo de subida de referencia
+              if (imagenTienePersona && imagePart?.inlineData?.data) {
+                const refData = imagePart.inlineData.data;
+                const refMime = imagePart.inlineData.mimeType ?? "image/png";
+                if (humanoEnPrimerPlano && !imagenReferenciaHumanoBase64) {
+                  imagenReferenciaHumanoBase64 = refData;
+                  imagenReferenciaHumanoMimeType = refMime;
+                  try {
+                    const refBuf = Buffer.from(refData, "base64");
+                    const refUrl = await new Promise<string>((resolve, reject) => {
+                      const uploadStream = cloudinary.uploader.upload_stream(
+                        { folder: "sitio-media/stories/referencias" },
+                        (err, result) => {
+                          if (err) reject(err);
+                          else resolve(result!.secure_url);
+                        }
+                      );
+                      Readable.from(refBuf).pipe(uploadStream);
+                    });
+                    imagenReferenciaUrlToSave = refUrl;
+                  } catch {
+                    // ignorar fallo de subida de referencia
+                  }
+                  controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen de referencia humano guardada (página ${p})` })));
+                } else if (!humanoEnPrimerPlano && !imagenReferenciaAnimalBase64) {
+                  imagenReferenciaAnimalBase64 = refData;
+                  imagenReferenciaAnimalMimeType = refMime;
+                  if (!imagenReferenciaUrlToSave) {
+                    try {
+                      const refBuf = Buffer.from(refData, "base64");
+                      const refUrl = await new Promise<string>((resolve, reject) => {
+                        const uploadStream = cloudinary.uploader.upload_stream(
+                          { folder: "sitio-media/stories/referencias" },
+                          (err, result) => {
+                            if (err) reject(err);
+                            else resolve(result!.secure_url);
+                          }
+                        );
+                        Readable.from(refBuf).pipe(uploadStream);
+                      });
+                      imagenReferenciaUrlToSave = refUrl;
+                    } catch {
+                      // ignorar
+                    }
+                  }
+                  controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen de referencia animal guardada (página ${p})` })));
                 }
-                controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen de referencia del protagonista guardada (página ${p})` })));
               }
             } else {
               throw new Error("Gemini no devolvió imagen");
