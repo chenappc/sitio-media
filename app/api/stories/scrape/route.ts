@@ -83,9 +83,15 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       const enc = new TextEncoder();
       let descripcionProtagonista: string | null = null;
+      let protagonistaFijo: string | null = null;
       if (initialStoryId != null) {
         storyId = initialStoryId;
         storySlug = initialStorySlug;
+        const row = await pool.query<{ descripcion_protagonista: string | null }>(
+          "SELECT descripcion_protagonista FROM stories WHERE id = $1",
+          [storyId]
+        );
+        protagonistaFijo = row.rows[0]?.descripcion_protagonista?.trim() ?? null;
       }
       let imagenReferenciaBase64: string | null = null;
       let imagenReferenciaMimeType: string = "image/png";
@@ -234,6 +240,39 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
             }
           }
 
+          const imagenTienePersonaAfterVisual = descripcionVisual
+            ? /\b(man|woman|person|people|elder|elderly|old|young|hombre|mujer|persona|anciano|anciana|dog|cat|horse|bird|animal|pet|puppy|kitten|perro|gato|caballo|pájaro|animal|mascota|cachorro|tiger|lion|bear|wolf|tigre|león|oso|lobo)\b/i.test(descripcionVisual)
+            : false;
+          if (imagenTienePersonaAfterVisual && !protagonistaFijo && descripcionVisual?.trim()) {
+            try {
+              controller.enqueue(enc.encode(sseMessage({ mensaje: "Extrayendo descripción fija del protagonista..." })));
+              const protRes = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-api-key": anthropicKey,
+                  "anthropic-version": "2023-06-01",
+                },
+                body: JSON.stringify({
+                  model: "claude-haiku-4-5-20251001",
+                  max_tokens: 200,
+                  messages: [{
+                    role: "user",
+                    content: `From this image description, extract a precise physical description of the main protagonist (person or animal) that will remain consistent throughout all images. Include: for humans: ethnicity, approximate age, hair color and style, eye color, distinctive facial features, typical clothing style. For animals: species, breed, size, coat color and pattern, distinctive markings. Be very specific. Respond in English in one paragraph. Description: ${descripcionVisual}`,
+                  }],
+                }),
+              });
+              const protData = await protRes.json().catch(() => ({}));
+              const extracted = protData.content?.[0]?.text?.trim();
+              if (extracted) {
+                protagonistaFijo = extracted;
+                controller.enqueue(enc.encode(sseMessage({ mensaje: `Protagonista fijo: ${extracted.slice(0, 80)}...` })));
+              }
+            } catch {
+              // ignorar
+            }
+          }
+
           if (p === paginaInicio && parrafos.length > 0) {
             try {
               const extractRes = await fetch("https://api.anthropic.com/v1/messages", {
@@ -270,7 +309,10 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
           const imagenTienePersona = descripcionVisual
             ? /\b(man|woman|person|people|elder|elderly|old|young|hombre|mujer|persona|anciano|anciana|dog|cat|horse|bird|animal|pet|puppy|kitten|perro|gato|caballo|pájaro|animal|mascota|cachorro|tiger|lion|bear|wolf|tigre|león|oso|lobo)\b/i.test(descripcionVisual)
             : false;
-          const descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${imagenTienePersona && descripcionProtagonista ? ` Main character physical appearance: ${descripcionProtagonista}.` : ""} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels. Single image only, no split screen, no collage, no grid, no multiple panels, no divided image, no side by side comparison, no before and after, one single unified scene.`;
+          const protagonistaLine = protagonistaFijo
+            ? ` CRITICAL: The protagonist is ALWAYS this SAME individual, do not change ANY physical trait: ${protagonistaFijo}.`
+            : (imagenTienePersona && descripcionProtagonista ? ` Main character physical appearance: ${descripcionProtagonista}.` : "");
+          const descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${protagonistaLine} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels. Single image only, no split screen, no collage, no grid, no multiple panels, no divided image, no side by side comparison, no before and after, one single unified scene.`;
           try {
             controller.enqueue(enc.encode(sseMessage({ mensaje: `Generando imagen con Gemini 2.5 para página ${p}...` })));
 
@@ -385,6 +427,12 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
                 `UPDATE stories SET total_paginas = (SELECT COUNT(*) FROM story_paginas WHERE story_id = $1), updated_at = NOW() WHERE id = $1`,
                 [storyId]
               );
+              if (protagonistaFijo) {
+                await pool.query(
+                  "UPDATE stories SET descripcion_protagonista = $1, updated_at = NOW() WHERE id = $2",
+                  [protagonistaFijo, storyId]
+                );
+              }
             }
           } catch (e) {
             controller.enqueue(enc.encode(sseMessage({
