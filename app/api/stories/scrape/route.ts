@@ -84,17 +84,32 @@ export async function POST(req: NextRequest) {
       const enc = new TextEncoder();
       let descripcionProtagonista: string | null = null;
       let protagonistaFijo: string | null = null;
+      let imagenReferenciaBase64: string | null = null;
+      let imagenReferenciaMimeType: string = "image/png";
+      let imagenReferenciaUrlToSave: string | null = null;
       if (initialStoryId != null) {
         storyId = initialStoryId;
         storySlug = initialStorySlug;
-        const row = await pool.query<{ descripcion_protagonista: string | null }>(
-          "SELECT descripcion_protagonista FROM stories WHERE id = $1",
+        const row = await pool.query<{ descripcion_protagonista: string | null; imagen_referencia_url: string | null }>(
+          "SELECT descripcion_protagonista, imagen_referencia_url FROM stories WHERE id = $1",
           [storyId]
         );
         protagonistaFijo = row.rows[0]?.descripcion_protagonista?.trim() ?? null;
+        const imagenRefUrl = row.rows[0]?.imagen_referencia_url?.trim();
+        if (imagenRefUrl) {
+          try {
+            const imgRes = await fetch(imagenRefUrl, { headers: { "User-Agent": UA } });
+            if (imgRes.ok) {
+              const buf = Buffer.from(await imgRes.arrayBuffer());
+              imagenReferenciaBase64 = buf.toString("base64");
+              const contentType = imgRes.headers.get("content-type") ?? "";
+              imagenReferenciaMimeType = contentType.startsWith("image/") ? contentType.split(";")[0].trim() : "image/png";
+            }
+          } catch {
+            // ignorar, seguir sin referencia
+          }
+        }
       }
-      let imagenReferenciaBase64: string | null = null;
-      let imagenReferenciaMimeType: string = "image/png";
       try {
         for (let p = paginaInicio; p <= paginaFin; p++) {
           const url = `${urlBase.replace(/\/$/, "")}/${p}/`;
@@ -370,6 +385,22 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
               if (!imagenReferenciaBase64 && imagenTienePersona && imagePart?.inlineData?.data) {
                 imagenReferenciaBase64 = imagePart.inlineData.data;
                 imagenReferenciaMimeType = imagePart.inlineData.mimeType ?? "image/png";
+                try {
+                  const refBuf = Buffer.from(imagePart.inlineData.data, "base64");
+                  const refUrl = await new Promise<string>((resolve, reject) => {
+                    const uploadStream = cloudinary.uploader.upload_stream(
+                      { folder: "sitio-media/stories/referencias" },
+                      (err, result) => {
+                        if (err) reject(err);
+                        else resolve(result!.secure_url);
+                      }
+                    );
+                    Readable.from(refBuf).pipe(uploadStream);
+                  });
+                  imagenReferenciaUrlToSave = refUrl;
+                } catch {
+                  // ignorar fallo de subida de referencia
+                }
                 controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen de referencia del protagonista guardada (página ${p})` })));
                 controller.enqueue(enc.encode(sseMessage({ mensaje: `DEBUG referencia guardada: imagenTienePersona=${imagenTienePersona}, page=${p}` })));
               }
@@ -434,6 +465,13 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
                   "UPDATE stories SET descripcion_protagonista = $1, updated_at = NOW() WHERE id = $2",
                   [protagonistaFijo, storyId]
                 );
+              }
+              if (imagenReferenciaUrlToSave) {
+                await pool.query(
+                  "UPDATE stories SET imagen_referencia_url = $1, updated_at = NOW() WHERE id = $2",
+                  [imagenReferenciaUrlToSave, storyId]
+                );
+                imagenReferenciaUrlToSave = null;
               }
             }
           } catch (e) {
