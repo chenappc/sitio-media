@@ -20,24 +20,34 @@ function filterParrafos(arr: string[]): string[] {
   });
 }
 
-function extractNombres(texto: string): string[] {
-  const matches = texto.match(/\b[A-Z][a-z]{2,}(?:\s[A-Z][a-z]+)?\b/g) ?? [];
-  const blacklist = new Set([
-    "The", "This", "That", "When", "While", "After", "Before", "Since", "There", "Their", "These", "Those", "With",
-    "From", "Into", "Upon", "Each", "They", "Then", "Also", "Just", "Very", "More", "Some", "Such", "Both", "Even",
-    "Here", "Where", "What", "Which", "Your", "Have", "Been", "Will", "Would", "Could", "Should",
-    "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
-    "January", "February", "March", "April", "June", "July", "August", "September", "October", "November", "December",
-  ]);
+async function extractNombresConClaude(texto: string, anthropicKey: string): Promise<string[]> {
+  const prompt = `From the following text, extract ONLY proper names of people or named animals (e.g. Zachary, Luna, Rex). Do not include place names, common nouns, or Spanish/English words that are not names. Return ONLY a comma-separated list of names, nothing else. If there are no proper names, return 'NONE'.
 
-  const set = new Set<string>();
-  for (const m of matches) {
-    const name = m.trim();
-    if (!name) continue;
-    if (blacklist.has(name)) continue;
-    set.add(name);
+Text: ${texto}`;
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": anthropicKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 100,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    const raw = (data.content?.[0]?.text ?? "").trim();
+    if (!raw || raw.toUpperCase() === "NONE") return [];
+    return raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  } catch {
+    return [];
   }
-  return Array.from(set);
 }
 
 function auth(req: NextRequest): boolean {
@@ -170,7 +180,8 @@ Respond in English, number each protagonist, one paragraph each.`;
               if (extracted) {
                 protagonistaFijo = extracted;
                 controller.enqueue(enc.encode(sseMessage({ mensaje: `Protagonistas fijos: ${extracted.slice(0, 80)}...` })));
-                nombresYaVistos = new Set<string>(extractNombres(contextoPrimeras3));
+                const nombresIniciales = await extractNombresConClaude(contextoPrimeras3, anthropicKey);
+                nombresIniciales.forEach((n) => nombresYaVistos.add(n));
                 if (storyId != null) {
                   await pool.query(
                     "UPDATE stories SET descripcion_protagonista = $1, updated_at = NOW() WHERE id = $2",
@@ -296,7 +307,7 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
           }
 
           if (p >= 5) {
-            const nombresPagina = extractNombres(pageText);
+            const nombresPagina = await extractNombresConClaude(pageText, anthropicKey);
             const nuevos = nombresPagina.filter((n) => !nombresYaVistos.has(n));
             if (nuevos.length > 0) {
               nuevos.forEach((n) => nombresYaVistos.add(n));
