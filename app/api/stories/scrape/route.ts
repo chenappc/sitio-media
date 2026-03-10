@@ -20,36 +20,6 @@ function filterParrafos(arr: string[]): string[] {
   });
 }
 
-async function extractNombresConClaude(texto: string, anthropicKey: string): Promise<string[]> {
-  const prompt = `From the following text, extract ONLY proper names of people or named animals (e.g. Zachary, Luna, Rex). Do not include place names, common nouns, or Spanish/English words that are not names. Return ONLY a comma-separated list of names, nothing else. If there are no proper names, return 'NONE'.
-
-Text: ${texto}`;
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": anthropicKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 100,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-    const data = await res.json().catch(() => ({}));
-    const raw = (data.content?.[0]?.text ?? "").trim();
-    if (!raw || raw.toUpperCase() === "NONE") return [];
-    return raw
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-  } catch {
-    return [];
-  }
-}
-
 function auth(req: NextRequest): boolean {
   const secret = req.headers.get("x-admin-secret");
   return !!ADMIN_SECRET && secret === ADMIN_SECRET;
@@ -118,8 +88,6 @@ export async function POST(req: NextRequest) {
       let imagenReferenciaMimeType: string = "image/png";
       let imagenReferenciaUrlToSave: string | null = null;
       let contextoPaginas: string = "";
-      let contextoPrimeras3: string = "";
-      let nombresYaVistos = new Set<string>();
       if (initialStoryId != null) {
         storyId = initialStoryId;
         storySlug = initialStorySlug;
@@ -145,55 +113,6 @@ export async function POST(req: NextRequest) {
       }
       try {
         for (let p = paginaInicio; p <= paginaFin; p++) {
-          if (p === 4 && !protagonistaFijo && contextoPaginas.trim()) {
-            try {
-              controller.enqueue(enc.encode(sseMessage({ mensaje: "Extrayendo protagonistas fijos desde contexto (páginas 1-3)..." })));
-              const protPromptText = `You are analyzing a story. Based ONLY on the narrative text below, identify the MAIN RECURRING PROTAGONISTS — characters that are central to the entire story.
-
-For each named protagonist (humans with a proper name, or animals with a proper name like Luna or Rex), provide a detailed physical description that will be used to generate consistent images:
-- For humans: infer ethnicity and appearance from context clues in the text (names, locations, cultural references). Provide: estimated ethnicity, age range, hair color and style, eye color if mentioned, distinctive features, typical clothing based on their role (e.g. zookeeper → khaki uniform)
-- For animals with a proper name: species, breed if mentioned, coat color if mentioned, size, distinctive traits
-
-If physical appearance is NOT described in the text, make reasonable inferences based on the character's role, name, and story context. Be specific and consistent — choose ONE appearance and stick to it.
-
-ONLY include characters that are explicitly named in the story text. Do not include unnamed extras.
-
-Story text (first 3 pages):
-${contextoPaginas.trim()}
-
-Respond in English, number each protagonist, one paragraph each.`;
-              const protRes = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "x-api-key": anthropicKey,
-                  "anthropic-version": "2023-06-01",
-                },
-                body: JSON.stringify({
-                  model: "claude-haiku-4-5-20251001",
-                  max_tokens: 300,
-                  messages: [{ role: "user", content: protPromptText }],
-                }),
-              });
-              const protData = await protRes.json().catch(() => ({}));
-              const extracted = protData.content?.[0]?.text?.trim();
-              if (extracted) {
-                protagonistaFijo = extracted;
-                controller.enqueue(enc.encode(sseMessage({ mensaje: `Protagonistas fijos: ${extracted.slice(0, 80)}...` })));
-                const nombresIniciales = await extractNombresConClaude(contextoPrimeras3, anthropicKey);
-                nombresIniciales.forEach((n) => nombresYaVistos.add(n));
-                if (storyId != null) {
-                  await pool.query(
-                    "UPDATE stories SET descripcion_protagonista = $1, updated_at = NOW() WHERE id = $2",
-                    [protagonistaFijo, storyId]
-                  );
-                }
-              }
-            } catch {
-              // ignorar
-            }
-          }
-
           const url = `${urlBase.replace(/\/$/, "")}/${p}/`;
           let titulo = "";
           let imagenPrincipal: string | null = null;
@@ -302,63 +221,6 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
 
           const pageText = `Page ${p}:\n` + parrafos.join("\n");
           contextoPaginas += (contextoPaginas ? "\n\n" : "") + pageText;
-          if (p <= 3) {
-            contextoPrimeras3 += (contextoPrimeras3 ? "\n\n" : "") + pageText;
-          }
-
-          if (p >= 5) {
-            const nombresPagina = await extractNombresConClaude(pageText, anthropicKey);
-            const nuevos = nombresPagina.filter((n) => !nombresYaVistos.has(n));
-            if (nuevos.length > 0) {
-              nuevos.forEach((n) => nombresYaVistos.add(n));
-              controller.enqueue(enc.encode(sseMessage({
-                mensaje: `Nuevos personajes detectados en página ${p}: ${nuevos.join(", ")}. Actualizando protagonistas...`,
-              })));
-              try {
-                const protPromptText = `You are analyzing a story. Based ONLY on the narrative text below, identify the MAIN RECURRING PROTAGONISTS — characters that are central to the entire story.
-
-For each named protagonist (humans with a proper name, or animals with a proper name like Luna or Rex), provide a detailed physical description that will be used to generate consistent images:
-- For humans: infer ethnicity and appearance from context clues in the text (names, locations, cultural references). Provide: estimated ethnicity, age range, hair color and style, eye color if mentioned, distinctive features, typical clothing based on their role (e.g. zookeeper → khaki uniform)
-- For animals with a proper name: species, breed if mentioned, coat color if mentioned, size, distinctive traits
-
-If physical appearance is NOT described in the text, make reasonable inferences based on the character's role, name, and story context. Be specific and consistent — choose ONE appearance and stick to it.
-
-ONLY include characters that are explicitly named in the story text. Do not include unnamed extras.
-
-Story text (pages so far):
-${contextoPaginas.trim()}
-
-Respond in English, number each protagonist, one paragraph each.`;
-
-                const protRes = await fetch("https://api.anthropic.com/v1/messages", {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    "x-api-key": anthropicKey,
-                    "anthropic-version": "2023-06-01",
-                  },
-                  body: JSON.stringify({
-                    model: "claude-haiku-4-5-20251001",
-                    max_tokens: 300,
-                    messages: [{ role: "user", content: protPromptText }],
-                  }),
-                });
-                const protData = await protRes.json().catch(() => ({}));
-                const extracted = protData.content?.[0]?.text?.trim();
-                if (extracted) {
-                  protagonistaFijo = extracted;
-                  if (storyId != null) {
-                    await pool.query(
-                      "UPDATE stories SET descripcion_protagonista = $1, updated_at = NOW() WHERE id = $2",
-                      [protagonistaFijo, storyId]
-                    );
-                  }
-                }
-              } catch {
-                // ignorar
-              }
-            }
-          }
 
           let descripcionVisual: string | null = null;
           if (imagenPrincipal) {
