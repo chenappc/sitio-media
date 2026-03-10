@@ -116,12 +116,18 @@ export async function POST(req: NextRequest) {
           if (p === 4 && !protagonistaFijo && contextoPaginas.trim()) {
             try {
               controller.enqueue(enc.encode(sseMessage({ mensaje: "Extrayendo protagonistas fijos desde contexto (páginas 1-3)..." })));
-              const protPromptText = `You are analyzing a story. Based on the narrative text of the first pages, identify the 2-3 MAIN recurring protagonists (the characters central to the entire story, not extras). For each one provide a precise physical description that will be used to maintain visual consistency: for humans: ethnicity, approximate age, hair color and style, eye color, distinctive facial features, typical clothing style. For animals: species, breed, size, coat color and pattern, distinctive markings. Number each protagonist. Be very specific and detailed. Only include characters explicitly mentioned as main characters in the story text. Do NOT invent characters not mentioned in the text.
+              const protPromptText = `You are analyzing a story with the reference image provided. Your task is to identify the main recurring protagonists and describe them with PRECISE VISUAL details that will be used to generate consistent images throughout the story.
+
+IMPORTANT: Use the reference image as the PRIMARY source for physical descriptions. The story text tells you WHO the protagonists are, the image shows you WHAT they look like.
+
+For each main protagonist found in BOTH the story text and the reference image, provide:
+- For humans: exact ethnicity, skin tone, age range, hair color and style, eye color, facial hair, distinctive features, typical clothing colors and style
+- For animals: exact species, breed, coat color and pattern (be very specific: e.g. 'tan/fawn colored large mixed breed dog with white chest patch and black muzzle'), size, distinctive markings
 
 Story text (first 3 pages):
 ${contextoPaginas.trim()}
 
-Respond in English, one paragraph per protagonist.${imagenReferenciaBase64 ? " Also use the reference image above to accurately describe the physical appearance of any protagonists visible in it." : ""}`;
+Describe each protagonist in ONE detailed paragraph. Be extremely specific about colors and physical traits visible in the reference image. Number each protagonist.`;
               const protContent = imagenReferenciaBase64
                 ? [
                     {
