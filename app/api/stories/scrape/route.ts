@@ -113,6 +113,45 @@ export async function POST(req: NextRequest) {
       }
       try {
         for (let p = paginaInicio; p <= paginaFin; p++) {
+          if (p === 4 && !protagonistaFijo && contextoPaginas.trim()) {
+            try {
+              controller.enqueue(enc.encode(sseMessage({ mensaje: "Extrayendo protagonistas fijos desde contexto (páginas 1-3)..." })));
+              const protPrompt = `You are analyzing a story. Based on the narrative text of the first pages, identify the 2-3 MAIN recurring protagonists (the characters central to the entire story, not extras). For each one provide a precise physical description that will be used to maintain visual consistency: for humans: ethnicity, approximate age, hair color and style, eye color, distinctive facial features, typical clothing style. For animals: species, breed, size, coat color and pattern, distinctive markings. Number each protagonist. Be very specific and detailed. Only include characters explicitly mentioned as main characters in the story text. Do NOT invent characters not mentioned in the text.
+
+Story text (first 3 pages):
+${contextoPaginas.trim()}
+
+Respond in English, one paragraph per protagonist.`;
+              const protRes = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-api-key": anthropicKey,
+                  "anthropic-version": "2023-06-01",
+                },
+                body: JSON.stringify({
+                  model: "claude-haiku-4-5-20251001",
+                  max_tokens: 300,
+                  messages: [{ role: "user", content: protPrompt }],
+                }),
+              });
+              const protData = await protRes.json().catch(() => ({}));
+              const extracted = protData.content?.[0]?.text?.trim();
+              if (extracted) {
+                protagonistaFijo = extracted;
+                controller.enqueue(enc.encode(sseMessage({ mensaje: `Protagonistas fijos: ${extracted.slice(0, 80)}...` })));
+                if (storyId != null) {
+                  await pool.query(
+                    "UPDATE stories SET descripcion_protagonista = $1, updated_at = NOW() WHERE id = $2",
+                    [protagonistaFijo, storyId]
+                  );
+                }
+              }
+            } catch {
+              // ignorar
+            }
+          }
+
           const url = `${urlBase.replace(/\/$/, "")}/${p}/`;
           let titulo = "";
           let imagenPrincipal: string | null = null;
@@ -259,44 +298,6 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
           const imagenTienePersonaAfterVisual = descripcionVisual
             ? /\b(man|woman|person|people|elder|elderly|old|young|hombre|mujer|persona|anciano|anciana|dog|cat|horse|bird|animal|pet|puppy|kitten|perro|gato|caballo|pájaro|animal|mascota|cachorro|tiger|lion|bear|wolf|tigre|león|oso|lobo)\b/i.test(descripcionVisual)
             : false;
-          if (imagenTienePersonaAfterVisual && !protagonistaFijo && descripcionVisual?.trim()) {
-            try {
-              controller.enqueue(enc.encode(sseMessage({ mensaje: "Extrayendo descripción fija del protagonista..." })));
-              const protPrompt = contextoPaginas.trim()
-                ? `You are analyzing a story. Based on the narrative text and the image description below, identify ONLY the main recurring protagonists (not extras or secondary characters). For each protagonist provide a precise physical description: for humans: ethnicity, approximate age, hair color and style, eye color, distinctive facial features, typical clothing. For animals: species, breed, size, coat color and pattern, distinctive markings. Number each protagonist. Be very specific. Respond in English.
-
-Story context (first pages):
-${contextoPaginas.trim()}
-
-Image description:
-${descripcionVisual}`
-                : `Based on the image description below, identify ONLY the main recurring protagonist(s) (person or animal). Provide a precise physical description: for humans: ethnicity, approximate age, hair color and style, eye color, distinctive facial features, typical clothing. For animals: species, breed, size, coat color and pattern, distinctive markings. Be very specific. Respond in English in one paragraph.
-
-Image description:
-${descripcionVisual}`;
-              const protRes = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "x-api-key": anthropicKey,
-                  "anthropic-version": "2023-06-01",
-                },
-                body: JSON.stringify({
-                  model: "claude-haiku-4-5-20251001",
-                  max_tokens: 200,
-                  messages: [{ role: "user", content: protPrompt }],
-                }),
-              });
-              const protData = await protRes.json().catch(() => ({}));
-              const extracted = protData.content?.[0]?.text?.trim();
-              if (extracted) {
-                protagonistaFijo = extracted;
-                controller.enqueue(enc.encode(sseMessage({ mensaje: `Protagonista fijo: ${extracted.slice(0, 80)}...` })));
-              }
-            } catch {
-              // ignorar
-            }
-          }
 
           if (p === paginaInicio && parrafos.length > 0) {
             try {
@@ -334,9 +335,12 @@ ${descripcionVisual}`;
           const imagenTienePersona = descripcionVisual
             ? /\b(man|woman|person|people|elder|elderly|old|young|hombre|mujer|persona|anciano|anciana|dog|cat|horse|bird|animal|pet|puppy|kitten|perro|gato|caballo|pájaro|animal|mascota|cachorro|tiger|lion|bear|wolf|tigre|león|oso|lobo)\b/i.test(descripcionVisual)
             : false;
-          const protagonistaLine = protagonistaFijo
-            ? ` CRITICAL: The protagonist is ALWAYS this SAME individual, do not change ANY physical trait: ${protagonistaFijo}.`
-            : (imagenTienePersona && descripcionProtagonista ? ` Main character physical appearance: ${descripcionProtagonista}.` : "");
+          const protagonistaLine =
+            p <= 3
+              ? ""
+              : protagonistaFijo
+                ? ` If any of the following recurring characters appear in this scene based on the scene description, depict them with their EXACT physical appearance without changing ANY trait. Do not force characters into scenes where they don't belong: ${protagonistaFijo}.`
+                : "";
           const descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${protagonistaLine} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels. Single image only, no split screen, no collage, no grid, no multiple panels, no divided image, no side by side comparison, no before and after, one single unified scene.`;
           try {
             controller.enqueue(enc.encode(sseMessage({ mensaje: `Generando imagen con Gemini 2.5 para página ${p}...` })));
