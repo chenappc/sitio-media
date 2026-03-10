@@ -116,18 +116,25 @@ export async function POST(req: NextRequest) {
           if (p === 4 && !protagonistaFijo && contextoPaginas.trim()) {
             try {
               controller.enqueue(enc.encode(sseMessage({ mensaje: "Extrayendo protagonistas fijos desde contexto (páginas 1-3)..." })));
-              const protPromptText = `You are analyzing a story with the reference image provided. Your task is to identify the main recurring protagonists and describe them with PRECISE VISUAL details that will be used to generate consistent images throughout the story.
+              const protPromptText = `You are analyzing a story. Your task is to identify the MAIN RECURRING PROTAGONISTS and describe them with PRECISE VISUAL details for consistent image generation.
 
-IMPORTANT: Use the reference image as the PRIMARY source for physical descriptions. The story text tells you WHO the protagonists are, the image shows you WHAT they look like.
+CRITICAL INSTRUCTION: The story text mentions characters by name. Match each NAMED character to their visual appearance in the reference image. If a character is mentioned by name doing something (e.g. 'Zachary fed the tigers', 'Luna nursed the cubs'), find that character in the reference image and describe their exact appearance. Do NOT describe unnamed background figures or extras.
 
-For each main protagonist found in BOTH the story text and the reference image, provide:
-- For humans: exact ethnicity, skin tone, age range, hair color and style, eye color, facial hair, distinctive features, typical clothing colors and style
-- For animals: exact species, breed, coat color and pattern (be very specific: e.g. 'tan/fawn colored large mixed breed dog with white chest patch and black muzzle'), size, distinctive markings
+NAMED CHARACTERS ARE ALWAYS MAIN PROTAGONISTS:
+- Humans with a proper name (e.g. Zachary, Maria, John)
+- Animals with a proper name (e.g. Luna, Rex, Pablo) — note: generic references like 'the tiger' or 'the dog' without a name are NOT named characters
+
+For each NAMED protagonist found in both the story text and reference image, provide ONE detailed paragraph with:
+- Their name and role in the story
+- For humans: exact ethnicity and skin tone AS VISIBLE IN THE IMAGE, age range, hair color and style, eye color, facial hair if any, distinctive facial features, typical clothing colors and style AS VISIBLE IN THE IMAGE
+- For animals WITH A PROPER NAME: exact species, breed AS VISIBLE IN THE IMAGE, coat color and pattern (be extremely specific: e.g. 'tan/fawn large dog with white chest, black muzzle and dark ears'), size, distinctive markings AS VISIBLE IN THE IMAGE
+
+IMPORTANT: Only include characters that are BOTH named in the story text AND visible in the reference image. Do not invent appearances. Do not describe extras or background figures.
 
 Story text (first 3 pages):
 ${contextoPaginas.trim()}
 
-Describe each protagonist in ONE detailed paragraph. Be extremely specific about colors and physical traits visible in the reference image. Number each protagonist.`;
+Respond in English, number each protagonist.`;
               const protContent = imagenReferenciaBase64
                 ? [
                     {
