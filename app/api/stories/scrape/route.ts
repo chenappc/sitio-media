@@ -357,7 +357,7 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
           const descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${protagonistaLine} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels. Single image only, no split screen, no collage, no grid, no multiple panels, no divided image, no side by side comparison, no before and after, one single unified scene.`;
           try {
             controller.enqueue(enc.encode(sseMessage({ mensaje: `Generando imagen con Gemini 2.5 para página ${p}...` })));
-            controller.enqueue(enc.encode(sseMessage({ mensaje: `DEBUG: imagenReferenciaBase64=${imagenReferenciaBase64 ? "SÍ (" + imagenReferenciaMimeType + ")" : "NO"}, protagonistaFijo=${protagonistaFijo ? "SÍ: " + protagonistaFijo.slice(0, 80) + "..." : "NO"}` })));
+            controller.enqueue(enc.encode(sseMessage({ mensaje: `DEBUG: imagenReferenciaBase64=${imagenReferenciaBase64 ? "SÍ (" + imagenReferenciaMimeType + ")" : "NO"}, protagonistaFijo=${protagonistaFijo ? "SÍ: " + protagonistaFijo.slice(0, 300) + "..." : "NO"}` })));
 
             const geminiRes: Response = await fetch(
               `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${process.env.GOOGLE_API_KEY}`,
@@ -429,7 +429,6 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
                   // ignorar fallo de subida de referencia
                 }
                 controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen de referencia del protagonista guardada (página ${p})` })));
-                controller.enqueue(enc.encode(sseMessage({ mensaje: `DEBUG referencia guardada: imagenTienePersona=${imagenTienePersona}, page=${p}` })));
               }
             } else {
               throw new Error("Gemini no devolvió imagen");
