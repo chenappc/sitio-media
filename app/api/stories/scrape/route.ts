@@ -155,6 +155,7 @@ export async function POST(req: NextRequest) {
       let imagenReferenciaAnimalMimeType: string = "image/png";
       let imagenReferenciaUrlToSave: string | null = null;
       let contextoPaginas: string = "";
+      let descripcionAnimalOriginal: string | null = null;
       if (initialStoryId != null) {
         storyId = initialStoryId;
         storySlug = initialStorySlug;
@@ -323,6 +324,41 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
               const visionData = await visionRes.json().catch(() => ({}));
               descripcionVisual = visionData.content?.[0]?.text?.trim() ?? null;
               if (descripcionVisual) controller.enqueue(enc.encode(sseMessage({ mensaje: `Visual: ${descripcionVisual}` })));
+              if (p === 1 && imagenPrincipal && descripcionVisual && ANIMAL_KEYWORDS.test(descripcionVisual)) {
+                try {
+                  controller.enqueue(enc.encode(sseMessage({ mensaje: "Obteniendo descripción detallada del animal de la imagen original..." })));
+                  const animalDetailRes = await fetch("https://api.anthropic.com/v1/messages", {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "x-api-key": anthropicKey,
+                      "anthropic-version": "2023-06-01",
+                    },
+                    body: JSON.stringify({
+                      model: "claude-haiku-4-5-20251001",
+                      max_tokens: 300,
+                      messages: [{
+                        role: "user",
+                        content: [
+                          { type: "image", source: { type: "url", url: imagenPrincipal } },
+                          {
+                            type: "text",
+                            text: "Describe in extreme visual detail the animal in this image. Focus on: species, size, body shape, exact coat/fur colors and pattern distribution (which specific parts of the body are which color), ear shape, tail, face markings, distinctive features. Be specific enough that an image generator could recreate the exact same animal. Ignore any split screen, focus only on describing the animal's appearance.",
+                          },
+                        ],
+                      }],
+                    }),
+                  });
+                  const animalDetailData = await animalDetailRes.json().catch(() => ({}));
+                  const animalDetail = animalDetailData.content?.[0]?.text?.trim();
+                  if (animalDetail) {
+                    descripcionAnimalOriginal = animalDetail;
+                    controller.enqueue(enc.encode(sseMessage({ mensaje: "Descripción del animal guardada (imagen original)" })));
+                  }
+                } catch {
+                  // ignorar
+                }
+              }
             } catch {
               // ignorar, usar texto como fallback
             }
@@ -379,14 +415,15 @@ If reference images are provided, use them to describe the exact appearance of t
 
 Story text (first pages):
 ${contextoPaginas.trim()}
+${descripcionAnimalOriginal ? `\n\nIMPORTANT: The animal's appearance has been identified from the original news image as follows: ${descripcionAnimalOriginal}. Use this as the ground truth for the animal's appearance.` : ""}
 
 Respond in English, number each protagonist, one paragraph each.`
                 : (imagenReferenciaHumanoBase64 || imagenReferenciaAnimalBase64)
-                  ? `You are analyzing reference image(s) of story protagonists. The first image shows the human protagonist (if any), the second shows the animal protagonist (if any). Describe each visible character with precise physical details for consistent image generation. For humans: ethnicity, age, hair, clothing, distinctive features. For animals: species/breed, age/size, coat color, markings. For each animal protagonist, describe their appearance in extreme visual detail based on the reference image: species, size, body shape, exact coat colors and pattern distribution (which parts are which color), ear shape, tail, distinctive markings. Be specific enough that an image generator could recreate the exact same animal. Respond in English, one paragraph per character.`
+                  ? `You are analyzing reference image(s) of story protagonists. The first image shows the human protagonist (if any), the second shows the animal protagonist (if any). Describe each visible character with precise physical details for consistent image generation. For humans: ethnicity, age, hair, clothing, distinctive features. For animals: species/breed, age/size, coat color, markings. For each animal protagonist, describe their appearance in extreme visual detail based on the reference image: species, size, body shape, exact coat colors and pattern distribution (which parts are which color), ear shape, tail, distinctive markings. Be specific enough that an image generator could recreate the exact same animal.${descripcionAnimalOriginal ? `\n\nIMPORTANT: The animal's appearance has been identified from the original news image as follows: ${descripcionAnimalOriginal}. Use this as the ground truth for the animal's appearance.` : ""} Respond in English, one paragraph per character.`
                   : `Based on the following image description of a story scene, identify the main character(s) visible and provide a precise physical description for each that will be used to keep visual consistency across images. For humans: ethnicity, age range, hair, clothing, distinctive features. For animals: species/breed, age/size, coat color, markings. For each animal protagonist, describe their appearance in extreme visual detail based on the reference image (or the description below): species, size, body shape, exact coat colors and pattern distribution (which parts are which color), ear shape, tail, distinctive markings. Be specific enough that an image generator could recreate the exact same animal. Respond in English, one paragraph per character.
 
 Image description (page 4):
-${descripcionVisual!.trim()}`;
+${descripcionVisual!.trim()}${descripcionAnimalOriginal ? `\n\nIMPORTANT: The animal's appearance has been identified from the original news image as follows: ${descripcionAnimalOriginal}. Use this as the ground truth for the animal's appearance.` : ""}`;
               const protContent: Array<{ type: "image"; source: { type: "base64"; media_type: string; data: string } } | { type: "text"; text: string }> = [];
               if (imagenReferenciaHumanoBase64) {
                 protContent.push({
@@ -470,6 +507,9 @@ ${descripcionVisual!.trim()}`;
           const humanoEnPrimerPlano = descripcionVisual ? descripcionVisualTieneHumanoEnPrimerPlano(descripcionVisual) : false;
           const imagenReferenciaParaGemini = imagenReferenciaHumanoBase64 ?? imagenReferenciaAnimalBase64;
           const imagenReferenciaMimeParaGemini = imagenReferenciaHumanoBase64 ? imagenReferenciaHumanoMimeType : imagenReferenciaAnimalMimeType;
+          const lineaAnimalOriginal = descripcionAnimalOriginal
+            ? ` MANDATORY: If this scene includes a dog or animal, it MUST be depicted exactly as follows (ground truth from original news image): ${descripcionAnimalOriginal}.`
+            : "";
           const protagonistaLine =
             p <= 3
               ? ""
@@ -480,7 +520,7 @@ ${descripcionVisual!.trim()}`;
                   })()
                 : "";
           const instruccionesReferenciaYNarrativa = ` CRITICAL INSTRUCTIONS: (1) The reference image is ONLY for knowing how the characters look. DO NOT copy the composition, pose, setting or scene from the reference image. Generate a completely new scene. (2) The image MUST illustrate specifically what is happening in the text of this page. The scene, action, place and context must faithfully reflect the narrative content of the text. Do not generate generic scenes.`;
-          const descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${protagonistaLine}${instruccionesReferenciaYNarrativa} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels. Single image only, no split screen, no collage, no grid, no multiple panels, no divided image, no side by side comparison, no before and after, one single unified scene.`;
+          const descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${lineaAnimalOriginal}${protagonistaLine}${instruccionesReferenciaYNarrativa} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels. Single image only, no split screen, no collage, no grid, no multiple panels, no divided image, no side by side comparison, no before and after, one single unified scene.`;
           try {
             controller.enqueue(enc.encode(sseMessage({ mensaje: `Generando imagen con Gemini 2.5 para página ${p}...` })));
 
