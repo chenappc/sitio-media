@@ -87,18 +87,22 @@ export async function POST(req: NextRequest) {
 
         let imagenReferenciaBase64: string | null = null;
         let imagenReferenciaMimeType: string = "image/png";
-        const imagenRefUrl = story.imagen_referencia_url?.trim();
-        if (imagenRefUrl) {
-          try {
-            const imgRes = await fetch(imagenRefUrl, { headers: { "User-Agent": UA } });
-            if (imgRes.ok) {
-              const buf = Buffer.from(await imgRes.arrayBuffer());
-              imagenReferenciaBase64 = buf.toString("base64");
-              const contentType = imgRes.headers.get("content-type") ?? "";
-              imagenReferenciaMimeType = contentType.startsWith("image/") ? contentType.split(";")[0].trim() : "image/png";
+        if (pagina > 1) {
+          const paginaAnterior = paginas.find((p) => p.numero === pagina - 1);
+          const imagenAnteriorUrl = paginaAnterior?.imagen_url?.trim();
+          if (imagenAnteriorUrl) {
+            try {
+              controller.enqueue(enc.encode(sseMessage({ mensaje: "Cargando imagen de la página anterior como referencia..." })));
+              const imgRes = await fetch(imagenAnteriorUrl, { headers: { "User-Agent": UA } });
+              if (imgRes.ok) {
+                const buf = Buffer.from(await imgRes.arrayBuffer());
+                imagenReferenciaBase64 = buf.toString("base64");
+                const contentType = imgRes.headers.get("content-type") ?? "";
+                imagenReferenciaMimeType = contentType.startsWith("image/") ? contentType.split(";")[0].trim() : "image/png";
+              }
+            } catch {
+              // ignorar
             }
-          } catch {
-            // ignorar
           }
         }
 
@@ -252,9 +256,12 @@ export async function POST(req: NextRequest) {
         descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${protagonistaLine}${instruccionesRefYNarrativa}${imagenTienePersona && descripcionProtagonista ? ` Main character physical appearance: ${descripcionProtagonista}.` : ""} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels. Single image only, no split screen, no collage, no grid, no multiple panels, no divided image, no side by side comparison, no before and after, one single unified scene.`;
         }
 
+        const promptConReferencia = imagenReferenciaBase64
+          ? `${descripcion} IMPORTANT: Maintain the exact same protagonist appearance as shown in the reference image. Same face, same age, same hair, same clothing style. IMPORTANT: Use the reference image ONLY to match the exact appearance of the characters (face, hair, clothing, body). DO NOT copy the composition, pose, angle, background or scene from the reference image. Generate a completely different scene based on the story text.`
+          : descripcion;
         const geminiBodyParts: Array<{ inlineData?: { mimeType: string; data: string } } | { text: string }> = [
           ...(imagenReferenciaBase64 ? [{ inlineData: { mimeType: imagenReferenciaMimeType, data: imagenReferenciaBase64 } }] : []),
-          { text: imagenReferenciaBase64 ? `${descripcion} IMPORTANT: Maintain the exact same protagonist appearance as shown in the reference image. Same face, same age, same hair, same clothing style.` : descripcion },
+          { text: promptConReferencia },
         ];
         const geminiRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${googleApiKey}`,
