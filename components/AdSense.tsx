@@ -9,7 +9,7 @@ type AdSenseProps = {
   slot?: string;
 };
 
-// const DEFAULT_SLOT = "8857811296";
+// Slot anterior (desactivado): "8857811296"
 const DEFAULT_SLOT = "7922354756";
 
 export default function AdSense({ slot = DEFAULT_SLOT }: AdSenseProps) {
