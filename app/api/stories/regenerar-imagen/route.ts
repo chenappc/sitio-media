@@ -7,6 +7,25 @@ import { getStoryBySlug, getStoryPagina, updateStoryPaginaImagen } from "@/lib/s
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
 const UA = "Mozilla/5.0 (compatible; sitio-media-bot/1.0)";
 
+const ANIMAL_KEYWORDS = /\b(dog|cat|horse|bird|animal|pet|puppy|kitten|species|breed|coat|tiger|lion|bear|wolf|cub|perro|gato|caballo|mascota)\b/i;
+
+function splitProtagonistaFijoEnAnimalYHumano(protagonistaFijo: string): { animal: string; human: string } {
+  const chunks = protagonistaFijo
+    .split(/\n\s*\d+\.\s*/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const animal: string[] = [];
+  const human: string[] = [];
+  for (const chunk of chunks) {
+    if (ANIMAL_KEYWORDS.test(chunk)) animal.push(chunk);
+    else human.push(chunk);
+  }
+  return {
+    animal: animal.join(" ").trim() || protagonistaFijo,
+    human: human.join(" ").trim() || protagonistaFijo,
+  };
+}
+
 function auth(req: NextRequest): boolean {
   const secret = req.headers.get("x-admin-secret");
   return !!ADMIN_SECRET && secret === ADMIN_SECRET;
@@ -66,6 +85,31 @@ export async function POST(req: NextRequest) {
           return;
         }
 
+        let imagenReferenciaBase64: string | null = null;
+        let imagenReferenciaMimeType: string = "image/png";
+        const imagenRefUrl = story.imagen_referencia_url?.trim();
+        if (imagenRefUrl) {
+          try {
+            const imgRes = await fetch(imagenRefUrl, { headers: { "User-Agent": UA } });
+            if (imgRes.ok) {
+              const buf = Buffer.from(await imgRes.arrayBuffer());
+              imagenReferenciaBase64 = buf.toString("base64");
+              const contentType = imgRes.headers.get("content-type") ?? "";
+              imagenReferenciaMimeType = contentType.startsWith("image/") ? contentType.split(";")[0].trim() : "image/png";
+            }
+          } catch {
+            // ignorar
+          }
+        }
+
+        const descripcionProtagonistaFijo = story.descripcion_protagonista?.trim() ?? null;
+        const protagonistaLine = descripcionProtagonistaFijo
+          ? (() => {
+              const { animal: descAnimal, human: descHumano } = splitProtagonistaFijoEnAnimalYHumano(descripcionProtagonistaFijo);
+              return ` MANDATORY: If this scene includes a dog or animal, it MUST be depicted as: ${descAnimal}. If this scene includes a person, they MUST look exactly like: ${descHumano}. Use the reference image provided as the visual guide. Same individual, same appearance, every single image, no exceptions.`;
+            })()
+          : "";
+
         const parrafos = Array.isArray(pageRow.parrafos)
           ? (pageRow.parrafos as string[]).filter((p) => typeof p === "string" && p.trim())
           : [];
@@ -73,7 +117,7 @@ export async function POST(req: NextRequest) {
 
         let descripcion: string;
         if (descripcionCustom?.trim()) {
-          descripcion = descripcionCustom.trim() + ". No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels. Single image only, no split screen, no collage, no grid, no multiple panels, no divided image, no side by side comparison, no before and after, one single unified scene.";
+          descripcion = descripcionCustom.trim() + protagonistaLine + ". No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels. Single image only, no split screen, no collage, no grid, no multiple panels, no divided image, no side by side comparison, no before and after, one single unified scene.";
           controller.enqueue(enc.encode(sseMessage({ mensaje: "Usando prompt custom" })));
         } else {
         let descripcionProtagonista: string | null = null;
@@ -203,16 +247,20 @@ export async function POST(req: NextRequest) {
         const imagenTienePersona = descripcionVisual
           ? /\b(man|woman|person|people|elder|elderly|old|young|hombre|mujer|persona|anciano|anciana)\b/i.test(descripcionVisual)
           : false;
-        descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${imagenTienePersona && descripcionProtagonista ? ` Main character physical appearance: ${descripcionProtagonista}.` : ""} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels. Single image only, no split screen, no collage, no grid, no multiple panels, no divided image, no side by side comparison, no before and after, one single unified scene.`;
+        descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${protagonistaLine}${imagenTienePersona && descripcionProtagonista ? ` Main character physical appearance: ${descripcionProtagonista}.` : ""} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels. Single image only, no split screen, no collage, no grid, no multiple panels, no divided image, no side by side comparison, no before and after, one single unified scene.`;
         }
 
+        const geminiBodyParts: Array<{ inlineData?: { mimeType: string; data: string } } | { text: string }> = [
+          ...(imagenReferenciaBase64 ? [{ inlineData: { mimeType: imagenReferenciaMimeType, data: imagenReferenciaBase64 } }] : []),
+          { text: imagenReferenciaBase64 ? `${descripcion} IMPORTANT: Maintain the exact same protagonist appearance as shown in the reference image. Same face, same age, same hair, same clothing style.` : descripcion },
+        ];
         const geminiRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${googleApiKey}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              contents: [{ parts: [{ text: descripcion }] }],
+              contents: [{ parts: geminiBodyParts }],
               generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
             }),
           }

@@ -26,6 +26,8 @@ export interface Story {
   status: string;
   total_paginas: number;
   url_base?: string | null;
+  descripcion_protagonista?: string | null;
+  imagen_referencia_url?: string | null;
   created_at?: Date;
   updated_at?: Date;
 }

@@ -23,7 +23,7 @@ export async function getStoryBySlug(slug: string): Promise<{
 }> {
   try {
     const storyRes = await pool.query<Story>(
-      `SELECT id, slug, titulo, status, total_paginas, url_base, created_at, updated_at
+      `SELECT id, slug, titulo, status, total_paginas, url_base, descripcion_protagonista, imagen_referencia_url, created_at, updated_at
        FROM stories
        WHERE slug = $1`,
       [slug]
