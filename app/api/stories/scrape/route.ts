@@ -555,18 +555,24 @@ Respond in English, number each protagonist, one paragraph each.`;
           }
         }
 
-        async function generarImagenYSubir(page: PageData): Promise<string | null> {
+        let ultimaImagenGeneradaBase64: string | null = null;
+        let ultimaImagenGeneradaMime: string = "image/png";
+
+        async function generarImagenYSubir(
+          page: PageData,
+          refBase64: string | null,
+          refMime: string
+        ): Promise<{ imagenUrl: string | null; generatedBase64: string | null; generatedMime: string }> {
           const { p, tituloRewritten, parrafos, imagenPrincipal, descripcionVisual } = page;
           let imagenUrl: string | null = null;
+          let generatedBase64: string | null = null;
+          let generatedMime: string = "image/png";
 
           const temaBase = (tituloRewritten && parrafos.length > 0)
             ? `${tituloRewritten}. ${parrafos.slice(0, 2).join(" ").slice(0, 400)}`
             : (parrafos.length > 0
               ? parrafos.slice(0, 2).join(" ").slice(0, 400)
               : (descripcionVisual ?? "Escena narrativa"));
-
-          const imagenReferenciaParaGemini = imagenReferenciaHumanoBase64 ?? imagenReferenciaAnimalBase64;
-          const imagenReferenciaMimeParaGemini = imagenReferenciaHumanoBase64 ? imagenReferenciaHumanoMimeType : imagenReferenciaAnimalMimeType;
 
           const lineaAnimalOriginal = descripcionAnimalOriginal
             ? ` MANDATORY: If this scene includes a dog or animal, it MUST be depicted exactly as follows (ground truth from original news image): ${descripcionAnimalOriginal}.`
@@ -591,14 +597,14 @@ Respond in English, number each protagonist, one paragraph each.`;
                 body: JSON.stringify({
                   contents: [{
                     parts: [
-                      ...(imagenReferenciaParaGemini ? [{
+                      ...(refBase64 ? [{
                         inlineData: {
-                          mimeType: imagenReferenciaMimeParaGemini,
-                          data: imagenReferenciaParaGemini,
+                          mimeType: refMime,
+                          data: refBase64,
                         },
                       }] : []),
                       {
-                        text: imagenReferenciaParaGemini
+                        text: refBase64
                           ? `${descripcion} IMPORTANT: Maintain the exact same protagonist appearance as shown in the reference image. Same face, same age, same hair, same clothing style.`
                           : descripcion,
                       },
@@ -619,8 +625,11 @@ Respond in English, number each protagonist, one paragraph each.`;
 
             if (!imagePart?.inlineData?.data) throw new Error("Gemini no devolvió imagen");
 
+            generatedBase64 = imagePart.inlineData.data;
+            generatedMime = imagePart.inlineData.mimeType ?? "image/png";
+
             controller.enqueue(enc.encode(sseMessage({ mensaje: `Subiendo imagen a Cloudinary...` })));
-            const buf = Buffer.from(imagePart.inlineData.data, "base64");
+            const buf = Buffer.from(generatedBase64, "base64");
             imagenUrl = await new Promise<string>((resolve, reject) => {
               const uploadStream = cloudinary.uploader.upload_stream(
                 { folder: "sitio-media/stories" },
@@ -665,12 +674,17 @@ Respond in English, number each protagonist, one paragraph each.`;
             }
           }
 
-          return imagenUrl;
+          return { imagenUrl, generatedBase64, generatedMime };
         }
 
         // FASE 3: generar imágenes para páginas 1-5 ya leídas, con protagonistaFijo disponible desde p1.
         for (const page of paginasFase1) {
-          const imagenUrl = await generarImagenYSubir(page);
+          const gen = await generarImagenYSubir(page, ultimaImagenGeneradaBase64, ultimaImagenGeneradaMime);
+          const imagenUrl = gen.imagenUrl;
+          if (gen.generatedBase64) {
+            ultimaImagenGeneradaBase64 = gen.generatedBase64;
+            ultimaImagenGeneradaMime = gen.generatedMime;
+          }
           try {
             if (storyId != null) {
               await addStoryPagina(storyId, page.p, imagenUrl, page.parrafos);
@@ -699,7 +713,12 @@ Respond in English, number each protagonist, one paragraph each.`;
         for (let p = Math.max(6, paginaInicio); p <= paginaFin; p++) {
           const page = await leerYProcesarPagina(p);
           if (!page) continue;
-          const imagenUrl = await generarImagenYSubir(page);
+          const gen = await generarImagenYSubir(page, ultimaImagenGeneradaBase64, ultimaImagenGeneradaMime);
+          const imagenUrl = gen.imagenUrl;
+          if (gen.generatedBase64) {
+            ultimaImagenGeneradaBase64 = gen.generatedBase64;
+            ultimaImagenGeneradaMime = gen.generatedMime;
+          }
           try {
             if (storyId != null) {
               await addStoryPagina(storyId, p, imagenUrl, page.parrafos);
