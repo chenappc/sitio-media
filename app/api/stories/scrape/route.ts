@@ -464,12 +464,39 @@ ${descripcionVisual!.trim()}`;
                 Readable.from(buf).pipe(uploadStream);
               });
               controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen subida: ${imagenUrl}` })));
-              if (imagenTienePersona && imagePart?.inlineData?.data && !descripcionVisualIndicaSplit) {
-                const refData = imagePart.inlineData.data;
-                const refMime = imagePart.inlineData.mimeType ?? "image/png";
-                if (humanoEnPrimerPlano && !imagenReferenciaHumanoBase64) {
-                  imagenReferenciaHumanoBase64 = refData;
-                  imagenReferenciaHumanoMimeType = refMime;
+              const refData = imagePart.inlineData.data;
+              const refMime = imagePart.inlineData.mimeType ?? "image/png";
+              if (imagenTienePersona && !descripcionVisualIndicaSplit && humanoEnPrimerPlano && !imagenReferenciaHumanoBase64) {
+                imagenReferenciaHumanoBase64 = refData;
+                imagenReferenciaHumanoMimeType = refMime;
+                try {
+                  const refBuf = Buffer.from(refData, "base64");
+                  const refUrl = await new Promise<string>((resolve, reject) => {
+                    const uploadStream = cloudinary.uploader.upload_stream(
+                      { folder: "sitio-media/stories/referencias" },
+                      (err, result) => {
+                        if (err) reject(err);
+                        else resolve(result!.secure_url);
+                      }
+                    );
+                    Readable.from(refBuf).pipe(uploadStream);
+                  });
+                  imagenReferenciaUrlToSave = refUrl;
+                } catch {
+                  // ignorar fallo de subida de referencia
+                }
+                controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen de referencia humano guardada (página ${p})` })));
+              }
+              const puedeGuardarRefAnimal =
+                !descripcionVisualIndicaSplit &&
+                imagenTienePersona &&
+                !humanoEnPrimerPlano &&
+                !imagenReferenciaAnimalBase64 &&
+                !!refData;
+              if (puedeGuardarRefAnimal) {
+                imagenReferenciaAnimalBase64 = refData;
+                imagenReferenciaAnimalMimeType = refMime;
+                if (!imagenReferenciaUrlToSave) {
                   try {
                     const refBuf = Buffer.from(refData, "base64");
                     const refUrl = await new Promise<string>((resolve, reject) => {
@@ -484,32 +511,10 @@ ${descripcionVisual!.trim()}`;
                     });
                     imagenReferenciaUrlToSave = refUrl;
                   } catch {
-                    // ignorar fallo de subida de referencia
+                    // ignorar
                   }
-                  controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen de referencia humano guardada (página ${p})` })));
-                } else if (!humanoEnPrimerPlano && !imagenReferenciaAnimalBase64) {
-                  imagenReferenciaAnimalBase64 = refData;
-                  imagenReferenciaAnimalMimeType = refMime;
-                  if (!imagenReferenciaUrlToSave) {
-                    try {
-                      const refBuf = Buffer.from(refData, "base64");
-                      const refUrl = await new Promise<string>((resolve, reject) => {
-                        const uploadStream = cloudinary.uploader.upload_stream(
-                          { folder: "sitio-media/stories/referencias" },
-                          (err, result) => {
-                            if (err) reject(err);
-                            else resolve(result!.secure_url);
-                          }
-                        );
-                        Readable.from(refBuf).pipe(uploadStream);
-                      });
-                      imagenReferenciaUrlToSave = refUrl;
-                    } catch {
-                      // ignorar
-                    }
-                  }
-                  controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen de referencia animal guardada (página ${p})` })));
                 }
+                controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen de referencia animal guardada (página ${p})` })));
               }
             } else {
               throw new Error("Gemini no devolvió imagen");
