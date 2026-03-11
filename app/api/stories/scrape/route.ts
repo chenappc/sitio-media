@@ -326,7 +326,9 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
               const protPromptText = hasContexto
                 ? `You are analyzing a story. Based on the narrative text below and the reference image(s) provided (first = human protagonist if present, second = animal protagonist if present), identify the MAIN RECURRING PROTAGONISTS and describe them with precise visual details for consistent image generation.
 
-For each protagonist visible in the reference image(s) or named in the text: provide a detailed physical description. For humans: ethnicity, age range, hair color and style, eye color, distinctive features, clothing as visible or inferred. For animals: species, breed, coat color and pattern, size, distinctive markings.
+For each protagonist visible in the reference image(s) or named in the text: provide a detailed physical description.
+- For humans: ethnicity, age range, hair color and style, eye color, distinctive features, clothing as visible or inferred.
+- For animals: species/breed, age/size, hair/coat color, clothing/markings. For each animal protagonist, describe their appearance in extreme visual detail based on the reference image: species, size, body shape, exact coat colors and pattern distribution (which parts are which color), ear shape, tail, distinctive markings. Be specific enough that an image generator could recreate the exact same animal.
 
 If reference images are provided, use them to describe the exact appearance of the character(s). Be specific and consistent.
 
@@ -335,8 +337,8 @@ ${contextoPaginas.trim()}
 
 Respond in English, number each protagonist, one paragraph each.`
                 : (imagenReferenciaHumanoBase64 || imagenReferenciaAnimalBase64)
-                  ? `You are analyzing reference image(s) of story protagonists. The first image shows the human protagonist (if any), the second shows the animal protagonist (if any). Describe each visible character with precise physical details for consistent image generation: for humans (ethnicity, age, hair, clothing, distinctive features), for animals (species, breed, color, size, markings). Respond in English, one paragraph per character.`
-                  : `Based on the following image description of a story scene, identify the main character(s) visible and provide a precise physical description for each that will be used to keep visual consistency across images. For humans: ethnicity, age range, hair, clothing, distinctive features. For animals: species, breed, color, size, markings. Respond in English, one paragraph per character.
+                  ? `You are analyzing reference image(s) of story protagonists. The first image shows the human protagonist (if any), the second shows the animal protagonist (if any). Describe each visible character with precise physical details for consistent image generation. For humans: ethnicity, age, hair, clothing, distinctive features. For animals: species/breed, age/size, coat color, markings. For each animal protagonist, describe their appearance in extreme visual detail based on the reference image: species, size, body shape, exact coat colors and pattern distribution (which parts are which color), ear shape, tail, distinctive markings. Be specific enough that an image generator could recreate the exact same animal. Respond in English, one paragraph per character.`
+                  : `Based on the following image description of a story scene, identify the main character(s) visible and provide a precise physical description for each that will be used to keep visual consistency across images. For humans: ethnicity, age range, hair, clothing, distinctive features. For animals: species/breed, age/size, coat color, markings. For each animal protagonist, describe their appearance in extreme visual detail based on the reference image (or the description below): species, size, body shape, exact coat colors and pattern distribution (which parts are which color), ear shape, tail, distinctive markings. Be specific enough that an image generator could recreate the exact same animal. Respond in English, one paragraph per character.
 
 Image description (page 4):
 ${descripcionVisual!.trim()}`;
