@@ -26,7 +26,8 @@ export default function SolicitarPrestamoParaguayPage() {
         institución reconocida, te ofrece libertad y confianza en cada paso.
       </p>
 
-      <AdSense slot="8857811296" />
+      {/* Slot anterior: 8857811296 */}
+      <AdSense slot="7922354756" />
 
       <h2 className={styles.sectionTitle}>
         ¿Cuáles son los requisitos para solicitar el Mi Préstamo?
@@ -57,7 +58,8 @@ export default function SolicitarPrestamoParaguayPage() {
         a tus posibilidades, evitando desequilibrios financieros en el futuro.
       </p>
 
-      <AdSense slot="9784384730" />
+      {/* Slot anterior: 9784384730 */}
+      <AdSense slot="7922354756" />
 
       <h2 className={styles.sectionTitle}>
         ¿Cómo solicitar el préstamo de Banco Itaú?

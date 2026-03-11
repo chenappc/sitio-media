@@ -25,7 +25,8 @@ export default function PrestamosParaguayPage() {
         buscan concretar proyectos personales o organizar sus finanzas.
       </p>
 
-      <AdSense slot="8857811296" />
+      {/* Slot anterior: 8857811296 */}
+      <AdSense slot="7922354756" />
 
       <ul className={styles.list}>
         <li className={styles.listItem}>
@@ -81,7 +82,8 @@ export default function PrestamosParaguayPage() {
         tasas y condiciones, consultá directamente con Banco Itaú.
       </p>
 
-      <AdSense slot="9784384730" />
+      {/* Slot anterior: 9784384730 */}
+      <AdSense slot="7922354756" />
 
       <h2 className={styles.sectionTitle}>
         ¿Cómo solicitar Itaú Mi Préstamo?

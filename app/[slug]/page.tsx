@@ -70,7 +70,8 @@ export default async function NotaPage({ params }: Props) {
       <h1 className="mt-3 font-serif text-2xl font-bold leading-tight md:text-3xl">
         {nota.titulo}
       </h1>
-      {/* <div className="mt-4">
+      {/* Slot anterior: 4862111765
+      <div className="mt-4">
         <AdSense slot="4862111765" />
       </div> */}
       <p className="mt-2 text-sm text-[var(--negro)]/60">
@@ -104,7 +105,8 @@ export default async function NotaPage({ params }: Props) {
       />
 
       <div className="mt-8">
-        <AdSense slot="8801356773" />
+        {/* Slot anterior: 8801356773 */}
+        <AdSense slot="7922354756" />
       </div>
 
       {nota.fuente_url && (

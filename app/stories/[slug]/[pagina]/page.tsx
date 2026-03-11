@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { getStoryPagina } from "@/lib/stories";
+import AdSense from "@/components/AdSense";
 import type { Metadata } from "next";
 
 export const revalidate = 0;
@@ -69,7 +70,7 @@ export default async function StoryPaginaPage({ params }: Props) {
                 <p className="text-xl leading-relaxed">{texto}</p>
                 {i === midIndex && midIndex > 0 && (
                   <div className="my-4 min-h-[90px] rounded-sm bg-[var(--negro)]/5">
-                    {/* AdSense - agregar código */}
+                    <AdSense slot="7922354756" />
                   </div>
                 )}
               </div>
