@@ -495,11 +495,11 @@ ${descripcionVisual!.trim()}${descripcionAnimalOriginal ? `\n\nIMPORTANT: The an
           }
 
           let imagenUrl: string | null = null;
-          const temaBase = descripcionVisual
-            ? descripcionVisual
-            : (tituloRewritten && parrafos[0]
-              ? `${tituloRewritten}. ${parrafos[0].slice(0, 300)}`
-              : (tituloRewritten || parrafos[0]?.slice(0, 400) || "Escena narrativa"));
+          const temaBase = (tituloRewritten && parrafos.length > 0)
+            ? `${tituloRewritten}. ${parrafos.slice(0, 2).join(" ").slice(0, 400)}`
+            : (parrafos.length > 0
+              ? parrafos.slice(0, 2).join(" ").slice(0, 400)
+              : (descripcionVisual ?? "Escena narrativa"));
 
           const imagenTienePersona = descripcionVisual
             ? /\b(man|woman|person|people|elder|elderly|old|young|hombre|mujer|persona|anciano|anciana|dog|cat|horse|bird|animal|pet|puppy|kitten|perro|gato|caballo|pájaro|animal|mascota|cachorro|tiger|lion|bear|wolf|tigre|león|oso|lobo)\b/i.test(descripcionVisual)
