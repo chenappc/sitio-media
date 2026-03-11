@@ -52,6 +52,20 @@ function descripcionVisualTieneHumanoEnPrimerPlano(descripcionVisual: string): b
   return count >= 2;
 }
 
+const BACK_VIEW_PHRASES = [
+  "from behind",
+  "desde atrás",
+  "de espaldas",
+  "back of",
+  "rear view",
+  "facing away",
+];
+
+function descripcionVisualIndicaHumanoDeEspaldas(descripcionVisual: string): boolean {
+  const lower = descripcionVisual.toLowerCase();
+  return BACK_VIEW_PHRASES.some((phrase) => lower.includes(phrase));
+}
+
 const ANIMAL_KEYWORDS = /\b(dog|cat|horse|bird|animal|pet|puppy|kitten|species|breed|coat|tiger|lion|bear|wolf|cub|perro|gato|caballo|mascota)\b/i;
 
 function splitProtagonistaFijoEnAnimalYHumano(protagonistaFijo: string): { animal: string; human: string } {
@@ -490,7 +504,8 @@ ${descripcionVisual!.trim()}`;
               controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen subida: ${imagenUrl}` })));
               const refData = imagePart.inlineData.data;
               const refMime = imagePart.inlineData.mimeType ?? "image/png";
-              if (imagenTienePersona && !descripcionVisualIndicaSplit && humanoEnPrimerPlano && !imagenReferenciaHumanoBase64) {
+              const humanoDeEspaldas = descripcionVisual ? descripcionVisualIndicaHumanoDeEspaldas(descripcionVisual) : false;
+              if (imagenTienePersona && !descripcionVisualIndicaSplit && humanoEnPrimerPlano && !humanoDeEspaldas && !imagenReferenciaHumanoBase64) {
                 imagenReferenciaHumanoBase64 = refData;
                 imagenReferenciaHumanoMimeType = refMime;
                 try {
