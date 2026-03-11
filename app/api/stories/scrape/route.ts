@@ -466,6 +466,7 @@ ${descripcionVisual!.trim()}`;
               controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen subida: ${imagenUrl}` })));
               const refData = imagePart.inlineData.data;
               const refMime = imagePart.inlineData.mimeType ?? "image/png";
+              controller.enqueue(enc.encode(sseMessage({ mensaje: `DEBUG ref check p${p}: tienePersona=${imagenTienePersona}, esHumano=${descripcionVisualTieneHumanoEnPrimerPlano(descripcionVisual ?? "")}, esSplit=${SPLIT_SCREEN_PATTERNS.some((pat) => (descripcionVisual ?? "").toLowerCase().includes(pat))}, refHumanoNull=${imagenReferenciaHumanoBase64 === null}, refAnimalNull=${imagenReferenciaAnimalBase64 === null}, imagePart=${!!imagePart}` })));
               if (imagenTienePersona && !descripcionVisualIndicaSplit && humanoEnPrimerPlano && !imagenReferenciaHumanoBase64) {
                 imagenReferenciaHumanoBase64 = refData;
                 imagenReferenciaHumanoMimeType = refMime;
