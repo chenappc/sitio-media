@@ -555,24 +555,16 @@ Respond in English, number each protagonist, one paragraph each.`;
           }
         }
 
-        let ultimaImagenGeneradaBase64: string | null = null;
-        let ultimaImagenGeneradaMime: string = "image/png";
-
-        async function generarImagenYSubir(
-          page: PageData,
-          refBase64: string | null,
-          refMime: string
-        ): Promise<{ imagenUrl: string | null; generatedBase64: string | null; generatedMime: string }> {
+        async function generarImagenYSubir(page: PageData): Promise<{ imagenUrl: string | null }> {
           const { p, tituloRewritten, parrafos, imagenPrincipal, descripcionVisual } = page;
           let imagenUrl: string | null = null;
-          let generatedBase64: string | null = null;
-          let generatedMime: string = "image/png";
 
-          const temaBase = (tituloRewritten && parrafos.length > 0)
-            ? `${tituloRewritten}. ${parrafos.slice(0, 2).join(" ").slice(0, 400)}`
-            : (parrafos.length > 0
-              ? parrafos.slice(0, 2).join(" ").slice(0, 400)
-              : (descripcionVisual ?? "Escena narrativa"));
+          const textoNarrativo = (tituloRewritten && parrafos.length > 0)
+            ? `${tituloRewritten}. ${parrafos.slice(0, 2).join(" ").slice(0, 300)}`
+            : (parrafos.length > 0 ? parrafos.slice(0, 2).join(" ").slice(0, 300) : "");
+          const temaBase = descripcionVisual
+            ? (textoNarrativo ? `${textoNarrativo}. Scene reference: ${descripcionVisual}` : `Scene reference: ${descripcionVisual}`)
+            : (textoNarrativo || "Escena narrativa");
 
           const lineaAnimalOriginal = descripcionAnimalOriginal
             ? ` MANDATORY: If this scene includes a dog or animal, it MUST be depicted exactly as follows (ground truth from original news image): ${descripcionAnimalOriginal}.`
@@ -580,12 +572,12 @@ Respond in English, number each protagonist, one paragraph each.`;
           const protagonistaLine = protagonistaFijo
             ? (() => {
                 const { animal: descAnimal, human: descHumano } = splitProtagonistaFijoEnAnimalYHumano(protagonistaFijo);
-                return ` MANDATORY: If this scene includes a dog or animal, it MUST be depicted as: ${descAnimal}. If this scene includes a person, they MUST look exactly like: ${descHumano}. Use the reference image provided as the visual guide. Same individual, same appearance, every single image, no exceptions.`;
+                return ` MANDATORY: If this scene includes a dog or animal, it MUST be depicted as: ${descAnimal}. If this scene includes a person, they MUST look exactly like: ${descHumano}. Same individual, same appearance, every single image, no exceptions.`;
               })()
             : "";
-          const instruccionesReferenciaYNarrativa = ` CRITICAL INSTRUCTIONS: (1) The reference image is ONLY for knowing how the characters look. DO NOT copy the composition, pose, setting or scene from the reference image. Generate a completely new scene. (2) The image MUST illustrate specifically what is happening in the text of this page. The scene, action, place and context must faithfully reflect the narrative content of the text. Do not generate generic scenes.`;
+          const instruccionesNarrativa = ` The image MUST illustrate specifically what is happening in the text of this page. The scene, action, place and context must faithfully reflect the narrative content of the text. Do not generate generic scenes.`;
 
-          const descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${lineaAnimalOriginal}${protagonistaLine}${instruccionesReferenciaYNarrativa} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels. Single image only, no split screen, no collage, no grid, no multiple panels, no divided image, no side by side comparison, no before and after, one single unified scene.`;
+          const descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${lineaAnimalOriginal}${protagonistaLine}${instruccionesNarrativa} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels. Single image only, no split screen, no collage, no grid, no multiple panels, no divided image, no side by side comparison, no before and after, one single unified scene.`;
 
           try {
             controller.enqueue(enc.encode(sseMessage({ mensaje: `Generando imagen con Gemini 2.5 para página ${p}...` })));
@@ -595,21 +587,7 @@ Respond in English, number each protagonist, one paragraph each.`;
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  contents: [{
-                    parts: [
-                      ...(refBase64 ? [{
-                        inlineData: {
-                          mimeType: refMime,
-                          data: refBase64,
-                        },
-                      }] : []),
-                      {
-                        text: refBase64
-                          ? `${descripcion} IMPORTANT: Maintain the exact same protagonist appearance as shown in the reference image. Same face, same age, same hair, same clothing style. IMPORTANT: Use the reference image ONLY to match the exact appearance of the characters (face, hair, clothing, body). DO NOT copy the composition, pose, angle, background or scene from the reference image. Generate a completely different scene based on the story text.`
-                          : descripcion,
-                      },
-                    ],
-                  }],
+                  contents: [{ parts: [{ text: descripcion }] }],
                   generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
                 }),
               }
@@ -625,11 +603,8 @@ Respond in English, number each protagonist, one paragraph each.`;
 
             if (!imagePart?.inlineData?.data) throw new Error("Gemini no devolvió imagen");
 
-            generatedBase64 = imagePart.inlineData.data;
-            generatedMime = imagePart.inlineData.mimeType ?? "image/png";
-
             controller.enqueue(enc.encode(sseMessage({ mensaje: `Subiendo imagen a Cloudinary...` })));
-            const buf = Buffer.from(generatedBase64, "base64");
+            const buf = Buffer.from(imagePart.inlineData.data, "base64");
             imagenUrl = await new Promise<string>((resolve, reject) => {
               const uploadStream = cloudinary.uploader.upload_stream(
                 { folder: "sitio-media/stories" },
@@ -674,17 +649,13 @@ Respond in English, number each protagonist, one paragraph each.`;
             }
           }
 
-          return { imagenUrl, generatedBase64, generatedMime };
+          return { imagenUrl };
         }
 
         // FASE 3: generar imágenes para páginas 1-5 ya leídas, con protagonistaFijo disponible desde p1.
         for (const page of paginasFase1) {
-          const gen = await generarImagenYSubir(page, ultimaImagenGeneradaBase64, ultimaImagenGeneradaMime);
+          const gen = await generarImagenYSubir(page);
           const imagenUrl = gen.imagenUrl;
-          if (gen.generatedBase64) {
-            ultimaImagenGeneradaBase64 = gen.generatedBase64;
-            ultimaImagenGeneradaMime = gen.generatedMime;
-          }
           try {
             if (storyId != null) {
               await addStoryPagina(storyId, page.p, imagenUrl, page.parrafos);
@@ -713,12 +684,8 @@ Respond in English, number each protagonist, one paragraph each.`;
         for (let p = Math.max(6, paginaInicio); p <= paginaFin; p++) {
           const page = await leerYProcesarPagina(p);
           if (!page) continue;
-          const gen = await generarImagenYSubir(page, ultimaImagenGeneradaBase64, ultimaImagenGeneradaMime);
+          const gen = await generarImagenYSubir(page);
           const imagenUrl = gen.imagenUrl;
-          if (gen.generatedBase64) {
-            ultimaImagenGeneradaBase64 = gen.generatedBase64;
-            ultimaImagenGeneradaMime = gen.generatedMime;
-          }
           try {
             if (storyId != null) {
               await addStoryPagina(storyId, p, imagenUrl, page.parrafos);
