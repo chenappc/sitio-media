@@ -52,6 +52,25 @@ function descripcionVisualTieneHumanoEnPrimerPlano(descripcionVisual: string): b
   return count >= 2;
 }
 
+const ANIMAL_KEYWORDS = /\b(dog|cat|horse|bird|animal|pet|puppy|kitten|species|breed|coat|tiger|lion|bear|wolf|cub|perro|gato|caballo|mascota)\b/i;
+
+function splitProtagonistaFijoEnAnimalYHumano(protagonistaFijo: string): { animal: string; human: string } {
+  const chunks = protagonistaFijo
+    .split(/\n\s*\d+\.\s*/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const animal: string[] = [];
+  const human: string[] = [];
+  for (const chunk of chunks) {
+    if (ANIMAL_KEYWORDS.test(chunk)) animal.push(chunk);
+    else human.push(chunk);
+  }
+  return {
+    animal: animal.join(" ").trim() || protagonistaFijo,
+    human: human.join(" ").trim() || protagonistaFijo,
+  };
+}
+
 function auth(req: NextRequest): boolean {
   const secret = req.headers.get("x-admin-secret");
   return !!ADMIN_SECRET && secret === ADMIN_SECRET;
@@ -408,7 +427,10 @@ ${descripcionVisual!.trim()}`;
             p <= 3
               ? ""
               : protagonistaFijo
-                ? ` If any of the following recurring characters appear in this scene based on the scene description, depict them with their EXACT physical appearance without changing ANY trait. Do not force characters into scenes where they don't belong: ${protagonistaFijo}.`
+                ? (() => {
+                    const { animal: descAnimal, human: descHumano } = splitProtagonistaFijoEnAnimalYHumano(protagonistaFijo);
+                    return ` MANDATORY: If this scene includes a dog or animal, it MUST be depicted as: ${descAnimal}. If this scene includes a person, they MUST look exactly like: ${descHumano}. Use the reference image provided as the visual guide. Same individual, same appearance, every single image, no exceptions.`;
+                  })()
                 : "";
           const descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${protagonistaLine} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels. Single image only, no split screen, no collage, no grid, no multiple panels, no divided image, no side by side comparison, no before and after, one single unified scene.`;
           try {
