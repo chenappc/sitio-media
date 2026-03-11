@@ -139,6 +139,8 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+  const anthropicKeyStr: string = anthropicKey;
+  const googleApiKeyStr: string = googleApiKey;
 
   const total = paginaFin - paginaInicio + 1;
   let storyId: number | null = null;
@@ -273,7 +275,7 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
-                  "x-api-key": anthropicKey,
+                  "x-api-key": anthropicKeyStr,
                   "anthropic-version": "2023-06-01",
                 },
                 body: JSON.stringify({
@@ -311,7 +313,7 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
-                  "x-api-key": anthropicKey,
+                  "x-api-key": anthropicKeyStr,
                   "anthropic-version": "2023-06-01",
                 },
                 body: JSON.stringify({
@@ -340,7 +342,7 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
                     method: "POST",
                     headers: {
                       "Content-Type": "application/json",
-                      "x-api-key": anthropicKey,
+                      "x-api-key": anthropicKeyStr,
                       "anthropic-version": "2023-06-01",
                     },
                     body: JSON.stringify({
@@ -527,7 +529,7 @@ Respond in English, number each protagonist, one paragraph each.`;
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                "x-api-key": anthropicKey,
+                "x-api-key": anthropicKeyStr,
                 "anthropic-version": "2023-06-01",
               },
               body: JSON.stringify({
@@ -582,7 +584,7 @@ Respond in English, number each protagonist, one paragraph each.`;
           try {
             controller.enqueue(enc.encode(sseMessage({ mensaje: `Generando imagen con Gemini 2.5 para página ${p}...` })));
             const geminiRes: Response = await fetch(
-              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${process.env.GOOGLE_API_KEY}`,
+              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${googleApiKeyStr}`,
               {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
