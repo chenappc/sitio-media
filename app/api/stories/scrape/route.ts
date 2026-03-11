@@ -333,6 +333,37 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
             : false;
           const descripcionVisualIndicaSplit = descripcionVisual ? descripcionVisualIndicaSplitScreen(descripcionVisual) : false;
 
+          if (p === 1 && imagenPrincipal && descripcionVisual && !descripcionVisualIndicaSplit && imagenTienePersonaAfterVisual && !descripcionVisualTieneHumanoEnPrimerPlano(descripcionVisual) && !imagenReferenciaAnimalBase64) {
+            try {
+              controller.enqueue(enc.encode(sseMessage({ mensaje: "Usando imagen original de la noticia como referencia animal..." })));
+              const imgRes = await fetch(imagenPrincipal, { headers: { "User-Agent": UA } });
+              if (imgRes.ok) {
+                const buf = Buffer.from(await imgRes.arrayBuffer());
+                imagenReferenciaAnimalBase64 = buf.toString("base64");
+                const contentType = imgRes.headers.get("content-type") ?? "";
+                imagenReferenciaAnimalMimeType = contentType.startsWith("image/") ? contentType.split(";")[0].trim() : "image/png";
+                try {
+                  const refUrl = await new Promise<string>((resolve, reject) => {
+                    const uploadStream = cloudinary.uploader.upload_stream(
+                      { folder: "sitio-media/stories/referencias" },
+                      (err, result) => {
+                        if (err) reject(err);
+                        else resolve(result!.secure_url);
+                      }
+                    );
+                    Readable.from(buf).pipe(uploadStream);
+                  });
+                  imagenReferenciaUrlToSave = refUrl;
+                } catch {
+                  // ignorar fallo de subida
+                }
+                controller.enqueue(enc.encode(sseMessage({ mensaje: "Imagen de referencia animal guardada (foto original de la noticia)" })));
+              }
+            } catch {
+              // ignorar
+            }
+          }
+
           if (p === 4 && !protagonistaFijo && (contextoPaginas.trim() || descripcionVisual || imagenReferenciaHumanoBase64 || imagenReferenciaAnimalBase64)) {
             try {
               controller.enqueue(enc.encode(sseMessage({ mensaje: "Extrayendo protagonistas fijos (página 4, una sola vez)..." })));
@@ -525,35 +556,6 @@ ${descripcionVisual!.trim()}`;
                   // ignorar fallo de subida de referencia
                 }
                 controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen de referencia humano guardada (página ${p})` })));
-              }
-              const puedeGuardarRefAnimal =
-                !descripcionVisualIndicaSplit &&
-                imagenTienePersona &&
-                !humanoEnPrimerPlano &&
-                !imagenReferenciaAnimalBase64 &&
-                !!refData;
-              if (puedeGuardarRefAnimal) {
-                imagenReferenciaAnimalBase64 = refData;
-                imagenReferenciaAnimalMimeType = refMime;
-                if (!imagenReferenciaUrlToSave) {
-                  try {
-                    const refBuf = Buffer.from(refData, "base64");
-                    const refUrl = await new Promise<string>((resolve, reject) => {
-                      const uploadStream = cloudinary.uploader.upload_stream(
-                        { folder: "sitio-media/stories/referencias" },
-                        (err, result) => {
-                          if (err) reject(err);
-                          else resolve(result!.secure_url);
-                        }
-                      );
-                      Readable.from(refBuf).pipe(uploadStream);
-                    });
-                    imagenReferenciaUrlToSave = refUrl;
-                  } catch {
-                    // ignorar
-                  }
-                }
-                controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen de referencia animal guardada (página ${p})` })));
               }
             } else {
               throw new Error("Gemini no devolvió imagen");
