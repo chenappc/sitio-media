@@ -555,64 +555,63 @@ Respond in English, number each protagonist, one paragraph each.`;
           }
         }
 
-        let ultimaImagenGeneradaBase64: string | null = null;
-        let ultimaImagenGeneradaMime: string = "image/png";
-
-        async function generarImagenYSubir(
-          page: PageData,
-          refBase64: string | null,
-          refMime: string
-        ): Promise<{ imagenUrl: string | null; generatedBase64: string | null; generatedMime: string }> {
+        async function generarImagenYSubir(page: PageData): Promise<{ imagenUrl: string | null }> {
           const { p, tituloRewritten, parrafos, imagenPrincipal, descripcionVisual } = page;
           let imagenUrl: string | null = null;
-          let generatedBase64: string | null = null;
-          let generatedMime: string = "image/png";
 
-          // 1. PRIMERO: regla estricta sobre no copiar composición (solo si hay referencia)
-          const strictRuleRef = refBase64
-            ? "STRICT RULE: The reference image shows ONLY how the characters look. You MUST NOT copy the composition, pose, camera angle, background, setting, lighting or scene layout from the reference image. Violating this rule is not acceptable. "
-            : "";
+          const pageText = (tituloRewritten && parrafos.length > 0)
+            ? `${tituloRewritten}. ${parrafos.join(" ")}`
+            : (parrafos.length > 0 ? parrafos.join(" ") : "");
+          const claudePromptForGemini = `You are a prompt engineer for AI image generation. Based on the story text below and the character descriptions, write a single detailed cinematic prompt for an AI image generator. The prompt must:
+1. Describe the exact scene happening in this page's text (setting, action, mood, time of day)
+2. Include precise physical descriptions of every character that appears in the scene: ${protagonistaFijo ?? "None specified"}
+3. Be photorealistic, documentary style, National Geographic quality
+4. NOT include any text, logos, watermarks, split screens or collages
+5. Be a single unified scene
 
-          // 2. SEGUNDO: descripción de escena (temaBase)
-          const textoNarrativo = (tituloRewritten && parrafos.length > 0)
-            ? `${tituloRewritten}. ${parrafos.slice(0, 2).join(" ").slice(0, 300)}`
-            : (parrafos.length > 0 ? parrafos.slice(0, 2).join(" ").slice(0, 300) : "");
-          const temaBase = descripcionVisual
-            ? (textoNarrativo ? `${textoNarrativo}. Scene reference: ${descripcionVisual}` : `Scene reference: ${descripcionVisual}`)
-            : (textoNarrativo || "Escena narrativa");
-          const parteEscena = `Recreate this scene: ${temaBase}.`;
+Page text: ${pageText}
+Original scene context: ${descripcionVisual ?? "None"}
 
-          // 3. TERCERO: instrucciones MANDATORY de protagonistaFijo
-          const lineaAnimalOriginal = descripcionAnimalOriginal
-            ? ` MANDATORY: If this scene includes a dog or animal, it MUST be depicted exactly as follows (ground truth from original news image): ${descripcionAnimalOriginal}.`
-            : "";
-          const protagonistaLine = protagonistaFijo
-            ? (() => {
-                const { animal: descAnimal, human: descHumano } = splitProtagonistaFijoEnAnimalYHumano(protagonistaFijo);
-                return ` MANDATORY: If this scene includes a dog or animal, it MUST be depicted as: ${descAnimal}. If this scene includes a person, they MUST look exactly like: ${descHumano}. Same individual, same appearance, every single image, no exceptions.`;
-              })()
-            : "";
-          const instruccionesNarrativa = ` The image MUST illustrate specifically what is happening in the text of this page. The scene, action, place and context must faithfully reflect the narrative content of the text. Do not generate generic scenes.`;
-          const parteProtagonistas = `${lineaAnimalOriginal}${protagonistaLine}${instruccionesNarrativa}`;
+Write ONLY the image generation prompt, nothing else, no preamble, no explanation.`;
 
-          // 4. ÚLTIMO: restricciones técnicas
-          const parteTecnica = ` RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels. Single image only, no split screen, no collage, no grid, no multiple panels, no divided image, no side by side comparison, no before and after, one single unified scene.`;
-
-          const descripcion = strictRuleRef + parteEscena + parteProtagonistas + parteTecnica;
+          let promptParaGemini: string;
+          try {
+            controller.enqueue(enc.encode(sseMessage({ mensaje: `Claude: generando prompt cinematográfico para página ${p}...` })));
+            const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-api-key": anthropicKeyStr,
+                "anthropic-version": "2023-06-01",
+              },
+              body: JSON.stringify({
+                model: "claude-haiku-4-5-20251001",
+                max_tokens: 1024,
+                messages: [{ role: "user", content: claudePromptForGemini }],
+              }),
+            });
+            const claudeData = await claudeRes.json().catch(() => ({}));
+            promptParaGemini = (claudeData.content?.[0]?.text ?? "").trim();
+            if (!promptParaGemini) throw new Error("Claude no devolvió prompt");
+          } catch (e) {
+            controller.enqueue(enc.encode(sseMessage({
+              pagina: p,
+              total,
+              status: "error",
+              mensaje: `Error Claude (prompt): ${e instanceof Error ? e.message : String(e)}`,
+            })));
+            return { imagenUrl };
+          }
 
           try {
             controller.enqueue(enc.encode(sseMessage({ mensaje: `Generando imagen con Gemini 2.5 para página ${p}...` })));
-            const geminiBodyParts: Array<{ inlineData?: { mimeType: string; data: string } } | { text: string }> = [
-              ...(refBase64 ? [{ inlineData: { mimeType: refMime, data: refBase64 } }] : []),
-              { text: descripcion },
-            ];
             const geminiRes: Response = await fetch(
               `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${googleApiKeyStr}`,
               {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  contents: [{ parts: geminiBodyParts }],
+                  contents: [{ parts: [{ text: promptParaGemini }] }],
                   generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
                 }),
               }
@@ -628,11 +627,8 @@ Respond in English, number each protagonist, one paragraph each.`;
 
             if (!imagePart?.inlineData?.data) throw new Error("Gemini no devolvió imagen");
 
-            generatedBase64 = imagePart.inlineData.data;
-            generatedMime = imagePart.inlineData.mimeType ?? "image/png";
-
             controller.enqueue(enc.encode(sseMessage({ mensaje: `Subiendo imagen a Cloudinary...` })));
-            const buf = Buffer.from(generatedBase64, "base64");
+            const buf = Buffer.from(imagePart.inlineData.data, "base64");
             imagenUrl = await new Promise<string>((resolve, reject) => {
               const uploadStream = cloudinary.uploader.upload_stream(
                 { folder: "sitio-media/stories" },
@@ -677,17 +673,13 @@ Respond in English, number each protagonist, one paragraph each.`;
             }
           }
 
-          return { imagenUrl, generatedBase64, generatedMime };
+          return { imagenUrl };
         }
 
         // FASE 3: generar imágenes para páginas 1-5 ya leídas, con protagonistaFijo disponible desde p1.
         for (const page of paginasFase1) {
-          const gen = await generarImagenYSubir(page, ultimaImagenGeneradaBase64, ultimaImagenGeneradaMime);
+          const gen = await generarImagenYSubir(page);
           const imagenUrl = gen.imagenUrl;
-          if (gen.generatedBase64) {
-            ultimaImagenGeneradaBase64 = gen.generatedBase64;
-            ultimaImagenGeneradaMime = gen.generatedMime;
-          }
           try {
             if (storyId != null) {
               await addStoryPagina(storyId, page.p, imagenUrl, page.parrafos);
@@ -716,12 +708,8 @@ Respond in English, number each protagonist, one paragraph each.`;
         for (let p = Math.max(6, paginaInicio); p <= paginaFin; p++) {
           const page = await leerYProcesarPagina(p);
           if (!page) continue;
-          const gen = await generarImagenYSubir(page, ultimaImagenGeneradaBase64, ultimaImagenGeneradaMime);
+          const gen = await generarImagenYSubir(page);
           const imagenUrl = gen.imagenUrl;
-          if (gen.generatedBase64) {
-            ultimaImagenGeneradaBase64 = gen.generatedBase64;
-            ultimaImagenGeneradaMime = gen.generatedMime;
-          }
           try {
             if (storyId != null) {
               await addStoryPagina(storyId, p, imagenUrl, page.parrafos);
