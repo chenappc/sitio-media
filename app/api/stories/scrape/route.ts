@@ -605,7 +605,7 @@ Respond in English, number each protagonist, one paragraph each.`;
                       }] : []),
                       {
                         text: refBase64
-                          ? `${descripcion} IMPORTANT: Maintain the exact same protagonist appearance as shown in the reference image. Same face, same age, same hair, same clothing style.`
+                          ? `${descripcion} IMPORTANT: Maintain the exact same protagonist appearance as shown in the reference image. Same face, same age, same hair, same clothing style. IMPORTANT: Use the reference image ONLY to match the exact appearance of the characters (face, hair, clothing, body). DO NOT copy the composition, pose, angle, background or scene from the reference image. Generate a completely different scene based on the story text.`
                           : descripcion,
                       },
                     ],
