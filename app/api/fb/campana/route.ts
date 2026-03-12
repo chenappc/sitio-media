@@ -60,8 +60,10 @@ export async function POST(req: NextRequest) {
       { field: 'name', operator: 'EQUAL', value: campaignName },
     ]);
     const listUrl = `https://graph.facebook.com/v19.0/${adAccountId}/campaigns?fields=id,name&filtering=${encodeURIComponent(filterJson)}&access_token=${encodeURIComponent(accessToken ?? '')}`;
+    console.log('FB CAMPANA DEBUG [list campaigns] request:', { url: listUrl.replace(accessToken ?? '', '[TOKEN]') });
     const listRes = await fetch(listUrl);
     const listData = (await listRes.json()) as { data?: { id: string }[]; error?: { message: string } };
+    console.log('FB CAMPANA DEBUG [list campaigns] response:', { status: listRes.status, body: listData });
     let fbCampaignId: string;
     if (listData.error) {
       console.error('FB error campana list:', JSON.stringify(listData, null, 2));
@@ -70,19 +72,22 @@ export async function POST(req: NextRequest) {
     if (listData.data && listData.data.length > 0) {
       fbCampaignId = listData.data[0].id;
     } else {
+      const campaignBody = new URLSearchParams({
+        name: campaignName,
+        objective: 'OUTCOME_ENGAGEMENT',
+        status: 'PAUSED',
+        special_ad_categories: '[]',
+        is_adset_budget_sharing_enabled: 'false',
+        access_token: process.env.FB_PAGE_ACCESS_TOKEN ?? '',
+      });
+      console.log('FB CAMPANA DEBUG [create campaign] request:', { url: `https://graph.facebook.com/v19.0/${adAccountId}/campaigns`, body: Object.fromEntries(campaignBody) });
       const campanaRes = await fetch(`https://graph.facebook.com/v19.0/${adAccountId}/campaigns`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          name: campaignName,
-          objective: 'OUTCOME_ENGAGEMENT',
-          status: 'PAUSED',
-          special_ad_categories: '[]',
-          is_adset_budget_sharing_enabled: 'false',
-          access_token: process.env.FB_PAGE_ACCESS_TOKEN ?? '',
-        }),
+        body: campaignBody,
       });
       const campanaData = await campanaRes.json();
+      console.log('FB CAMPANA DEBUG [create campaign] response:', { status: campanaRes.status, body: campanaData });
       if (campanaData.error) {
         console.error('FB error campana:', JSON.stringify(campanaData, null, 2));
         throw new Error(campanaData.error.message);
@@ -117,31 +122,35 @@ export async function POST(req: NextRequest) {
       access_token: accessToken,
     };
 
-    console.log('Usando campaign_id:', fbCampaignId);
+    console.log('FB CAMPANA DEBUG [create adset] request:', { url: `https://graph.facebook.com/v19.0/${adAccountId}/adsets`, body: adsetBody });
     const adsetRes = await fetch(`https://graph.facebook.com/v19.0/${adAccountId}/adsets`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(adsetBody),
     });
     const adsetData = await adsetRes.json();
+    console.log('FB CAMPANA DEBUG [create adset] response:', { status: adsetRes.status, body: adsetData });
     if (adsetData.error) {
       console.error('FB error campana:', JSON.stringify(adsetData, null, 2));
       throw new Error(adsetData.error.message);
     }
     const fbAdsetId = adsetData.id;
 
+    const adBody = {
+      name: nombreAd,
+      adset_id: fbAdsetId,
+      creative: { object_story_id: nota.fb_post_id },
+      status: 'ACTIVE',
+      access_token: accessToken,
+    };
+    console.log('FB CAMPANA DEBUG [create ad] request:', { url: `https://graph.facebook.com/v19.0/${adAccountId}/ads`, body: adBody });
     const adRes = await fetch(`https://graph.facebook.com/v19.0/${adAccountId}/ads`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: nombreAd,
-        adset_id: fbAdsetId,
-        creative: { object_story_id: nota.fb_post_id },
-        status: 'ACTIVE',
-        access_token: accessToken,
-      }),
+      body: JSON.stringify(adBody),
     });
     const adData = await adRes.json();
+    console.log('FB CAMPANA DEBUG [create ad] response:', { status: adRes.status, body: adData });
     if (adData.error) {
       console.error('FB error campana:', JSON.stringify(adData, null, 2));
       throw new Error(adData.error.message);
