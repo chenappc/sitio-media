@@ -40,3 +40,27 @@ export interface StoryPagina {
   parrafos: unknown[];
   created_at?: Date;
 }
+
+export interface Especial {
+  id: number;
+  slug: string;
+  titulo: string;
+  status: string;
+  total_paginas: number;
+  url_base?: string | null;
+  idioma?: string | null;
+  usar_imagenes_ia?: boolean;
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+export interface EspecialPagina {
+  id: number;
+  especial_id: number;
+  numero: number;
+  titulo_item?: string | null;
+  imagen_url?: string | null;
+  imagen_original_url?: string | null;
+  parrafos: unknown[];
+  created_at?: Date;
+}

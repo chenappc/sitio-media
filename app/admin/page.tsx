@@ -39,6 +39,12 @@ export default async function AdminPage({ searchParams }: Props) {
               Admin Stories
             </Link>
             <Link
+              href="/admin-especiales"
+              className="rounded border border-[var(--negro)]/30 px-4 py-2 text-sm font-semibold text-[var(--negro)] hover:bg-[var(--negro)]/5"
+            >
+              Admin Especiales
+            </Link>
+            <Link
               href="/admin/curar"
               className="rounded border border-[var(--rojo)]/60 px-4 py-2 text-sm font-semibold text-[var(--rojo)] hover:bg-[var(--rojo)]/10"
             >
