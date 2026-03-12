@@ -29,7 +29,10 @@ export async function POST(req: NextRequest) {
     }
 
     const pageId = process.env.FB_PAGE_ID;
-    const accessToken = process.env.FB_PAGE_ACCESS_TOKEN;
+    let accessToken = process.env.FB_PAGE_ACCESS_TOKEN;
+
+    const appId = process.env.FB_APP_ID;
+    const appSecret = process.env.FB_APP_SECRET;
 
     console.log("FB TOKEN DEBUG:", {
       pageId,
@@ -43,6 +46,49 @@ export async function POST(req: NextRequest) {
         { error: "FB_PAGE_ID o FB_PAGE_ACCESS_TOKEN no configurados" },
         { status: 503 }
       );
+    }
+
+    // Renovación opcional (si falla, se usa el token original)
+    // Paso 1: intercambiar a long-lived user token con fb_exchange_token
+    // Paso 2: con ese token, obtener el Page Access Token via /{pageId}?fields=access_token
+    if (appId && appSecret) {
+      try {
+        const exchangeUrl = new URL("https://graph.facebook.com/v19.0/oauth/access_token");
+        exchangeUrl.searchParams.set("grant_type", "fb_exchange_token");
+        exchangeUrl.searchParams.set("client_id", appId);
+        exchangeUrl.searchParams.set("client_secret", appSecret);
+        exchangeUrl.searchParams.set("fb_exchange_token", accessToken);
+
+        const exchangeRes = await fetch(exchangeUrl.toString());
+        const exchangeData = (await exchangeRes.json().catch(() => ({}))) as {
+          access_token?: string;
+          error?: { message?: string };
+        };
+
+        if (exchangeRes.ok && exchangeData.access_token) {
+          const longLivedUserToken = exchangeData.access_token;
+
+          try {
+            const pageTokenUrl = new URL(`https://graph.facebook.com/v19.0/${pageId}`);
+            pageTokenUrl.searchParams.set("fields", "access_token");
+            pageTokenUrl.searchParams.set("access_token", longLivedUserToken);
+
+            const pageTokenRes = await fetch(pageTokenUrl.toString());
+            const pageTokenData = (await pageTokenRes.json().catch(() => ({}))) as {
+              access_token?: string;
+              error?: { message?: string };
+            };
+
+            if (pageTokenRes.ok && pageTokenData.access_token) {
+              accessToken = pageTokenData.access_token;
+            }
+          } catch (_) {
+            // Si falla obtener page access token, se sigue con el token actual
+          }
+        }
+      } catch (_) {
+        // Si falla el exchange, se sigue con el token original
+      }
     }
 
     const link = `https://www.sitio.media/${nota.slug}`;
