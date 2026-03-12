@@ -45,9 +45,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className={`${merriweather.variable} ${sourceSans.variable}`}>
+      <head>
+        <AdSenseScript />
+      </head>
       <body>
         <LayoutShell>{children}</LayoutShell>
-        <AdSenseScript />
         <Script id="statcounter" strategy="afterInteractive">
           {`var sc_project=13196069; var sc_invisible=1; var sc_security="af334f2e";`}
         </Script>
