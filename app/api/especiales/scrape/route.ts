@@ -124,6 +124,38 @@ export async function POST(req: NextRequest) {
         const res = await fetch(urlBase, { headers: { "User-Agent": UA } });
         const html = await res.text();
         const $ = cheerio.load(html);
+
+        enq({
+          mensaje: `Headings encontrados: h1=${$("h1").length} h2=${$("h2").length} h3=${$("h3").length} h4=${$("h4").length}`,
+        });
+
+        const primerosH2H3 = $("h2, h3")
+          .toArray()
+          .slice(0, 5)
+          .map((el) => $(el).text().trim())
+          .filter(Boolean);
+        if (primerosH2H3.length > 0) {
+          enq({ mensaje: `Primeros h2/h3: ${primerosH2H3.join(" | ")}` });
+        } else {
+          enq({ mensaje: "Primeros h2/h3: (ninguno)" });
+        }
+
+        const clasesDivs: string[] = [];
+        const vistos = new Set<string>();
+        $("div[class]").each((_, el) => {
+          if (clasesDivs.length >= 3) return;
+          const cls = ($(el).attr("class") ?? "").trim();
+          if (!cls) return;
+          for (const token of cls.split(/\s+/)) {
+            if (!token) continue;
+            if (vistos.has(token)) continue;
+            vistos.add(token);
+            clasesDivs.push(token);
+            if (clasesDivs.length >= 3) return;
+          }
+        });
+        enq({ mensaje: `Clases div (primeras 3): ${clasesDivs.join(", ") || "(ninguna)"}` });
+
         const articuloTitulo = ($("h1").first().text() || $("title").text() || "Especial").trim();
         const items = extraerItems($, urlBase);
         if (items.length === 0) {
