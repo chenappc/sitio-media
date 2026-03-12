@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
     if (!fbRes.ok || fbData.error) {
       const errMsg =
         fbData.error?.message ?? `Facebook API: ${fbRes.status}`;
+      console.log("FB POST DEBUG:", { status: fbRes.status, pageId, fbData });
       console.error("Facebook feed error:", fbData);
       return NextResponse.json(
         { error: errMsg },
