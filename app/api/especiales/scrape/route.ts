@@ -109,6 +109,13 @@ export async function POST(req: NextRequest) {
         controller.enqueue(enc.encode(sseMessage({ mensaje: "Descargando artículo..." })));
         const res = await fetch(urlBase, { headers: { "User-Agent": UA } });
         const html = await res.text();
+        controller.enqueue(
+          enc.encode(
+            sseMessage({
+              mensaje: "HTML preview: " + html.slice(0, 2000),
+            })
+          )
+        );
         const $ = cheerio.load(html);
         const articuloTitulo = ($("h1").first().text() || $("title").text() || "Especial").trim();
         const items = extraerItems($, urlBase);
