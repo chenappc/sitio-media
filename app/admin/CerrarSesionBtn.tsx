@@ -25,6 +25,7 @@ export default function CerrarSesionBtn() {
       type="button"
       onClick={() => {
         clearAdminSecret();
+        window.location.href = "/admin/login";
       }}
       className="text-sm text-[var(--negro)]/50 hover:text-[var(--negro)]/80"
     >
