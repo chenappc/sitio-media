@@ -125,36 +125,51 @@ export async function POST(req: NextRequest) {
         const html = await res.text();
         const $ = cheerio.load(html);
 
-        enq({
-          mensaje: `Headings encontrados: h1=${$("h1").length} h2=${$("h2").length} h3=${$("h3").length} h4=${$("h4").length}`,
-        });
-
-        const primerosH2H3 = $("h2, h3")
+        const h3Texts = $("h3")
           .toArray()
-          .slice(0, 5)
           .map((el) => $(el).text().trim())
           .filter(Boolean);
-        if (primerosH2H3.length > 0) {
-          enq({ mensaje: `Primeros h2/h3: ${primerosH2H3.join(" | ")}` });
+        const h4Texts = $("h4")
+          .toArray()
+          .map((el) => $(el).text().trim())
+          .filter(Boolean);
+        enq({ mensaje: `Headings encontrados: h3=${h3Texts.length} h4=${h4Texts.length}` });
+        if (h3Texts.length > 0) enq({ mensaje: `h3: ${h3Texts.slice(0, 10).join(" | ")}` });
+        if (h4Texts.length > 0) enq({ mensaje: `h4: ${h4Texts.slice(0, 10).join(" | ")}` });
+
+        const parrafosPreview = $("p")
+          .toArray()
+          .map((el) => $(el).text().trim().replace(/\s+/g, " "))
+          .filter((t) => t.length > 50)
+          .slice(0, 5);
+        if (parrafosPreview.length > 0) {
+          for (let i = 0; i < parrafosPreview.length; i++) {
+            enq({ mensaje: `P${i + 1} preview: ${parrafosPreview[i].slice(0, 500)}` });
+          }
         } else {
-          enq({ mensaje: "Primeros h2/h3: (ninguno)" });
+          enq({ mensaje: "P preview: (ninguno > 50 chars)" });
         }
 
-        const clasesDivs: string[] = [];
-        const vistos = new Set<string>();
-        $("div[class]").each((_, el) => {
-          if (clasesDivs.length >= 3) return;
-          const cls = ($(el).attr("class") ?? "").trim();
-          if (!cls) return;
-          for (const token of cls.split(/\s+/)) {
-            if (!token) continue;
-            if (vistos.has(token)) continue;
-            vistos.add(token);
-            clasesDivs.push(token);
-            if (clasesDivs.length >= 3) return;
+        const imgsPreview: string[] = [];
+        $("img").each((_, el) => {
+          if (imgsPreview.length >= 5) return;
+          const $img = $(el);
+          const src =
+            $img.attr("data-layzr") ||
+            $img.attr("data-lazy-src") ||
+            $img.attr("data-src") ||
+            $img.attr("src") ||
+            "";
+          if (!src) return;
+          if (src.startsWith("data:")) return;
+          if (/logo|icon|avatar|sprite|pixel|1x1|tracking|badge|button/i.test(src)) return;
+          try {
+            imgsPreview.push(new URL(src, urlBase).href);
+          } catch {
+            imgsPreview.push(src);
           }
         });
-        enq({ mensaje: `Clases div (primeras 3): ${clasesDivs.join(", ") || "(ninguna)"}` });
+        enq({ mensaje: `IMG src (primeras 5): ${imgsPreview.join(" | ") || "(ninguna)"}` });
 
         const articuloTitulo = ($("h1").first().text() || $("title").text() || "Especial").trim();
         const items = extraerItems($, urlBase);
