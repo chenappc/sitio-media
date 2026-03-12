@@ -31,6 +31,13 @@ export async function POST(req: NextRequest) {
     const pageId = process.env.FB_PAGE_ID;
     const accessToken = process.env.FB_PAGE_ACCESS_TOKEN;
 
+    console.log("FB TOKEN DEBUG:", {
+      pageId,
+      tokenStart: accessToken?.slice(0, 20),
+      tokenEnd: accessToken?.slice(-10),
+      tokenLength: accessToken?.length,
+    });
+
     if (!pageId || !accessToken) {
       return NextResponse.json(
         { error: "FB_PAGE_ID o FB_PAGE_ACCESS_TOKEN no configurados" },
