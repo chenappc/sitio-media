@@ -412,6 +412,7 @@ export async function POST(req: NextRequest) {
         }
       };
       try {
+        enq({ mensaje: "SCRAPER VERSION 2 - con estrategia 0 JSON" });
         enq({ mensaje: "Descargando artículo..." });
         const res = await fetch(urlBase, { headers: { "User-Agent": UA } });
         const html = await res.text();
