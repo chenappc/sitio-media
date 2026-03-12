@@ -105,23 +105,30 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       const enc = new TextEncoder();
+      let closed = false;
+      const enq = (obj: object) => {
+        try {
+          if (!closed) controller.enqueue(enc.encode(sseMessage(obj)));
+        } catch (_) {}
+      };
+      const close = () => {
+        if (!closed) {
+          closed = true;
+          try {
+            controller.close();
+          } catch (_) {}
+        }
+      };
       try {
-        controller.enqueue(enc.encode(sseMessage({ mensaje: "Descargando artículo..." })));
+        enq({ mensaje: "Descargando artículo..." });
         const res = await fetch(urlBase, { headers: { "User-Agent": UA } });
         const html = await res.text();
-        controller.enqueue(
-          enc.encode(
-            sseMessage({
-              mensaje: "HTML preview: " + html.slice(0, 2000),
-            })
-          )
-        );
         const $ = cheerio.load(html);
         const articuloTitulo = ($("h1").first().text() || $("title").text() || "Especial").trim();
         const items = extraerItems($, urlBase);
         if (items.length === 0) {
-          controller.enqueue(enc.encode(sseMessage({ status: "error", mensaje: "No se encontraron ítems (h2/h3 con contenido)" })));
-          controller.close();
+          enq({ status: "error", mensaje: "No se encontraron ítems (h2/h3 con contenido)" });
+          close();
           return;
         }
 
@@ -137,7 +144,7 @@ export async function POST(req: NextRequest) {
         }
 
         const especialId = await createEspecial(slug, articuloTitulo, total, urlBase, idioma, usarImagenesIA);
-        controller.enqueue(enc.encode(sseMessage({ mensaje: `Especial creado: ${slug}. Procesando ${total} ítems...` })));
+        enq({ mensaje: `Especial creado: ${slug}. Procesando ${total} ítems...` });
 
         for (let idx = 0; idx < items.length; idx++) {
           const numero = idx + 1;
@@ -147,7 +154,7 @@ export async function POST(req: NextRequest) {
 
           if (idioma !== "original" && (item.titulo || item.parrafos.length > 0)) {
             try {
-              controller.enqueue(enc.encode(sseMessage({ mensaje: `Claude: reescribiendo ítem ${numero}...` })));
+              enq({ mensaje: `Claude: reescribiendo ítem ${numero}...` });
               const langInstruction =
                 idioma === "es"
                   ? "Reescribí en español neutro, manteniendo el sentido. Título breve y atractivo; párrafos claros."
@@ -190,7 +197,7 @@ export async function POST(req: NextRequest) {
           if (item.imagenUrl) {
             if (!usarImagenesIA) {
               try {
-                controller.enqueue(enc.encode(sseMessage({ mensaje: `Subiendo imagen original ítem ${numero}...` })));
+                enq({ mensaje: `Subiendo imagen original ítem ${numero}...` });
                 const imgRes = await fetch(item.imagenUrl, { headers: { "User-Agent": UA } });
                 if (imgRes.ok) {
                   const buf = Buffer.from(await imgRes.arrayBuffer());
@@ -206,12 +213,12 @@ export async function POST(req: NextRequest) {
                   });
                 }
               } catch (e) {
-                controller.enqueue(enc.encode(sseMessage({ mensaje: `Error subiendo imagen ítem ${numero}: ${e instanceof Error ? e.message : String(e)}` })));
+                enq({ mensaje: `Error subiendo imagen ítem ${numero}: ${e instanceof Error ? e.message : String(e)}` });
               }
             } else {
               let descripcionVisual: string | null = null;
               try {
-                controller.enqueue(enc.encode(sseMessage({ mensaje: `Claude vision ítem ${numero}...` })));
+                enq({ mensaje: `Claude vision ítem ${numero}...` });
                 const visionRes = await fetch("https://api.anthropic.com/v1/messages", {
                   method: "POST",
                   headers: {
@@ -274,7 +281,7 @@ Item text: ${pageText}`;
               const promptConRef = "Based on this reference image, create a photorealistic version maintaining the same subject and composition. " + promptParaGemini;
 
               try {
-                controller.enqueue(enc.encode(sseMessage({ mensaje: `Gemini 2.5 ítem ${numero}...` })));
+                enq({ mensaje: `Gemini 2.5 ítem ${numero}...` });
                 const imgRes = await fetch(item.imagenUrl, { headers: { "User-Agent": UA } });
                 if (!imgRes.ok) throw new Error("No se pudo descargar imagen de referencia");
                 const imgBuf = Buffer.from(await imgRes.arrayBuffer());
@@ -306,7 +313,7 @@ Item text: ${pageText}`;
                 const imageBase64 = imagePart?.inlineData?.data;
 
                 if (imageBase64) {
-                  controller.enqueue(enc.encode(sseMessage({ mensaje: `Subiendo imagen IA ítem ${numero}...` })));
+                  enq({ mensaje: `Subiendo imagen IA ítem ${numero}...` });
                   const buf = Buffer.from(imageBase64, "base64");
                   imagenUrl = await new Promise<string>((resolve, reject) => {
                     const uploadStream = cloudinary.uploader.upload_stream(
@@ -322,7 +329,7 @@ Item text: ${pageText}`;
                   throw new Error("Gemini no devolvió imagen");
                 }
               } catch (e) {
-                controller.enqueue(enc.encode(sseMessage({ mensaje: `Fallback imagen original ítem ${numero}: ${e instanceof Error ? e.message : String(e)}` })));
+                enq({ mensaje: `Fallback imagen original ítem ${numero}: ${e instanceof Error ? e.message : String(e)}` });
                 try {
                   const imgRes = await fetch(item.imagenUrl, { headers: { "User-Agent": UA } });
                   if (imgRes.ok) {
@@ -352,30 +359,30 @@ Item text: ${pageText}`;
               [especialId]
             );
           } catch (e) {
-            controller.enqueue(enc.encode(sseMessage({
+            enq({
               pagina: numero,
               total,
               status: "error",
               mensaje: `Error DB ítem ${numero}: ${e instanceof Error ? e.message : String(e)}`,
-            })));
+            });
           }
 
-          controller.enqueue(enc.encode(sseMessage({
+          enq({
             pagina: numero,
             total,
             status: "ok",
             mensaje: `Ítem ${numero} procesado`,
-          })));
+          });
         }
 
-        controller.enqueue(enc.encode(sseMessage({ done: true, especialSlug: slug })));
+        enq({ done: true, especialSlug: slug });
       } catch (e) {
-        controller.enqueue(enc.encode(sseMessage({
+        enq({
           status: "error",
           mensaje: e instanceof Error ? e.message : String(e),
-        })));
+        });
       } finally {
-        controller.close();
+        close();
       }
     },
   });
