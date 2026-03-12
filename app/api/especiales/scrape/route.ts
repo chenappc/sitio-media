@@ -10,14 +10,39 @@ const ADMIN_SECRET = process.env.ADMIN_SECRET;
 const UA = "Mozilla/5.0 (compatible; sitio-media-bot/1.0)";
 
 const CODE_OR_NOISE = /JavaScript|CSS|código|script|function\(|var\s|const\s|let\s|\{|\}|querySelector|getElementById/i;
+const PARRAFO_SKIP =
+  /copyright|©|all rights reserved|reservados|footer|credits|créditos|cookie|subscribe|newsletter|leave a reply/i;
+const IMG_SKIP = /logo|icon|avatar|sprite|pixel|1x1|tracking|badge|button/i;
+const MAX_ITEMS = 50;
 
 function filterParrafos(arr: string[]): string[] {
   return arr.filter((p) => {
     const t = p.trim();
-    if (t.length < 30) return false;
+    if (t.length < 50) return false;
     if (CODE_OR_NOISE.test(t)) return false;
+    if (PARRAFO_SKIP.test(t)) return false;
     return true;
   });
+}
+
+function isParagraphValid(text: string): boolean {
+  const t = text.trim().replace(/\s+/g, " ");
+  if (t.length < 50) return false;
+  if (PARRAFO_SKIP.test(t)) return false;
+  if (CODE_OR_NOISE.test(t)) return false;
+  return true;
+}
+
+function isParagraphLong(text: string): boolean {
+  const t = text.trim().replace(/\s+/g, " ");
+  return t.length > 100 && isParagraphValid(text);
+}
+
+function isImageValid($: cheerio.CheerioAPI, el: cheerio.Element, src: string): boolean {
+  if (!src || src.startsWith("data:")) return false;
+  if (IMG_SKIP.test(src)) return false;
+  if (/logo|icon|avatar/i.test($(el).attr("class") || "")) return false;
+  return true;
 }
 
 function auth(req: NextRequest): boolean {
@@ -31,19 +56,34 @@ function sseMessage(obj: object): string {
 
 type RawItem = { titulo: string; imagenUrl: string | null; parrafos: string[] };
 
-/** Extrae ítems del HTML: cada h2/h3 y su bloque de contenido (img + párrafos) hasta el siguiente h2/h3. */
-function extraerItems($: cheerio.CheerioAPI, baseUrl: string): RawItem[] {
+/** Resuelve src de una img y normaliza URL. */
+function resolveImgSrc($: cheerio.CheerioAPI, el: cheerio.Element, baseUrl: string): string | null {
+  const $el = $(el);
+  const src =
+    $el.attr("data-layzr") ||
+    $el.attr("data-lazy-src") ||
+    $el.attr("data-src") ||
+    $el.attr("src") ||
+    "";
+  if (!src || !isImageValid($, el, src)) return null;
+  try {
+    return new URL(src, baseUrl).href;
+  } catch {
+    return src;
+  }
+}
+
+/** ESTRATEGIA 1 — Headings: h2/h3/h4, título = heading, primera imagen del bloque, párrafos hasta el siguiente heading. */
+function extraerPorHeadings($: cheerio.CheerioAPI, baseUrl: string): RawItem[] {
   const items: RawItem[] = [];
-  const headings = $("h2, h3").toArray();
-  for (let i = 0; i < headings.length; i++) {
+  const headings = $("h2, h3, h4").toArray();
+  for (let i = 0; i < headings.length && items.length < MAX_ITEMS; i++) {
     const el = headings[i];
     const $el = $(el);
     const titulo = $el.text().trim();
     if (!titulo || titulo.length < 2) continue;
     const nextHeading = headings[i + 1];
-    const $block = nextHeading
-      ? $el.nextUntil($(nextHeading))
-      : $el.nextAll();
+    const $block = nextHeading ? $el.nextUntil($(nextHeading)) : $el.nextAll();
     let imagenUrl: string | null = null;
     const $firstImg = $block.find("img").first().length ? $block.find("img").first() : $block.filter("img").first();
     const src =
@@ -52,7 +92,8 @@ function extraerItems($: cheerio.CheerioAPI, baseUrl: string): RawItem[] {
       $firstImg.attr("data-src") ||
       $firstImg.attr("src") ||
       "";
-    if (src && !src.startsWith("data:") && !/logo|icon|avatar|sprite|pixel|1x1|tracking|badge|button/i.test(src)) {
+    const imgEl = $firstImg.length ? ($firstImg[0] as cheerio.Element) : null;
+    if (src && imgEl && isImageValid($, imgEl, src)) {
       try {
         imagenUrl = new URL(src, baseUrl).href;
       } catch {
@@ -62,12 +103,71 @@ function extraerItems($: cheerio.CheerioAPI, baseUrl: string): RawItem[] {
     const parrafosRaw: string[] = [];
     $block.find("p").each((_, p) => {
       const t = $(p).text().trim();
-      if (t.length >= 50) parrafosRaw.push(t);
+      if (isParagraphValid(t)) parrafosRaw.push(t);
     });
-    const parrafos = filterParrafos(parrafosRaw);
-    items.push({ titulo, imagenUrl, parrafos });
+    items.push({ titulo, imagenUrl, parrafos: filterParrafos(parrafosRaw) });
   }
-  return items;
+  return items.slice(0, MAX_ITEMS);
+}
+
+/** ESTRATEGIA 2 — Bloques imagen+texto: orden DOM, cada imagen inicia ítem; título = primeros 80 chars del primer p. */
+function extraerPorImagenes($: cheerio.CheerioAPI, baseUrl: string): RawItem[] {
+  const items: RawItem[] = [];
+  const elements = $("body").find("img, p").toArray();
+  let leadingParrafos: string[] = [];
+  let currentItem: RawItem | null = null;
+
+  for (const el of elements) {
+    if (items.length >= MAX_ITEMS) break;
+    const tagName = (el as { name?: string }).name ?? "";
+    if (tagName === "img") {
+      const imagenUrl = resolveImgSrc($, el, baseUrl);
+      if (imagenUrl != null) {
+        if (leadingParrafos.length > 0 && items.length === 0) {
+          const titulo = leadingParrafos[0].slice(0, 80).trim() || "";
+          items.push({ titulo, imagenUrl: null, parrafos: filterParrafos(leadingParrafos) });
+          leadingParrafos = [];
+        }
+        currentItem = { titulo: "", imagenUrl, parrafos: [] };
+        items.push(currentItem);
+      }
+    } else if (tagName === "p") {
+      const text = $(el).text().trim().replace(/\s+/g, " ");
+      if (!isParagraphValid(text)) continue;
+      const filtered = filterParrafos([text]);
+      if (filtered.length === 0) continue;
+      const t = filtered[0];
+      if (currentItem != null) {
+        currentItem.parrafos.push(t);
+        if (!currentItem.titulo) currentItem.titulo = t.slice(0, 80).trim();
+      } else {
+        leadingParrafos.push(t);
+      }
+    }
+  }
+  for (const it of items) {
+    if (!it.titulo && it.parrafos.length > 0) it.titulo = it.parrafos[0].slice(0, 80).trim();
+  }
+  return items.slice(0, MAX_ITEMS);
+}
+
+/** ESTRATEGIA 3 — Solo párrafos: párrafos > 100 chars agrupados en bloques de 2–3 por ítem, sin imagen. */
+function extraerPorParrafos($: cheerio.CheerioAPI): RawItem[] {
+  const all: string[] = [];
+  $("body p").each((_, el) => {
+    const t = $(el).text().trim().replace(/\s+/g, " ");
+    if (isParagraphLong(t)) all.push(t);
+  });
+  const filtered = filterParrafos(all);
+  const items: RawItem[] = [];
+  for (let i = 0; i < filtered.length && items.length < MAX_ITEMS; ) {
+    const parrafos = filtered.slice(i, i + 3); // 2 o 3 párrafos por ítem
+    if (parrafos.length === 0) break;
+    const titulo = parrafos[0].slice(0, 80).trim() || "";
+    items.push({ titulo, imagenUrl: null, parrafos });
+    i += parrafos.length;
+  }
+  return items.slice(0, MAX_ITEMS);
 }
 
 export async function POST(req: NextRequest) {
@@ -172,12 +272,37 @@ export async function POST(req: NextRequest) {
         enq({ mensaje: `IMG src (primeras 5): ${imgsPreview.join(" | ") || "(ninguna)"}` });
 
         const articuloTitulo = ($("h1").first().text() || $("title").text() || "Especial").trim();
-        const items = extraerItems($, urlBase);
+        let items: RawItem[] = [];
+        let estrategiaUsada = "";
+
+        const items1 = extraerPorHeadings($, urlBase);
+        if (items1.length >= 2) {
+          items = items1;
+          estrategiaUsada = "Headings (h2/h3/h4)";
+        }
         if (items.length === 0) {
-          enq({ status: "error", mensaje: "No se encontraron ítems (h2/h3 con contenido)" });
+          enq({ mensaje: "Estrategia 1 (Headings) insuficiente; probando Estrategia 2 (imagen+párrafos)..." });
+          const items2 = extraerPorImagenes($, urlBase);
+          if (items2.length >= 2) {
+            items = items2;
+            estrategiaUsada = "Bloques imagen+texto";
+          }
+        }
+        if (items.length === 0) {
+          enq({ mensaje: "Estrategia 2 insuficiente; probando Estrategia 3 (solo párrafos)..." });
+          const items3 = extraerPorParrafos($);
+          if (items3.length >= 2) {
+            items = items3;
+            estrategiaUsada = "Solo párrafos";
+          }
+        }
+
+        if (items.length === 0) {
+          enq({ status: "error", mensaje: "Ninguna estrategia devolvió al menos 2 ítems" });
           close();
           return;
         }
+        enq({ mensaje: `Estrategia usada: ${estrategiaUsada}. Ítems: ${items.length}` });
 
         const total = items.length;
         const baseSlug = slugify(articuloTitulo, { lower: true, strict: true }) || "especial";
