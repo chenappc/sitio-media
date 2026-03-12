@@ -568,6 +568,7 @@ Respond in English, number each protagonist, one paragraph each.`;
 3. Be photorealistic, documentary style, National Geographic quality
 4. NOT include any text, logos, watermarks, split screens or collages
 5. Be a single unified scene
+6. Only include the recurring protagonists (people or animals described in protagonistaFijo) if they are explicitly mentioned or clearly implied by the text of this specific page. Do not force protagonists into scenes where the page text does not reference them. Let the scene be driven by what the page text actually describes.
 
 Page text: ${pageText}
 Original scene context: ${descripcionVisual ?? "None"}
@@ -628,6 +629,8 @@ Write ONLY the image generation prompt, nothing else, no preamble, no explanatio
             })));
             return { imagenUrl };
           }
+
+          promptParaGemini = `${promptParaGemini.trim()} Important: do not include any weapons, guns, knives, firearms, or violent imagery of any kind.`;
 
           try {
             controller.enqueue(enc.encode(sseMessage({ mensaje: `Generando imagen con Gemini 2.5 para página ${p}...` })));
