@@ -39,7 +39,6 @@ export async function POST(req: NextRequest) {
 
     const adAccountId = process.env.FB_AD_ACCOUNT_ID;
     const accessToken = process.env.FB_PAGE_ACCESS_TOKEN;
-    const pageId = process.env.FB_PAGE_ID;
     const paisConfig = PAISES[pais as keyof typeof PAISES];
     if (!paisConfig) return NextResponse.json({ error: 'País no válido' }, { status: 400 });
 
@@ -137,7 +136,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         name: nombreAd,
         adset_id: fbAdsetId,
-        creative: { object_story_id: `${pageId}_${nota.fb_post_id}` },
+        creative: { object_story_id: nota.fb_post_id },
         status: 'ACTIVE',
         access_token: accessToken,
       }),
