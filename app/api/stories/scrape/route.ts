@@ -574,6 +574,9 @@ Original scene context: ${descripcionVisual ?? "None"}
 
 Write ONLY the image generation prompt, nothing else, no preamble, no explanation.`;
 
+          const CLAUDE_MODEL_PROMPT = "claude-haiku-4-5-20251001";
+          const CLAUDE_MAX_TOKENS_PROMPT = 1024; // >= 500
+
           let promptParaGemini: string;
           try {
             controller.enqueue(enc.encode(sseMessage({ mensaje: `Claude: generando prompt cinematográfico para página ${p}...` })));
@@ -585,20 +588,43 @@ Write ONLY the image generation prompt, nothing else, no preamble, no explanatio
                 "anthropic-version": "2023-06-01",
               },
               body: JSON.stringify({
-                model: "claude-haiku-4-5-20251001",
-                max_tokens: 1024,
+                model: CLAUDE_MODEL_PROMPT,
+                max_tokens: CLAUDE_MAX_TOKENS_PROMPT,
                 messages: [{ role: "user", content: claudePromptForGemini }],
               }),
             });
-            const claudeData = await claudeRes.json().catch(() => ({}));
-            promptParaGemini = (claudeData.content?.[0]?.text ?? "").trim();
-            if (!promptParaGemini) throw new Error("Claude no devolvió prompt");
+            const claudeBody = await claudeRes.json().catch(() => null);
+            if (!claudeRes.ok) {
+              const errDetail = `Claude prompt error: HTTP ${claudeRes.status}, body: ${JSON.stringify(claudeBody)}`;
+              console.error("[scrape] " + errDetail);
+              controller.enqueue(enc.encode(sseMessage({
+                pagina: p,
+                total,
+                status: "error",
+                mensaje: errDetail,
+              })));
+              return { imagenUrl };
+            }
+            promptParaGemini = (claudeBody?.content?.[0]?.text ?? "").trim();
+            if (!promptParaGemini) {
+              const errDetail = `Claude no devolvió prompt. HTTP ${claudeRes.status}, body: ${JSON.stringify(claudeBody)}`;
+              console.error("[scrape] " + errDetail);
+              controller.enqueue(enc.encode(sseMessage({
+                pagina: p,
+                total,
+                status: "error",
+                mensaje: errDetail,
+              })));
+              return { imagenUrl };
+            }
           } catch (e) {
+            const errDetail = `Error Claude (prompt): ${e instanceof Error ? e.message : String(e)}`;
+            console.error("[scrape] " + errDetail, e);
             controller.enqueue(enc.encode(sseMessage({
               pagina: p,
               total,
               status: "error",
-              mensaje: `Error Claude (prompt): ${e instanceof Error ? e.message : String(e)}`,
+              mensaje: errDetail,
             })));
             return { imagenUrl };
           }
