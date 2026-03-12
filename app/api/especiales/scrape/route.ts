@@ -170,6 +170,198 @@ function extraerPorParrafos($: cheerio.CheerioAPI): RawItem[] {
   return items.slice(0, MAX_ITEMS);
 }
 
+/** Intenta extraer ítems desde JSON embebido o APIs (ESTRATEGIA 0). */
+async function extraerPorJson(
+  html: string,
+  $: cheerio.CheerioAPI,
+  urlBase: string,
+  enq: (obj: object) => void
+): Promise<RawItem[]> {
+  const items: RawItem[] = [];
+
+  const pushItems = (candidates: RawItem[]) => {
+    for (const it of candidates) {
+      if (!it) continue;
+      if (!it.titulo && (!it.parrafos || it.parrafos.length === 0)) continue;
+      items.push(it);
+      if (items.length >= MAX_ITEMS) break;
+    }
+  };
+
+  const extractFromJsonNode = (node: unknown) => {
+    if (!node || items.length >= MAX_ITEMS) return;
+    if (Array.isArray(node)) {
+      for (const el of node) {
+        extractFromJsonNode(el);
+        if (items.length >= MAX_ITEMS) break;
+      }
+      return;
+    }
+    if (typeof node === "object") {
+      const obj = node as Record<string, any>;
+      const keys = Object.keys(obj);
+      const hasTitle = keys.some((k) => /title|titulo|name/i.test(k));
+      const hasContent = keys.some((k) => /content|contenido|body|text|description|descripcion/i.test(k));
+      if (hasContent) {
+        const getField = (names: RegExp): any => {
+          const key = keys.find((k) => names.test(k));
+          return key ? obj[key] : undefined;
+        };
+        const rawTitle = getField(/title|titulo|name/i);
+        const rawContent = (() => {
+          const c = getField(/content|contenido|body|text/i);
+          if (c && typeof c === "object" && typeof c.rendered === "string") return c.rendered;
+          return c;
+        })();
+        const rawDesc = getField(/description|descripcion/i);
+        const rawImage = (() => {
+          const img = getField(/image|imagen|thumbnail|featured_image|picture/i);
+          if (img && typeof img === "object") {
+            if (typeof img.url === "string") return img.url;
+            if (typeof img.src === "string") return img.src;
+          }
+          return img;
+        })();
+
+        const titulo =
+          (typeof rawTitle === "string" && rawTitle.trim()) ||
+          (typeof rawDesc === "string" && rawDesc.trim().slice(0, 80)) ||
+          "";
+
+        let contenidoTexto = "";
+        const elegir = rawContent || rawDesc;
+        if (typeof elegir === "string") {
+          if (elegir.includes("<")) {
+            const $frag = cheerio.load(elegir);
+            contenidoTexto = $frag("body").text().trim() || $frag.root().text().trim();
+          } else {
+            contenidoTexto = elegir;
+          }
+        }
+        const parrafos = filterParrafos(
+          contenidoTexto
+            .split(/\n{2,}|\r{2,}/)
+            .map((s) => s.trim().replace(/\s+/g, " "))
+            .filter(Boolean)
+        );
+
+        let imagenUrl: string | null = null;
+        if (typeof rawImage === "string" && rawImage.trim()) {
+          try {
+            imagenUrl = new URL(rawImage, urlBase).href;
+          } catch {
+            imagenUrl = rawImage;
+          }
+        }
+
+        if (titulo || parrafos.length > 0) {
+          pushItems([{ titulo: titulo.slice(0, 120), imagenUrl, parrafos }]);
+        }
+      }
+
+      for (const value of Object.values(obj)) {
+        extractFromJsonNode(value);
+        if (items.length >= MAX_ITEMS) break;
+      }
+    }
+  };
+
+  // 0.1 Scripts JSON embebidos
+  try {
+    enq({ mensaje: "Estrategia 0: buscando <script type=\"application/json\"> / ld+json..." });
+    const scripts = $('script[type="application/json"], script[type="application/ld+json"]').toArray();
+    for (const el of scripts) {
+      const txt = $(el).html() || "";
+      try {
+        const json = JSON.parse(txt);
+        extractFromJsonNode(json);
+        if (items.length >= 2) {
+          enq({ mensaje: `Estrategia 0: JSON embebido produjo ${items.length} ítems (parcial)` });
+          break;
+        }
+      } catch {
+        // ignorar parseos fallidos
+      }
+    }
+  } catch {
+    // ignorar
+  }
+
+  // 0.2 Window globals tipo __INITIAL_STATE__ / __NEXT_DATA__ / __REDUX_STATE__
+  if (items.length < 2) {
+    try {
+      enq({ mensaje: "Estrategia 0: buscando window.__INITIAL_STATE__/__NEXT_DATA__/__REDUX_STATE__..." });
+      const patterns = [
+        /window\.__INITIAL_STATE__\s*=\s*({[\s\S]*?});/,
+        /window\.__NEXT_DATA__\s*=\s*({[\s\S]*?});/,
+        /window\.__REDUX_STATE__\s*=\s*({[\s\S]*?});/,
+      ];
+      for (const re of patterns) {
+        const match = html.match(re);
+        if (match && match[1]) {
+          try {
+            const json = JSON.parse(match[1]);
+            extractFromJsonNode(json);
+            enq({ mensaje: `Estrategia 0: encontrado bloque JSON global (${re.source}), ítems acumulados: ${items.length}` });
+            if (items.length >= 2) break;
+          } catch {
+            // seguir con otros patrones
+          }
+        }
+      }
+    } catch {
+      // ignorar
+    }
+  }
+
+  // 0.3 WordPress wp-json posts?slug=...
+  if (items.length < 2) {
+    try {
+      const u = new URL(urlBase);
+      const path = u.pathname.replace(/\/+$/, "");
+      const segs = path.split("/").filter(Boolean);
+      const slug = segs[segs.length - 1] || "";
+      if (slug) {
+        const wpUrl = `${u.origin}/wp-json/wp/v2/posts?slug=${encodeURIComponent(slug)}&_embed=true`;
+        enq({ mensaje: `Estrategia 0: intentando WordPress wp-json: ${wpUrl}` });
+        const wpRes = await fetch(wpUrl, { headers: { "User-Agent": UA } });
+        if (wpRes.ok) {
+          const wpData = (await wpRes.json().catch(() => null)) as
+            | { content?: { rendered?: string }; [k: string]: any }[]
+            | null;
+          if (Array.isArray(wpData) && wpData.length > 0) {
+            const post = wpData[0];
+            const contentHtml =
+              (post.content && typeof post.content.rendered === "string" && post.content.rendered) || "";
+            if (contentHtml) {
+              const $post = cheerio.load(contentHtml);
+              const wpItems = extraerPorImagenes($post, urlBase);
+              enq({ mensaje: `Estrategia 0: wp-json devolvió ${wpItems.length} ítems` });
+              pushItems(wpItems);
+            }
+          } else {
+            enq({ mensaje: "Estrategia 0: wp-json no devolvió posts para ese slug" });
+          }
+        } else {
+          enq({ mensaje: `Estrategia 0: wp-json status=${wpRes.status}` });
+        }
+      } else {
+        enq({ mensaje: "Estrategia 0: no se pudo determinar slug para wp-json" });
+      }
+    } catch {
+      // ignorar errores de wp-json
+    }
+  }
+
+  if (items.length >= 2) {
+    enq({ mensaje: `Estrategia 0: total ítems JSON/wp-json = ${items.length}` });
+  } else {
+    enq({ mensaje: `Estrategia 0: no se encontraron al menos 2 ítems (encontrados=${items.length})` });
+  }
+
+  return items.slice(0, MAX_ITEMS);
+}
+
 export async function POST(req: NextRequest) {
   if (!auth(req)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -275,11 +467,23 @@ export async function POST(req: NextRequest) {
         let items: RawItem[] = [];
         let estrategiaUsada = "";
 
-        const items1 = extraerPorHeadings($, urlBase);
-        if (items1.length >= 2) {
-          items = items1;
-          estrategiaUsada = "Headings (h2/h3/h4)";
+        // Estrategia 0: JSON embebido / APIs antes que nada
+        const items0 = await extraerPorJson(html, $, urlBase, enq);
+        if (items0.length >= 2) {
+          items = items0;
+          estrategiaUsada = "JSON embebido / APIs (Estrategia 0)";
         }
+
+        // Estrategia 1: Headings
+        if (items.length === 0) {
+          const items1 = extraerPorHeadings($, urlBase);
+          if (items1.length >= 2) {
+            items = items1;
+            estrategiaUsada = "Headings (h2/h3/h4)";
+          }
+        }
+
+        // Estrategia 2: Imagen + párrafos
         if (items.length === 0) {
           enq({ mensaje: "Estrategia 1 (Headings) insuficiente; probando Estrategia 2 (imagen+párrafos)..." });
           const items2 = extraerPorImagenes($, urlBase);
@@ -288,6 +492,8 @@ export async function POST(req: NextRequest) {
             estrategiaUsada = "Bloques imagen+texto";
           }
         }
+
+        // Estrategia 3: Solo párrafos
         if (items.length === 0) {
           enq({ mensaje: "Estrategia 2 insuficiente; probando Estrategia 3 (solo párrafos)..." });
           const items3 = extraerPorParrafos($);
