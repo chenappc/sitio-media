@@ -8,15 +8,17 @@ export type EspecialRow = {
   status: string;
   total_paginas: number;
   created_at?: Date;
+  imagen_portada?: string | null;
 };
 
-/** Devuelve todos los especiales ordenados por created_at DESC (campos listados). */
+/** Devuelve todos los especiales ordenados por created_at DESC (campos listados). Incluye imagen_portada de la página numero=1. */
 export async function getAllEspeciales(): Promise<EspecialRow[]> {
   try {
     const res = await pool.query<EspecialRow>(
-      `SELECT id, slug, titulo, status, total_paginas, created_at
-       FROM especiales
-       ORDER BY created_at DESC`
+      `SELECT e.id, e.slug, e.titulo, e.status, e.total_paginas, e.created_at,
+        (SELECT imagen_url FROM especial_paginas WHERE especial_id = e.id AND numero = 1 LIMIT 1) as imagen_portada
+       FROM especiales e
+       ORDER BY e.created_at DESC`
     );
     return res.rows;
   } catch {

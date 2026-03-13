@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { getEspeciales } from "@/lib/especiales";
 
 export const revalidate = 60;
@@ -25,8 +26,17 @@ export default async function EspecialesPage() {
               href={`/especiales/${especial.slug}/1`}
               className="group block rounded-lg overflow-hidden border border-[var(--negro)]/10 bg-white hover:shadow-md transition-shadow"
             >
-              <div className="relative aspect-[4/3] w-full bg-[var(--negro)]/5 flex items-center justify-center">
-                <span className="text-[var(--negro)]/20 text-sm">Especial</span>
+              <div className="relative aspect-[4/3] w-full bg-[var(--negro)]/5">
+                {especial.imagen_portada ? (
+                  <Image
+                    src={especial.imagen_portada}
+                    alt={especial.titulo}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-[var(--negro)]/20 text-sm">Sin imagen</div>
+                )}
               </div>
               <div className="p-4">
                 <h2 className="font-serif text-base font-bold leading-snug group-hover:text-[var(--rojo)] transition-colors line-clamp-3">
