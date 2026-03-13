@@ -29,7 +29,7 @@ export async function getEspeciales(): Promise<EspecialRow[]> {
   return getAllEspeciales();
 }
 
-/** Devuelve el especial por slug con sus páginas ordenadas por numero. */
+/** Devuelve el especial por slug con sus páginas ordenadas por numero. No filtra por status (draft o published; igual que getStoryPagina). */
 export async function getEspecialBySlug(slug: string): Promise<{
   especial: Especial | null;
   paginas: EspecialPagina[];

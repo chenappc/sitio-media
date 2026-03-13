@@ -3,13 +3,13 @@ import { getEspecialBySlug } from "@/lib/especiales";
 
 type Params = { params: Promise<{ slug: string; pagina: string }> };
 
-/** GET: devuelve { titulo_item, imagen_url, parrafos, numero, total_paginas } para ese slug y página. Solo si el especial está published. */
+/** GET: devuelve { titulo_item, imagen_url, parrafos, numero, total_paginas } para ese slug y página. Cualquier status (igual que stories). */
 export async function GET(_req: NextRequest, { params }: Params) {
   try {
     const { slug, pagina } = await params;
     const numero = Math.max(1, parseInt(pagina, 10) || 1);
     const { especial, paginas } = await getEspecialBySlug(slug);
-    if (!especial || especial.status !== "published") {
+    if (!especial) {
       return NextResponse.json({ error: "No encontrado" }, { status: 404 });
     }
     const paginaData = paginas.find((p) => p.numero === numero);

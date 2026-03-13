@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, pagina } = await params;
   const numero = Math.max(1, parseInt(pagina, 10) || 1);
   const { especial } = await getEspecialBySlug(slug);
-  if (!especial || especial.status !== "published") return { title: "Especial no encontrado" };
+  if (!especial) return { title: "Especial no encontrado" };
   return {
     title: `${especial.titulo} — ${numero}`,
     description: `${especial.titulo}, parte ${numero} de ${especial.total_paginas}`,
@@ -32,7 +32,7 @@ export default async function EspecialPaginaPage({ params }: Props) {
   const numero = Math.max(1, parseInt(pagina, 10) || 1);
   const { especial, paginas } = await getEspecialBySlug(slug);
 
-  if (!especial || especial.status !== "published") notFound();
+  if (!especial) notFound();
 
   const paginaData = paginas.find((p) => p.numero === numero);
   if (!paginaData) notFound();
