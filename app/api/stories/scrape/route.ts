@@ -85,6 +85,8 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       const enc = new TextEncoder();
       let contextoPaginas: string = "";
+      let imagenReferenciaPersonajes: string | null = null;
+      let imagenReferenciaPersonajesMime: string = "image/png";
       if (initialStoryId != null) {
         storyId = initialStoryId;
         storySlug = initialStorySlug;
@@ -236,7 +238,7 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
         }
 
         async function generarImagenYSubir(page: PageData): Promise<{ imagenUrl: string | null }> {
-          const { p, tituloRewritten, parrafos, imagenPrincipal, descripcionVisual } = page;
+          const { p, tituloRewritten, parrafos, imagenPrincipal } = page;
           let imagenUrl: string | null = null;
 
           let promptParaGemini: string;
@@ -259,8 +261,13 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
           }
 
           if (imagenBase64) {
-            promptParaGemini =
-              "Recreate this scene in a cinematic, photorealistic style. Keep the exact same people from the reference image — same faces, same physical appearance, same clothing. Only reinterpret the visual style to be more cinematic: improve lighting, depth, atmosphere and composition. Do not change who is in the scene. Important: do not include any weapons, guns, knives, firearms, or violent imagery of any kind.";
+            if (imagenReferenciaPersonajes) {
+              promptParaGemini =
+                "The second image defines the scene — use it to determine the setting, composition, atmosphere, and which characters appear. The first image is a character reference — if any person in the second image resembles a character from the first image, render them with the exact same face, appearance and clothing as in the first image. Do not add any characters that are not already present in the second image. Reinterpret the scene cinematically with dramatic lighting. Important: do not include any weapons, guns, knives, firearms, or violent imagery of any kind.";
+            } else {
+              promptParaGemini =
+                "Recreate this scene in a cinematic, photorealistic style. Keep the exact same people — same faces, same physical appearance, same clothing. Reinterpret the visual style to be more cinematic: improve lighting, depth, atmosphere and composition. Important: do not include any weapons, guns, knives, firearms, or violent imagery of any kind.";
+            }
           } else {
             const pageText = (tituloRewritten && parrafos.length > 0)
               ? `${tituloRewritten}. ${parrafos.join(" ")}`
@@ -312,6 +319,9 @@ Write ONLY the image generation prompt, nothing else, no preamble, no explanatio
           try {
             controller.enqueue(enc.encode(sseMessage({ mensaje: `Generando imagen con Gemini 2.5 para página ${p}...` })));
             const geminiParts: Array<{ inlineData?: { mimeType: string; data: string } } | { text: string }> = [
+              ...(imagenReferenciaPersonajes
+                ? [{ inlineData: { mimeType: imagenReferenciaPersonajesMime, data: imagenReferenciaPersonajes } }]
+                : []),
               ...(imagenBase64 ? [{ inlineData: { mimeType: imagenMimeType, data: imagenBase64 } }] : []),
               { text: promptParaGemini },
             ];
@@ -350,6 +360,20 @@ Write ONLY the image generation prompt, nothing else, no preamble, no explanatio
               Readable.from(buf).pipe(uploadStream);
             });
             controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen subida: ${imagenUrl}` })));
+            // Actualizar referencia encadenada de personajes con la imagen generada
+            try {
+              const refRes = await fetch(imagenUrl, { headers: { "User-Agent": UA } });
+              if (refRes.ok) {
+                const refBuf = Buffer.from(await refRes.arrayBuffer());
+                imagenReferenciaPersonajes = refBuf.toString("base64");
+                const ctRef = refRes.headers.get("content-type") ?? "";
+                imagenReferenciaPersonajesMime = ctRef.startsWith("image/")
+                  ? ctRef.split(";")[0].trim()
+                  : "image/png";
+              }
+            } catch {
+              // ignorar, se puede regenerar referencia en la siguiente página si hace falta
+            }
           } catch (e) {
             controller.enqueue(enc.encode(sseMessage({
               pagina: p,

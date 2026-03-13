@@ -267,6 +267,7 @@ export async function POST(req: NextRequest) {
 
         const useImageToImage = !!imagenPrincipalBase64;
         if (useImageToImage) {
+          // El prompt se definirá más abajo según si hay referencia de personajes o no.
           descripcion =
             "Recreate this scene in a cinematic, photorealistic style. Keep the exact same people from the reference image — same faces, same physical appearance, same clothing. Only reinterpret the visual style to be more cinematic: improve lighting, depth, atmosphere and composition. Do not change who is in the scene. Important: do not include any weapons, guns, knives, firearms, or violent imagery of any kind.";
         } else {
@@ -277,18 +278,26 @@ export async function POST(req: NextRequest) {
           descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${protagonistaLine}${instruccionesRefYNarrativa}${imagenTienePersona && descripcionProtagonista ? ` Main character physical appearance: ${descripcionProtagonista}.` : ""} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels. Single image only, no split screen, no collage, no grid, no multiple panels, no divided image, no side by side comparison, no before and after, one single unified scene.`;
         }
 
-        const promptConReferencia = imagenReferenciaBase64 && !useImageToImage
-          ? `${descripcion} IMPORTANT: Maintain the exact same protagonist appearance as shown in the reference image. Same face, same age, same hair, same clothing style. IMPORTANT: Use the reference image ONLY to match the exact appearance of the characters (face, hair, clothing, body). DO NOT copy the composition, pose, angle, background or scene from the reference image. Generate a completely different scene based on the story text.`
-          : descripcion;
-        const geminiBodyParts: Array<{ inlineData?: { mimeType: string; data: string } } | { text: string }> = useImageToImage
-          ? [
-              { inlineData: { mimeType: imagenPrincipalMimeType, data: imagenPrincipalBase64! } },
-              { text: promptConReferencia },
-            ]
-          : [
-              ...(imagenReferenciaBase64 ? [{ inlineData: { mimeType: imagenReferenciaMimeType, data: imagenReferenciaBase64 } }] : []),
-              { text: promptConReferencia },
-            ];
+        const geminiBodyParts: Array<{ inlineData?: { mimeType: string; data: string } } | { text: string }> = [];
+        if (useImageToImage && imagenPrincipalBase64) {
+          if (imagenReferenciaBase64) {
+            const promptCadena =
+              "The second image defines the scene — use it to determine the setting, composition, atmosphere, and which characters appear. The first image is a character reference — if any person in the second image resembles a character from the first image, render them with the exact same face, appearance and clothing as in the first image. Do not add any characters that are not already present in the second image. Reinterpret the scene cinematically with dramatic lighting. Important: do not include any weapons, guns, knives, firearms, or violent imagery of any kind.";
+            geminiBodyParts.push({ inlineData: { mimeType: imagenReferenciaMimeType, data: imagenReferenciaBase64 } });
+            geminiBodyParts.push({ inlineData: { mimeType: imagenPrincipalMimeType, data: imagenPrincipalBase64 } });
+            geminiBodyParts.push({ text: promptCadena });
+          } else {
+            const promptUnica =
+              "Recreate this scene in a cinematic, photorealistic style. Keep the exact same people — same faces, same physical appearance, same clothing. Reinterpret the visual style to be more cinematic: improve lighting, depth, atmosphere and composition. Important: do not include any weapons, guns, knives, firearms, or violent imagery of any kind.";
+            geminiBodyParts.push({ inlineData: { mimeType: imagenPrincipalMimeType, data: imagenPrincipalBase64 } });
+            geminiBodyParts.push({ text: promptUnica });
+          }
+        } else {
+          geminiBodyParts.push(
+            ...(imagenReferenciaBase64 ? [{ inlineData: { mimeType: imagenReferenciaMimeType, data: imagenReferenciaBase64 } }] : []),
+          );
+          geminiBodyParts.push({ text: descripcion });
+        }
         controller.enqueue(enc.encode(sseMessage({ mensaje: "Generando imagen con Gemini 2.5..." })));
         const geminiRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${googleApiKey}`,
