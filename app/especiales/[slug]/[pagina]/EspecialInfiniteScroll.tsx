@@ -79,91 +79,93 @@ export default function EspecialInfiniteScroll({
     return () => observer.disconnect();
   }, [pages.length, totalPaginas, loadNext]);
 
+  const getParrafosAndImagen = (page: PageData): { parrafos: string[]; imagenUrl: string | null } => {
+    if (Array.isArray(page.bloques) && page.bloques.length > 0) {
+      const parrafos = page.bloques
+        .filter((b): b is { tipo: "parrafo"; texto: string } => b.tipo === "parrafo")
+        .map((b) => b.texto);
+      const firstImg = page.bloques.find((b): b is { tipo: "imagen"; url: string } => b.tipo === "imagen");
+      return { parrafos, imagenUrl: firstImg?.url ?? null };
+    }
+    return {
+      parrafos: page.parrafos ?? [],
+      imagenUrl: page.imagen_url ?? null,
+    };
+  };
+
+  const pClass = "text-lg leading-relaxed text-[var(--negro)]";
+  const adSlot = "7922354756";
+
   return (
     <div className="mt-4 space-y-10">
-      {pages.map((page) => {
-        const useBloques = Array.isArray(page.bloques) && page.bloques.length > 0;
-        let firstImageShown = false;
+      {pages.map((page, pageIndex) => {
+        const { parrafos, imagenUrl } = getParrafosAndImagen(page);
+        const isFirstPage = pageIndex === 0;
+
         return (
           <article
             key={page.numero}
             className="border-b border-[var(--negro)]/10 pb-10 last:border-0"
             data-numero={page.numero}
           >
-            {useBloques ? (
-              <>
-                {page.titulo_item && (
-                  <h2 className="mb-4 font-serif text-xl font-semibold text-[var(--negro)]">
-                    {page.titulo_item}
-                  </h2>
-                )}
-                <div className="space-y-4 text-[var(--negro)]">
-                  {page.bloques!.map((bloque, i) => {
-                    if (bloque.tipo === "imagen") {
-                      const node = (
-                        <div key={i} className="relative w-full">
-                          <Image
-                            src={optimizarImagenCloudinary(bloque.url)}
-                            alt={page.titulo_item || `Página ${page.numero}`}
-                            width={600}
-                            height={600}
-                            className="w-full h-auto"
-                            priority={page.numero === initialNumero && i === 0}
-                          />
-                        </div>
-                      );
-                      if (!firstImageShown) {
-                        firstImageShown = true;
-                        return (
-                          <div key={i} className="space-y-4">
-                            {node}
-                            <div className="min-h-[90px] rounded-sm bg-[var(--negro)]/5">
-                              <AdSense slot="7922354756" />
-                            </div>
-                          </div>
-                        );
-                      }
-                      return node;
-                    }
-                    return (
-                      <p key={i} className="text-lg leading-relaxed">
-                        {bloque.texto}
-                      </p>
-                    );
-                  })}
-                </div>
-              </>
-            ) : (
-              <>
-                {page.imagen_url && (
-                  <div className="relative w-full">
-                    <Image
-                      src={optimizarImagenCloudinary(page.imagen_url)}
-                      alt={page.titulo_item || `Página ${page.numero}`}
-                      width={600}
-                      height={600}
-                      className="w-full h-auto"
-                      priority={page.numero === initialNumero}
-                    />
+            <div className="space-y-4">
+              {page.titulo_item && (
+                <h2 className="font-serif text-xl font-semibold text-[var(--negro)]">
+                  {page.titulo_item}
+                </h2>
+              )}
+
+              {isFirstPage ? (
+                <>
+                  {imagenUrl && (
+                    <div className="relative w-full">
+                      <Image
+                        src={optimizarImagenCloudinary(imagenUrl)}
+                        alt={page.titulo_item || `Página ${page.numero}`}
+                        width={600}
+                        height={600}
+                        className="w-full h-auto"
+                        priority={page.numero === initialNumero}
+                      />
+                    </div>
+                  )}
+                  <div className="min-h-[90px] rounded-sm bg-[var(--negro)]/5">
+                    <AdSense slot={adSlot} />
                   </div>
-                )}
-                <div className="my-4 min-h-[90px] rounded-sm bg-[var(--negro)]/5">
-                  <AdSense slot="7922354756" />
-                </div>
-                {page.titulo_item && (
-                  <h2 className="mt-4 font-serif text-xl font-semibold text-[var(--negro)]">
-                    {page.titulo_item}
-                  </h2>
-                )}
-                <div className="mt-4 space-y-4 text-[var(--negro)]">
-                  {page.parrafos.map((texto, i) => (
-                    <p key={i} className="text-lg leading-relaxed">
+                  {parrafos.map((texto, i) => (
+                    <p key={i} className={pClass}>
                       {texto}
                     </p>
                   ))}
-                </div>
-              </>
-            )}
+                </>
+              ) : (
+                <>
+                  {parrafos[0] != null && (
+                    <p className={pClass}>{parrafos[0]}</p>
+                  )}
+                  {imagenUrl && (
+                    <div className="relative w-full">
+                      <Image
+                        src={optimizarImagenCloudinary(imagenUrl)}
+                        alt={page.titulo_item || `Página ${page.numero}`}
+                        width={600}
+                        height={600}
+                        className="w-full h-auto"
+                        priority={false}
+                      />
+                    </div>
+                  )}
+                  <div className="min-h-[90px] rounded-sm bg-[var(--negro)]/5">
+                    <AdSense slot={adSlot} />
+                  </div>
+                  {parrafos.slice(1).map((texto, i) => (
+                    <p key={i} className={pClass}>
+                      {texto}
+                    </p>
+                  ))}
+                </>
+              )}
+            </div>
           </article>
         );
       })}

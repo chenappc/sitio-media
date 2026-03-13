@@ -15,6 +15,12 @@ const PARRAFO_SKIP =
 const IMG_SKIP = /logo|icon|avatar|sprite|pixel|1x1|tracking|badge|button/i;
 const MAX_ITEMS = 50;
 
+const ADSENSE_FACEBOOK_RULE = `CONTENIDO APTO PARA ADSENSE Y FACEBOOK: El artículo curado debe cumplir estrictamente las políticas de contenido de Google AdSense y Facebook Ads. Esto significa:
+- PROHIBIDO mencionar explícitamente: violación, abuso sexual, canibalismo, pedofilia, torturas, suicidio, automutilación, pornografía, drogas ilegales, armas de fuego en contexto violento, o cualquier contenido sexualmente explícito.
+- Si el artículo original contiene estos elementos, debés REEMPLAZARLOS por versiones suavizadas que mantengan la esencia de la historia sin mencionar los elementos prohibidos. Por ejemplo: 'abuso' → 'encuentro no deseado', 'canibalismo' → 'acto macabro', 'violación' → omitir o referir como 'fue aprovechada mientras dormía'.
+- Cuando el artículo mencione muerte, enfermedad, pérdida o situaciones oscuras, usá lenguaje empático: 'falleció', 'partió', 'dejó este mundo' en lugar de 'murió'. Evitá detalles gráficos o perturbadores.
+- Transformá siempre el enfoque hacia lo emotivo y humano.`;
+
 function filterParrafos(arr: string[]): string[] {
   return arr.filter((p) => {
     const t = p.trim();
@@ -489,8 +495,16 @@ export async function POST(req: NextRequest) {
             enq({ mensaje: "Curando título principal con Claude..." });
             const prompt =
               idioma === "es"
-                ? `Reescribí este título por completo. Debe ser intrigante, viral, máximo 12 palabras, en español neutro. No copies el original. Devolvé SOLO el título reescrito, sin comillas ni explicación.\n\nTítulo original: ${articuloTitulo}`
-                : `Rewrite this title completely. It must be intriguing, viral, max 12 words, in English. Do not copy the original. Return ONLY the rewritten title, no quotes or explanation.\n\nOriginal title: ${articuloTitulo}`;
+                ? `${ADSENSE_FACEBOOK_RULE}
+
+Reescribí este título por completo en español neutro latinoamericano. Usá 'ustedes' en lugar de 'vosotros', conjugaciones sin voseo español ('saben' no 'sabéis', 'pueden' no 'podéis'). Debe sonar natural para lectores de cualquier país de América Latina. Debe ser intrigante, viral, máximo 12 palabras. No copies el original. Devolvé SOLO el título reescrito, sin comillas ni explicación.
+
+Título original: ${articuloTitulo}`
+                : `${ADSENSE_FACEBOOK_RULE}
+
+Rewrite this title completely. It must be intriguing, viral, max 12 words, in English. Do not copy the original. Return ONLY the rewritten title, no quotes or explanation.
+
+Original title: ${articuloTitulo}`;
             const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
               method: "POST",
               headers: {
@@ -583,7 +597,7 @@ export async function POST(req: NextRequest) {
               enq({ mensaje: `Claude: reescribiendo ítem ${numero}...` });
               const langInstruction =
                 idioma === "es"
-                  ? "Reescribí en español neutro, manteniendo el sentido. Título breve y atractivo; párrafos claros."
+                  ? "Reescribí en español neutro latinoamericano. Usá 'ustedes' en lugar de 'vosotros', conjugaciones sin voseo español ('saben' no 'sabéis', 'pueden' no 'podéis'). Debe sonar natural para lectores de cualquier país de América Latina. Manteniendo el sentido. Título breve y atractivo; párrafos claros."
                   : "Rewrite in English, keeping the same meaning. Short catchy title; clear paragraphs.";
               const payload = { titulo: item.titulo, parrafos };
               const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
@@ -599,7 +613,11 @@ export async function POST(req: NextRequest) {
                   messages: [
                     {
                       role: "user",
-                      content: `${langInstruction} Devolvé SOLO un JSON: { "titulo": "string", "parrafos": ["string", ...] }.\n\n${JSON.stringify(payload)}`,
+                      content: `${ADSENSE_FACEBOOK_RULE}
+
+${langInstruction} Devolvé SOLO un JSON: { "titulo": "string", "parrafos": ["string", ...] }.
+
+${JSON.stringify(payload)}`,
                     },
                   ],
                 }),
