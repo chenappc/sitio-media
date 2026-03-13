@@ -93,7 +93,7 @@ export default function EspecialInfiniteScroll({
     };
   };
 
-  const pClass = "text-lg leading-relaxed text-[var(--negro)]";
+  const pClass = "text-xl leading-relaxed text-[var(--negro)]";
   const adSlot = "7922354756";
 
   return (
@@ -110,7 +110,7 @@ export default function EspecialInfiniteScroll({
           >
             <div className="space-y-4">
               {page.titulo_item && (
-                <h2 className="font-serif text-xl font-semibold text-[var(--negro)]">
+                <h2 className="font-serif text-2xl font-bold text-[var(--negro)]">
                   {page.titulo_item}
                 </h2>
               )}
