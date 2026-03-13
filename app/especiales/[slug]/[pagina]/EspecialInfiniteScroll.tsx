@@ -105,7 +105,7 @@ export default function EspecialInfiniteScroll({
         return (
           <article
             key={page.numero}
-            className="border-b border-[var(--negro)]/10 pb-10 last:border-0"
+            className="pb-10"
             data-numero={page.numero}
           >
             <div className="space-y-4">
