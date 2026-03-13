@@ -21,6 +21,9 @@ export default function Header() {
           <Link href="/stories" className={`${styles.navLink} ${pathname?.startsWith("/stories") ? styles.navLinkActive : ""}`}>
             Historias
           </Link>
+          <Link href="/especiales" className={`${styles.navLink} ${pathname?.startsWith("/especiales") ? styles.navLinkActive : ""}`}>
+            Especiales
+          </Link>
         </div>
       </nav>
     </header>
