@@ -20,71 +20,6 @@ function filterParrafos(arr: string[]): string[] {
   });
 }
 
-const SPLIT_SCREEN_PATTERNS = [
-  "composite image",
-  "split screen",
-  "two scenes",
-  "left side",
-  "right side",
-  "collage",
-  "split image",
-  "two photos",
-  "divided",
-];
-
-function descripcionVisualIndicaSplitScreen(descripcionVisual: string): boolean {
-  const lower = descripcionVisual.toLowerCase();
-  return SPLIT_SCREEN_PATTERNS.some((p) => lower.includes(p));
-}
-
-const HUMAN_FOREGROUND_PATTERNS = [
-  /\b(a man|a woman|a person)\b/i,
-  /\bman with\b/i,
-  /\bwoman with\b/i,
-  /\bwearing\b/i,
-  /\bshirt\b/i,
-  /\bstanding\b/i,
-  /\bsitting\b/i,
-];
-
-function descripcionVisualTieneHumanoEnPrimerPlano(descripcionVisual: string): boolean {
-  const count = HUMAN_FOREGROUND_PATTERNS.filter((re) => re.test(descripcionVisual)).length;
-  return count >= 2;
-}
-
-const BACK_VIEW_PHRASES = [
-  "from behind",
-  "desde atrás",
-  "de espaldas",
-  "back of",
-  "rear view",
-  "facing away",
-];
-
-function descripcionVisualIndicaHumanoDeEspaldas(descripcionVisual: string): boolean {
-  const lower = descripcionVisual.toLowerCase();
-  return BACK_VIEW_PHRASES.some((phrase) => lower.includes(phrase));
-}
-
-const ANIMAL_KEYWORDS = /\b(dog|cat|horse|bird|animal|pet|puppy|kitten|species|breed|coat|tiger|lion|bear|wolf|cub|perro|gato|caballo|mascota)\b/i;
-
-function splitProtagonistaFijoEnAnimalYHumano(protagonistaFijo: string): { animal: string; human: string } {
-  const chunks = protagonistaFijo
-    .split(/\n\s*\d+\.\s*/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const animal: string[] = [];
-  const human: string[] = [];
-  for (const chunk of chunks) {
-    if (ANIMAL_KEYWORDS.test(chunk)) animal.push(chunk);
-    else human.push(chunk);
-  }
-  return {
-    animal: animal.join(" ").trim() || protagonistaFijo,
-    human: human.join(" ").trim() || protagonistaFijo,
-  };
-}
-
 function auth(req: NextRequest): boolean {
   const secret = req.headers.get("x-admin-secret");
   return !!ADMIN_SECRET && secret === ADMIN_SECRET;
@@ -149,39 +84,10 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       const enc = new TextEncoder();
-      let descripcionProtagonista: string | null = null;
-      let protagonistaFijo: string | null = null;
-      let imagenReferenciaHumanoBase64: string | null = null;
-      let imagenReferenciaHumanoMimeType: string = "image/png";
-      let imagenReferenciaAnimalBase64: string | null = null;
-      let imagenReferenciaAnimalMimeType: string = "image/png";
-      let imagenReferenciaUrlToSave: string | null = null;
       let contextoPaginas: string = "";
-      let descripcionAnimalOriginal: string | null = null;
       if (initialStoryId != null) {
         storyId = initialStoryId;
         storySlug = initialStorySlug;
-        const row = await pool.query<{ descripcion_protagonista: string | null; imagen_referencia_url: string | null }>(
-          "SELECT descripcion_protagonista, imagen_referencia_url FROM stories WHERE id = $1",
-          [storyId]
-        );
-        protagonistaFijo = row.rows[0]?.descripcion_protagonista?.trim() ?? null;
-        const imagenRefUrl = row.rows[0]?.imagen_referencia_url?.trim();
-        if (imagenRefUrl) {
-          try {
-            const imgRes = await fetch(imagenRefUrl, { headers: { "User-Agent": UA } });
-            if (imgRes.ok) {
-              const buf = Buffer.from(await imgRes.arrayBuffer());
-              const b64 = buf.toString("base64");
-              const contentType = imgRes.headers.get("content-type") ?? "";
-              const mime = contentType.startsWith("image/") ? contentType.split(";")[0].trim() : "image/png";
-              imagenReferenciaHumanoBase64 = b64;
-              imagenReferenciaHumanoMimeType = mime;
-            }
-          } catch {
-            // ignorar, seguir sin referencia
-          }
-        }
       }
       try {
         type PageData = {
@@ -305,171 +211,15 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
           const pageText = `Page ${p}:\n` + parrafos.join("\n");
           contextoPaginas += (contextoPaginas ? "\n\n" : "") + pageText;
 
-          let descripcionVisual: string | null = null;
-          if (imagenPrincipal) {
-            try {
-              controller.enqueue(enc.encode(sseMessage({ mensaje: `Analizando imagen con Claude vision (página ${p})...` })));
-              const visionRes = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "x-api-key": anthropicKeyStr,
-                  "anthropic-version": "2023-06-01",
-                },
-                body: JSON.stringify({
-                  model: "claude-haiku-4-5-20251001",
-                  max_tokens: 150,
-                  messages: [{
-                    role: "user",
-                    content: [
-                      { type: "image", source: { type: "url", url: imagenPrincipal } },
-                      {
-                        type: "text",
-                        text: "Describe all the visual elements of this image in one sentence: all people and animals present (their species, breed, size, color, distinctive features, age, appearance, clothing for humans), their positions and interactions with each other, the setting, objects, colors, and lighting. Do NOT mention actions involving conflict or violence. Do NOT mention text, logos, brands or websites. Be specific about how many people and animals are in the scene and what they are doing together.",
-                      },
-                    ],
-                  }],
-                }),
-              });
-              const visionData = await visionRes.json().catch(() => ({}));
-              descripcionVisual = visionData.content?.[0]?.text?.trim() ?? null;
-              if (descripcionVisual) controller.enqueue(enc.encode(sseMessage({ mensaje: `Visual p${p}: ${descripcionVisual}` })));
-
-              if (p === 1 && imagenPrincipal && descripcionVisual && ANIMAL_KEYWORDS.test(descripcionVisual)) {
-                try {
-                  controller.enqueue(enc.encode(sseMessage({ mensaje: "Obteniendo descripción detallada del animal de la imagen original..." })));
-                  const animalDetailRes = await fetch("https://api.anthropic.com/v1/messages", {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                      "x-api-key": anthropicKeyStr,
-                      "anthropic-version": "2023-06-01",
-                    },
-                    body: JSON.stringify({
-                      model: "claude-haiku-4-5-20251001",
-                      max_tokens: 300,
-                      messages: [{
-                        role: "user",
-                        content: [
-                          { type: "image", source: { type: "url", url: imagenPrincipal } },
-                          {
-                            type: "text",
-                            text: "Describe in extreme visual detail the animal in this image. Focus on: species, size, body shape, exact coat/fur colors and pattern distribution (which specific parts of the body are which color), ear shape, tail, face markings, distinctive features. Be specific enough that an image generator could recreate the exact same animal. Ignore any split screen, focus only on describing the animal's appearance.",
-                          },
-                        ],
-                      }],
-                    }),
-                  });
-                  const animalDetailData = await animalDetailRes.json().catch(() => ({}));
-                  const animalDetail = animalDetailData.content?.[0]?.text?.trim();
-                  if (animalDetail) {
-                    descripcionAnimalOriginal = animalDetail;
-                    controller.enqueue(enc.encode(sseMessage({ mensaje: "Descripción del animal guardada (imagen original)" })));
-                  }
-                } catch {
-                  // ignorar
-                }
-              }
-            } catch {
-              // ignorar
-            }
-          }
-
-          const descripcionVisualIndicaSplit = descripcionVisual ? descripcionVisualIndicaSplitScreen(descripcionVisual) : false;
-          const humanoEnPrimerPlano = descripcionVisual ? descripcionVisualTieneHumanoEnPrimerPlano(descripcionVisual) : false;
-          const humanoDeEspaldas = descripcionVisual ? descripcionVisualIndicaHumanoDeEspaldas(descripcionVisual) : false;
-          const tienePersonaOAnimal = descripcionVisual
-            ? /\b(man|woman|person|people|elder|elderly|old|young|hombre|mujer|persona|anciano|anciana|dog|cat|horse|bird|animal|pet|puppy|kitten|perro|gato|caballo|pájaro|animal|mascota|cachorro|tiger|lion|bear|wolf|tigre|león|oso|lobo)\b/i.test(descripcionVisual)
-            : false;
-
-          // Referencia humano: primera página con humano en primer plano, de frente o perfil (no de espaldas) y no split.
-          if (!imagenReferenciaHumanoBase64 && imagenPrincipal && descripcionVisual && !descripcionVisualIndicaSplit && tienePersonaOAnimal && humanoEnPrimerPlano && !humanoDeEspaldas) {
-            try {
-              controller.enqueue(enc.encode(sseMessage({ mensaje: `Guardando referencia humano desde imagen original (página ${p})...` })));
-              const imgRes = await fetch(imagenPrincipal, { headers: { "User-Agent": UA } });
-              if (imgRes.ok) {
-                const buf = Buffer.from(await imgRes.arrayBuffer());
-                imagenReferenciaHumanoBase64 = buf.toString("base64");
-                const contentType = imgRes.headers.get("content-type") ?? "";
-                imagenReferenciaHumanoMimeType = contentType.startsWith("image/") ? contentType.split(";")[0].trim() : "image/png";
-                try {
-                  const refUrl = await new Promise<string>((resolve, reject) => {
-                    const uploadStream = cloudinary.uploader.upload_stream(
-                      { folder: "sitio-media/stories/referencias" },
-                      (err, result) => {
-                        if (err) reject(err);
-                        else resolve(result!.secure_url);
-                      }
-                    );
-                    Readable.from(buf).pipe(uploadStream);
-                  });
-                  imagenReferenciaUrlToSave = refUrl;
-                  if (storyId != null) {
-                    await pool.query(
-                      "UPDATE stories SET imagen_referencia_url = $1, updated_at = NOW() WHERE id = $2",
-                      [imagenReferenciaUrlToSave, storyId]
-                    );
-                    imagenReferenciaUrlToSave = null;
-                  }
-                } catch {
-                  // ignorar
-                }
-                controller.enqueue(enc.encode(sseMessage({ mensaje: `Referencia humano guardada (imagen original, p${p})` })));
-              }
-            } catch {
-              // ignorar
-            }
-          }
-
-          // Referencia animal: desde p1 intentar guardar desde imagen original si hay descripcionAnimalOriginal (aunque sea split screen).
-          if (p === 1 && !imagenReferenciaAnimalBase64 && imagenPrincipal && descripcionAnimalOriginal) {
-            try {
-              controller.enqueue(enc.encode(sseMessage({ mensaje: "Guardando referencia animal desde imagen original (página 1)..." })));
-              const imgRes = await fetch(imagenPrincipal, { headers: { "User-Agent": UA } });
-              if (imgRes.ok) {
-                const buf = Buffer.from(await imgRes.arrayBuffer());
-                imagenReferenciaAnimalBase64 = buf.toString("base64");
-                const contentType = imgRes.headers.get("content-type") ?? "";
-                imagenReferenciaAnimalMimeType = contentType.startsWith("image/") ? contentType.split(";")[0].trim() : "image/png";
-                try {
-                  const refUrl = await new Promise<string>((resolve, reject) => {
-                    const uploadStream = cloudinary.uploader.upload_stream(
-                      { folder: "sitio-media/stories/referencias" },
-                      (err, result) => {
-                        if (err) reject(err);
-                        else resolve(result!.secure_url);
-                      }
-                    );
-                    Readable.from(buf).pipe(uploadStream);
-                  });
-                  imagenReferenciaUrlToSave = refUrl;
-                  if (storyId != null) {
-                    await pool.query(
-                      "UPDATE stories SET imagen_referencia_url = $1, updated_at = NOW() WHERE id = $2",
-                      [imagenReferenciaUrlToSave, storyId]
-                    );
-                    imagenReferenciaUrlToSave = null;
-                  }
-                } catch {
-                  // ignorar
-                }
-                controller.enqueue(enc.encode(sseMessage({ mensaje: "Referencia animal guardada (imagen original, p1)" })));
-              }
-            } catch {
-              // ignorar
-            }
-          }
-
-          return { p, tituloRewritten, parrafos, imagenPrincipal, descripcionVisual };
+          return { p, tituloRewritten, parrafos, imagenPrincipal, descripcionVisual: null };
         }
 
-        // FASE 1: leer y procesar páginas 1-5 (o hasta paginaFin si es menor), sin Gemini.
         for (let p = paginaInicio; p <= phase1End; p++) {
           const page = await leerYProcesarPagina(p);
           if (page) paginasFase1.push(page);
         }
 
-        // Crear story lo antes posible si no existe (necesario para guardar protagonistaFijo en DB).
+        // Crear story lo antes posible si no existe.
         if (storyId == null && paginasFase1.length > 0) {
           const first = paginasFase1[0];
           const baseSlug = slugify(first.tituloRewritten || "story", { lower: true, strict: true });
@@ -483,76 +233,6 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
           }
           storySlug = slug;
           storyId = await createStory(slug, first.tituloRewritten || `Story ${paginaInicio}`, total, urlBase || null);
-        }
-
-        // Si quedó una referencia por subir a DB, y ya hay storyId, guardarla.
-        if (storyId != null && imagenReferenciaUrlToSave) {
-          await pool.query(
-            "UPDATE stories SET imagen_referencia_url = $1, updated_at = NOW() WHERE id = $2",
-            [imagenReferenciaUrlToSave, storyId]
-          );
-          imagenReferenciaUrlToSave = null;
-        }
-
-        // FASE 2: extraer protagonistas con contexto completo (primeras 5 páginas) + imágenes de referencia.
-        if (!protagonistaFijo && contextoPaginas.trim()) {
-          try {
-            controller.enqueue(enc.encode(sseMessage({ mensaje: "Extrayendo protagonistas fijos (FASE 2)..." })));
-            const protPromptText = `You are analyzing a story. Based on the narrative text below and the reference image(s) provided (first = human protagonist if present, second = animal protagonist if present), identify the MAIN RECURRING PROTAGONISTS and describe them with precise visual details for consistent image generation.
-
-For each protagonist visible in the reference image(s) or named in the text: provide a detailed physical description.
-- For humans: ethnicity, age range, hair color and style, eye color, distinctive features, clothing as visible or inferred.
-- For animals: species/breed, age/size, hair/coat color, clothing/markings. For each animal protagonist, describe their appearance in extreme visual detail based on the reference image: species, size, body shape, exact coat colors and pattern distribution (which parts are which color), ear shape, tail, distinctive markings. Be specific enough that an image generator could recreate the exact same animal.
-
-If reference images are provided, use them to describe the exact appearance of the character(s). Be specific and consistent.
-
-Story text (pages 1-5):
-${contextoPaginas.trim()}
-${descripcionAnimalOriginal ? `\n\nIMPORTANT: The animal's appearance has been identified from the original news image as follows: ${descripcionAnimalOriginal}. Use this as the ground truth for the animal's appearance.` : ""}
-
-Respond in English, number each protagonist, one paragraph each.`;
-            const protContent: Array<{ type: "image"; source: { type: "base64"; media_type: string; data: string } } | { type: "text"; text: string }> = [];
-            if (imagenReferenciaHumanoBase64) {
-              protContent.push({
-                type: "image",
-                source: { type: "base64", media_type: imagenReferenciaHumanoMimeType, data: imagenReferenciaHumanoBase64 },
-              });
-            }
-            if (imagenReferenciaAnimalBase64) {
-              protContent.push({
-                type: "image",
-                source: { type: "base64", media_type: imagenReferenciaAnimalMimeType, data: imagenReferenciaAnimalBase64 },
-              });
-            }
-            protContent.push({ type: "text", text: protPromptText });
-            const protRes = await fetch("https://api.anthropic.com/v1/messages", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "x-api-key": anthropicKeyStr,
-                "anthropic-version": "2023-06-01",
-              },
-              body: JSON.stringify({
-                model: "claude-haiku-4-5-20251001",
-                max_tokens: 300,
-                messages: [{ role: "user", content: protContent }],
-              }),
-            });
-            const protData = await protRes.json().catch(() => ({}));
-            const extracted = protData.content?.[0]?.text?.trim();
-            if (extracted) {
-              protagonistaFijo = extracted;
-              controller.enqueue(enc.encode(sseMessage({ mensaje: `Protagonistas fijos listos: ${extracted.slice(0, 80)}...` })));
-              if (storyId != null) {
-                await pool.query(
-                  "UPDATE stories SET descripcion_protagonista = $1, updated_at = NOW() WHERE id = $2",
-                  [protagonistaFijo, storyId]
-                );
-              }
-            }
-          } catch {
-            // ignorar
-          }
         }
 
         async function generarImagenYSubir(page: PageData): Promise<{ imagenUrl: string | null }> {
@@ -579,23 +259,19 @@ Respond in English, number each protagonist, one paragraph each.`;
           }
 
           if (imagenBase64) {
-            promptParaGemini = protagonistaFijo?.trim()
-              ? `Recreate this exact scene maintaining the same composition, lighting, setting and atmosphere. If there is a person in the scene, replace them with this exact character: ${protagonistaFijo.trim()}. Keep all other elements (background, objects, lighting, mood) identical to the reference image. Do not copy the composition exactly — reinterpret it cinematically. Important: do not include any weapons, guns, knives, firearms, or violent imagery of any kind.`
-              : "Recreate this exact scene maintaining the same composition, lighting, setting and atmosphere. Keep all elements faithful to the reference image but reinterpret it cinematically. Important: do not include any weapons, guns, knives, firearms, or violent imagery of any kind.";
+            promptParaGemini =
+              "Recreate this scene in a cinematic, photorealistic style. Keep the exact same people from the reference image — same faces, same physical appearance, same clothing. Only reinterpret the visual style to be more cinematic: improve lighting, depth, atmosphere and composition. Do not change who is in the scene. Important: do not include any weapons, guns, knives, firearms, or violent imagery of any kind.";
           } else {
             const pageText = (tituloRewritten && parrafos.length > 0)
               ? `${tituloRewritten}. ${parrafos.join(" ")}`
               : (parrafos.length > 0 ? parrafos.join(" ") : "");
-            const claudePromptForGemini = `You are a prompt engineer for AI image generation. Based on the story text below and the character descriptions, write a single detailed cinematic prompt for an AI image generator. The prompt must:
+            const claudePromptForGemini = `You are a prompt engineer for AI image generation. Based on the story text below, write a single detailed cinematic prompt for an AI image generator. The prompt must:
 1. Describe the exact scene happening in this page's text (setting, action, mood, time of day)
-2. Include precise physical descriptions of every character that appears in the scene: ${protagonistaFijo ?? "None specified"}
-3. Be photorealistic, documentary style, National Geographic quality
-4. NOT include any text, logos, watermarks, split screens or collages
-5. Be a single unified scene
-6. Only include the recurring protagonists (people or animals described in protagonistaFijo) if they are explicitly mentioned or clearly implied by the text of this specific page. Do not force protagonists into scenes where the page text does not reference them. Let the scene be driven by what the page text actually describes.
+2. Be photorealistic, documentary style, National Geographic quality
+3. NOT include any text, logos, watermarks, split screens or collages
+4. Be a single unified scene
 
 Page text: ${pageText}
-Original scene context: ${descripcionVisual ?? "None"}
 
 Write ONLY the image generation prompt, nothing else, no preamble, no explanation.`;
             const CLAUDE_MODEL_PROMPT = "claude-haiku-4-5-20251001";
@@ -710,7 +386,6 @@ Write ONLY the image generation prompt, nothing else, no preamble, no explanatio
           return { imagenUrl };
         }
 
-        // FASE 3: generar imágenes para páginas 1-5 ya leídas, con protagonistaFijo disponible desde p1.
         for (const page of paginasFase1) {
           const gen = await generarImagenYSubir(page);
           const imagenUrl = gen.imagenUrl;

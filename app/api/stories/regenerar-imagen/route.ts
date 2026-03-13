@@ -267,10 +267,8 @@ export async function POST(req: NextRequest) {
 
         const useImageToImage = !!imagenPrincipalBase64;
         if (useImageToImage) {
-          const promptParaGemini = descripcionProtagonistaFijo?.trim()
-            ? `Recreate this exact scene maintaining the same composition, lighting, setting and atmosphere. If there is a person in the scene, replace them with this exact character: ${descripcionProtagonistaFijo.trim()}. Keep all other elements (background, objects, lighting, mood) identical to the reference image. Do not copy the composition exactly — reinterpret it cinematically. Important: do not include any weapons, guns, knives, firearms, or violent imagery of any kind.`
-            : "Recreate this exact scene maintaining the same composition, lighting, setting and atmosphere. Keep all elements faithful to the reference image but reinterpret it cinematically. Important: do not include any weapons, guns, knives, firearms, or violent imagery of any kind.";
-          descripcion = promptParaGemini;
+          descripcion =
+            "Recreate this scene in a cinematic, photorealistic style. Keep the exact same people from the reference image — same faces, same physical appearance, same clothing. Only reinterpret the visual style to be more cinematic: improve lighting, depth, atmosphere and composition. Do not change who is in the scene. Important: do not include any weapons, guns, knives, firearms, or violent imagery of any kind.";
         } else {
           const imagenTienePersona = descripcionVisual
             ? /\b(man|woman|person|people|elder|elderly|old|young|hombre|mujer|persona|anciano|anciana)\b/i.test(descripcionVisual)
