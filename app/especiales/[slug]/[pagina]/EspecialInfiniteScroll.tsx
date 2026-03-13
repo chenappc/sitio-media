@@ -110,7 +110,7 @@ export default function EspecialInfiniteScroll({
           >
             <div className="space-y-4">
               {page.titulo_item && (
-                <h2 className="font-serif text-2xl font-bold text-[var(--negro)]">
+                <h2 className="font-serif text-xl font-semibold text-[var(--negro)]">
                   {page.titulo_item}
                 </h2>
               )}
