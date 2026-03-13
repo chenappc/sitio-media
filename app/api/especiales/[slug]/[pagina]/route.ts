@@ -19,10 +19,12 @@ export async function GET(_req: NextRequest, { params }: Params) {
     const parrafos = Array.isArray(paginaData.parrafos)
       ? (paginaData.parrafos as string[]).filter((p) => typeof p === "string" && p.trim())
       : [];
+    const bloques = Array.isArray(paginaData.bloques) ? paginaData.bloques : [];
     return NextResponse.json({
       titulo_item: paginaData.titulo_item ?? "",
       imagen_url: paginaData.imagen_url ?? null,
       parrafos,
+      bloques,
       numero: paginaData.numero,
       total_paginas: especial.total_paginas ?? paginas.length,
     });

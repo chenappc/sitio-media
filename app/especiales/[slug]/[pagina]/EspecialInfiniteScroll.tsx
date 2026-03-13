@@ -3,12 +3,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import AdSense from "@/components/AdSense";
+import type { Bloque } from "@/lib/types";
 
 type PageData = {
   numero: number;
   titulo_item: string;
   imagen_url: string | null;
   parrafos: string[];
+  bloques?: Bloque[];
 };
 
 function optimizarImagenCloudinary(url: string) {
@@ -46,6 +48,7 @@ export default function EspecialInfiniteScroll({
         titulo_item: data.titulo_item ?? "",
         imagen_url: data.imagen_url ?? null,
         parrafos: Array.isArray(data.parrafos) ? data.parrafos : [],
+        bloques: Array.isArray(data.bloques) ? data.bloques : undefined,
       };
       setPages((prev) => [...prev, newPage]);
       const url = `/especiales/${slug}/${nextNumero}`;
@@ -78,41 +81,92 @@ export default function EspecialInfiniteScroll({
 
   return (
     <div className="mt-4 space-y-10">
-      {pages.map((page) => (
-        <article
-          key={page.numero}
-          className="border-b border-[var(--negro)]/10 pb-10 last:border-0"
-          data-numero={page.numero}
-        >
-          {page.imagen_url && (
-            <div className="relative w-full">
-              <Image
-                src={optimizarImagenCloudinary(page.imagen_url)}
-                alt={page.titulo_item || `Página ${page.numero}`}
-                width={600}
-                height={600}
-                className="w-full h-auto"
-                priority={page.numero === initialNumero}
-              />
-            </div>
-          )}
-          <div className="my-4 min-h-[90px] rounded-sm bg-[var(--negro)]/5">
-            <AdSense slot="7922354756" />
-          </div>
-          {page.titulo_item && (
-            <h2 className="mt-4 font-serif text-xl font-semibold text-[var(--negro)]">
-              {page.titulo_item}
-            </h2>
-          )}
-          <div className="mt-4 space-y-4 text-[var(--negro)]">
-            {page.parrafos.map((texto, i) => (
-              <p key={i} className="text-lg leading-relaxed">
-                {texto}
-              </p>
-            ))}
-          </div>
-        </article>
-      ))}
+      {pages.map((page) => {
+        const useBloques = Array.isArray(page.bloques) && page.bloques.length > 0;
+        let firstImageShown = false;
+        return (
+          <article
+            key={page.numero}
+            className="border-b border-[var(--negro)]/10 pb-10 last:border-0"
+            data-numero={page.numero}
+          >
+            {useBloques ? (
+              <>
+                {page.titulo_item && (
+                  <h2 className="mb-4 font-serif text-xl font-semibold text-[var(--negro)]">
+                    {page.titulo_item}
+                  </h2>
+                )}
+                <div className="space-y-4 text-[var(--negro)]">
+                  {page.bloques!.map((bloque, i) => {
+                    if (bloque.tipo === "imagen") {
+                      const node = (
+                        <div key={i} className="relative w-full">
+                          <Image
+                            src={optimizarImagenCloudinary(bloque.url)}
+                            alt={page.titulo_item || `Página ${page.numero}`}
+                            width={600}
+                            height={600}
+                            className="w-full h-auto"
+                            priority={page.numero === initialNumero && i === 0}
+                          />
+                        </div>
+                      );
+                      if (!firstImageShown) {
+                        firstImageShown = true;
+                        return (
+                          <div key={i} className="space-y-4">
+                            {node}
+                            <div className="min-h-[90px] rounded-sm bg-[var(--negro)]/5">
+                              <AdSense slot="7922354756" />
+                            </div>
+                          </div>
+                        );
+                      }
+                      return node;
+                    }
+                    return (
+                      <p key={i} className="text-lg leading-relaxed">
+                        {bloque.texto}
+                      </p>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <>
+                {page.imagen_url && (
+                  <div className="relative w-full">
+                    <Image
+                      src={optimizarImagenCloudinary(page.imagen_url)}
+                      alt={page.titulo_item || `Página ${page.numero}`}
+                      width={600}
+                      height={600}
+                      className="w-full h-auto"
+                      priority={page.numero === initialNumero}
+                    />
+                  </div>
+                )}
+                <div className="my-4 min-h-[90px] rounded-sm bg-[var(--negro)]/5">
+                  <AdSense slot="7922354756" />
+                </div>
+                {page.titulo_item && (
+                  <h2 className="mt-4 font-serif text-xl font-semibold text-[var(--negro)]">
+                    {page.titulo_item}
+                  </h2>
+                )}
+                <div className="mt-4 space-y-4 text-[var(--negro)]">
+                  {page.parrafos.map((texto, i) => (
+                    <p key={i} className="text-lg leading-relaxed">
+                      {texto}
+                    </p>
+                  ))}
+                </div>
+              </>
+            )}
+          </article>
+        );
+      })}
       {pages.length < totalPaginas && (
         <div
           ref={sentinelRef}

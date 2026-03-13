@@ -1,5 +1,5 @@
 import pool from "./db";
-import type { Especial, EspecialPagina } from "./types";
+import type { Especial, EspecialPagina, Bloque } from "./types";
 
 export type EspecialRow = {
   id: number;
@@ -43,14 +43,17 @@ export async function getEspecialBySlug(slug: string): Promise<{
     const especial = especialRes.rows[0] ?? null;
     if (!especial) return { especial: null, paginas: [] };
 
-    const paginasRes = await pool.query<EspecialPagina & { parrafos: string }>(
-      `SELECT id, especial_id, numero, titulo_item, imagen_url, imagen_original_url, parrafos, created_at
+    const paginasRes = await pool.query<
+      EspecialPagina & { parrafos: string; bloques: string | Bloque[] }
+    >(
+      `SELECT id, especial_id, numero, titulo_item, imagen_url, imagen_original_url, parrafos, COALESCE(bloques, '[]'::jsonb) as bloques, created_at
        FROM especial_paginas WHERE especial_id = $1 ORDER BY numero ASC`,
       [especial.id]
     );
     const paginas: EspecialPagina[] = paginasRes.rows.map((row) => ({
       ...row,
       parrafos: typeof row.parrafos === "string" ? JSON.parse(row.parrafos) : row.parrafos,
+      bloques: Array.isArray(row.bloques) ? row.bloques : (typeof row.bloques === "string" ? JSON.parse(row.bloques) : []),
     }));
     return { especial, paginas };
   } catch {
@@ -76,18 +79,21 @@ export async function createEspecial(
   return res.rows[0].id;
 }
 
-/** Inserta una página de un especial. */
+/** Inserta una página de un especial. Parrafos se deriva de bloques si no se pasa. */
 export async function addEspecialPagina(
   especialId: number,
   numero: number,
   tituloItem: string | null,
   imagenUrl: string | null,
   imagenOriginalUrl: string | null,
-  parrafos: unknown[]
+  parrafos: unknown[],
+  bloques?: Bloque[]
 ): Promise<void> {
+  const bloquesJson = JSON.stringify(bloques ?? []);
+  const parrafosVal = parrafos.length > 0 ? parrafos : (bloques ?? []).filter((b): b is { tipo: "parrafo"; texto: string } => b.tipo === "parrafo").map((b) => b.texto);
   await pool.query(
-    `INSERT INTO especial_paginas (especial_id, numero, titulo_item, imagen_url, imagen_original_url, parrafos)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
-    [especialId, numero, tituloItem, imagenUrl, imagenOriginalUrl, JSON.stringify(parrafos)]
+    `INSERT INTO especial_paginas (especial_id, numero, titulo_item, imagen_url, imagen_original_url, parrafos, bloques)
+     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+    [especialId, numero, tituloItem, imagenUrl, imagenOriginalUrl, JSON.stringify(parrafosVal), bloquesJson]
   );
 }

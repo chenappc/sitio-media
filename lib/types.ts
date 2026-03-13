@@ -54,6 +54,10 @@ export interface Especial {
   updated_at?: Date;
 }
 
+export type Bloque =
+  | { tipo: "imagen"; url: string }
+  | { tipo: "parrafo"; texto: string };
+
 export interface EspecialPagina {
   id: number;
   especial_id: number;
@@ -62,5 +66,6 @@ export interface EspecialPagina {
   imagen_url?: string | null;
   imagen_original_url?: string | null;
   parrafos: unknown[];
+  bloques?: Bloque[];
   created_at?: Date;
 }

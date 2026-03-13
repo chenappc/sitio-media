@@ -35,6 +35,7 @@ export default async function EspecialPaginaPage({ params }: Props) {
   const parrafos = Array.isArray(paginaData.parrafos)
     ? (paginaData.parrafos as string[]).filter((p) => typeof p === "string" && p.trim())
     : [];
+  const bloques = Array.isArray(paginaData.bloques) ? paginaData.bloques : undefined;
   const totalPaginas = especial.total_paginas ?? paginas.length;
 
   const initialPage = {
@@ -42,6 +43,7 @@ export default async function EspecialPaginaPage({ params }: Props) {
     titulo_item: paginaData.titulo_item ?? "",
     imagen_url: paginaData.imagen_url ?? null,
     parrafos,
+    ...(bloques?.length ? { bloques } : {}),
   };
 
   return (

@@ -55,7 +55,12 @@ function sseMessage(obj: object): string {
   return `data: ${JSON.stringify(obj)}\n\n`;
 }
 
-type RawItem = { titulo: string; imagenUrl: string | null; parrafos: string[] };
+type Bloque = { tipo: "imagen"; url: string } | { tipo: "parrafo"; texto: string };
+type RawItem = { titulo: string; bloques: Bloque[]; imagenUrl: string | null };
+
+function parrafosFromBloques(bloques: Bloque[]): string[] {
+  return bloques.filter((b): b is { tipo: "parrafo"; texto: string } => b.tipo === "parrafo").map((b) => b.texto);
+}
 
 /** Resuelve src de una img y normaliza URL. */
 function resolveImgSrc($: cheerio.CheerioAPI, el: unknown, baseUrl: string): string | null {
@@ -74,7 +79,7 @@ function resolveImgSrc($: cheerio.CheerioAPI, el: unknown, baseUrl: string): str
   }
 }
 
-/** ESTRATEGIA 1 — Headings: h2/h3/h4, título = heading, primera imagen del bloque, párrafos hasta el siguiente heading. */
+/** ESTRATEGIA 1 — Headings: h2/h3/h4, título = heading, bloques = primera imagen + párrafos hasta el siguiente heading. */
 function extraerPorHeadings($: cheerio.CheerioAPI, baseUrl: string): RawItem[] {
   const items: RawItem[] = [];
   const headings = $("h2, h3, h4").toArray();
@@ -85,6 +90,7 @@ function extraerPorHeadings($: cheerio.CheerioAPI, baseUrl: string): RawItem[] {
     if (!titulo || titulo.length < 2) continue;
     const nextHeading = headings[i + 1];
     const $block = nextHeading ? $el.nextUntil($(nextHeading)) : $el.nextAll();
+    const bloques: Bloque[] = [];
     let imagenUrl: string | null = null;
     const $firstImg = $block.find("img").first().length ? $block.find("img").first() : $block.filter("img").first();
     const src =
@@ -97,39 +103,44 @@ function extraerPorHeadings($: cheerio.CheerioAPI, baseUrl: string): RawItem[] {
     if (src && imgEl && isImageValid($, imgEl, src)) {
       try {
         imagenUrl = new URL(src, baseUrl).href;
+        bloques.push({ tipo: "imagen", url: imagenUrl });
       } catch {
         imagenUrl = src;
+        bloques.push({ tipo: "imagen", url: src });
       }
     }
-    const parrafosRaw: string[] = [];
     $block.find("p").each((_, p) => {
       const t = $(p).text().trim();
-      if (isParagraphValid(t)) parrafosRaw.push(t);
+      if (isParagraphValid(t)) {
+        const filtered = filterParrafos([t]);
+        if (filtered.length > 0) bloques.push({ tipo: "parrafo", texto: filtered[0] });
+      }
     });
-    items.push({ titulo, imagenUrl, parrafos: filterParrafos(parrafosRaw) });
+    items.push({ titulo, bloques, imagenUrl });
   }
   return items.slice(0, MAX_ITEMS);
 }
 
-/** ESTRATEGIA 2 — Bloques imagen+texto: orden DOM, cada imagen inicia ítem; título = primeros 80 chars del primer p. */
+/** ESTRATEGIA 2 — Orden DOM: recorrer body en orden; cada imagen válida inicia ítem; párrafos e imágenes siguientes se agregan como bloques. */
 function extraerPorImagenes($: cheerio.CheerioAPI, baseUrl: string): RawItem[] {
   const items: RawItem[] = [];
   const elements = $("body").find("img, p").toArray();
-  let leadingParrafos: string[] = [];
+  let leadingBloques: Bloque[] = [];
   let currentItem: RawItem | null = null;
 
   for (const el of elements) {
     if (items.length >= MAX_ITEMS) break;
     const tagName = (el as { name?: string }).name ?? "";
     if (tagName === "img") {
-      const imagenUrl = resolveImgSrc($, el, baseUrl);
-      if (imagenUrl != null) {
-        if (leadingParrafos.length > 0 && items.length === 0) {
-          const titulo = leadingParrafos[0].slice(0, 80).trim() || "";
-          items.push({ titulo, imagenUrl: null, parrafos: filterParrafos(leadingParrafos) });
-          leadingParrafos = [];
+      const url = resolveImgSrc($, el, baseUrl);
+      if (url != null) {
+        if (leadingBloques.length > 0 && items.length === 0) {
+          const firstP = leadingBloques.find((b): b is { tipo: "parrafo"; texto: string } => b.tipo === "parrafo");
+          const titulo = firstP ? firstP.texto.slice(0, 80).trim() : "";
+          items.push({ titulo: titulo || "", bloques: leadingBloques, imagenUrl: null });
+          leadingBloques = [];
         }
-        currentItem = { titulo: "", imagenUrl, parrafos: [] };
+        currentItem = { titulo: "", bloques: [{ tipo: "imagen", url }], imagenUrl: url };
         items.push(currentItem);
       }
     } else if (tagName === "p") {
@@ -137,17 +148,20 @@ function extraerPorImagenes($: cheerio.CheerioAPI, baseUrl: string): RawItem[] {
       if (!isParagraphValid(text)) continue;
       const filtered = filterParrafos([text]);
       if (filtered.length === 0) continue;
-      const t = filtered[0];
+      const bloque: Bloque = { tipo: "parrafo", texto: filtered[0] };
       if (currentItem != null) {
-        currentItem.parrafos.push(t);
-        if (!currentItem.titulo) currentItem.titulo = t.slice(0, 80).trim();
+        currentItem.bloques.push(bloque);
+        if (!currentItem.titulo) currentItem.titulo = filtered[0].slice(0, 80).trim();
       } else {
-        leadingParrafos.push(t);
+        leadingBloques.push(bloque);
       }
     }
   }
   for (const it of items) {
-    if (!it.titulo && it.parrafos.length > 0) it.titulo = it.parrafos[0].slice(0, 80).trim();
+    if (!it.titulo) {
+      const firstP = it.bloques.find((b): b is { tipo: "parrafo"; texto: string } => b.tipo === "parrafo");
+      if (firstP) it.titulo = firstP.texto.slice(0, 80).trim();
+    }
   }
   return items.slice(0, MAX_ITEMS);
 }
@@ -162,10 +176,11 @@ function extraerPorParrafos($: cheerio.CheerioAPI): RawItem[] {
   const filtered = filterParrafos(all);
   const items: RawItem[] = [];
   for (let i = 0; i < filtered.length && items.length < MAX_ITEMS; ) {
-    const parrafos = filtered.slice(i, i + 3); // 2 o 3 párrafos por ítem
+    const parrafos = filtered.slice(i, i + 3);
     if (parrafos.length === 0) break;
     const titulo = parrafos[0].slice(0, 80).trim() || "";
-    items.push({ titulo, imagenUrl: null, parrafos });
+    const bloques: Bloque[] = parrafos.map((texto) => ({ tipo: "parrafo" as const, texto }));
+    items.push({ titulo, bloques, imagenUrl: null });
     i += parrafos.length;
   }
   return items.slice(0, MAX_ITEMS);
@@ -183,7 +198,7 @@ async function extraerPorJson(
   const pushItems = (candidates: RawItem[]) => {
     for (const it of candidates) {
       if (!it) continue;
-      if (!it.titulo && (!it.parrafos || it.parrafos.length === 0)) continue;
+      if (!it.titulo && (!it.bloques || it.bloques.length === 0)) continue;
       items.push(it);
       if (items.length >= MAX_ITEMS) break;
     }
@@ -256,7 +271,10 @@ async function extraerPorJson(
         }
 
         if (titulo || parrafos.length > 0) {
-          pushItems([{ titulo: titulo.slice(0, 120), imagenUrl, parrafos }]);
+          const bloques: Bloque[] = [];
+          if (imagenUrl) bloques.push({ tipo: "imagen", url: imagenUrl });
+          for (const p of parrafos) bloques.push({ tipo: "parrafo", texto: p });
+          pushItems([{ titulo: titulo.slice(0, 120), bloques, imagenUrl }]);
         }
       }
 
@@ -465,7 +483,34 @@ export async function POST(req: NextRequest) {
         });
         enq({ mensaje: `IMG src (primeras 5): ${imgsPreview.join(" | ") || "(ninguna)"}` });
 
-        const articuloTitulo = ($("h1").first().text() || $("title").text() || "Especial").trim();
+        let articuloTitulo = ($("h1").first().text() || $("title").text() || "Especial").trim();
+        if (idioma !== "original" && articuloTitulo) {
+          try {
+            enq({ mensaje: "Curando título principal con Claude..." });
+            const prompt =
+              idioma === "es"
+                ? `Reescribí este título por completo. Debe ser intrigante, viral, máximo 12 palabras, en español neutro. No copies el original. Devolvé SOLO el título reescrito, sin comillas ni explicación.\n\nTítulo original: ${articuloTitulo}`
+                : `Rewrite this title completely. It must be intriguing, viral, max 12 words, in English. Do not copy the original. Return ONLY the rewritten title, no quotes or explanation.\n\nOriginal title: ${articuloTitulo}`;
+            const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-api-key": anthropicKeyStr,
+                "anthropic-version": "2023-06-01",
+              },
+              body: JSON.stringify({
+                model: "claude-haiku-4-5-20251001",
+                max_tokens: 256,
+                messages: [{ role: "user", content: prompt }],
+              }),
+            });
+            const data = await claudeRes.json().catch(() => ({}));
+            const text = (data.content?.[0]?.text ?? "").trim().replace(/^["']|["']$/g, "");
+            if (text) articuloTitulo = text;
+          } catch {
+            // mantener título original
+          }
+        }
         let items: RawItem[] = [];
         let estrategiaUsada = "";
 
@@ -530,16 +575,17 @@ export async function POST(req: NextRequest) {
           const numero = idx + 1;
           const item = items[idx];
           let tituloItem = item.titulo;
-          let parrafos: string[] = item.parrafos;
+          let bloques: Bloque[] = [...item.bloques];
+          let parrafos: string[] = parrafosFromBloques(bloques);
 
-          if (idioma !== "original" && (item.titulo || item.parrafos.length > 0)) {
+          if (idioma !== "original" && (item.titulo || parrafos.length > 0)) {
             try {
               enq({ mensaje: `Claude: reescribiendo ítem ${numero}...` });
               const langInstruction =
                 idioma === "es"
                   ? "Reescribí en español neutro, manteniendo el sentido. Título breve y atractivo; párrafos claros."
                   : "Rewrite in English, keeping the same meaning. Short catchy title; clear paragraphs.";
-              const payload = { titulo: item.titulo, parrafos: item.parrafos };
+              const payload = { titulo: item.titulo, parrafos };
               const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
                 method: "POST",
                 headers: {
@@ -565,6 +611,14 @@ export async function POST(req: NextRequest) {
                 const parsed = JSON.parse(objMatch[0]) as { titulo?: string; parrafos?: string[] };
                 if (typeof parsed.titulo === "string" && parsed.titulo.trim()) tituloItem = parsed.titulo.trim();
                 if (Array.isArray(parsed.parrafos)) parrafos = parsed.parrafos.filter((x): x is string => typeof x === "string");
+                let pi = 0;
+                bloques = item.bloques.map((b) => {
+                  if (b.tipo === "parrafo") {
+                    const texto = parrafos[pi++] ?? b.texto;
+                    return { tipo: "parrafo" as const, texto };
+                  }
+                  return b;
+                });
               }
             } catch {
               // keep original
@@ -732,8 +786,15 @@ Item text: ${pageText}`;
             }
           }
 
+          if (imagenUrl != null) {
+            const firstImgIdx = bloques.findIndex((b) => b.tipo === "imagen");
+            if (firstImgIdx >= 0) {
+              const prev = bloques[firstImgIdx];
+              if (prev.tipo === "imagen") bloques[firstImgIdx] = { tipo: "imagen", url: imagenUrl };
+            }
+          }
           try {
-            await addEspecialPagina(especialId, numero, tituloItem, imagenUrl, imagenOriginalUrl, parrafos);
+            await addEspecialPagina(especialId, numero, tituloItem, imagenUrl, imagenOriginalUrl, parrafos, bloques);
             await pool.query(
               `UPDATE especiales SET total_paginas = (SELECT COUNT(*) FROM especial_paginas WHERE especial_id = $1), updated_at = NOW() WHERE id = $1`,
               [especialId]
