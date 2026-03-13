@@ -1,17 +1,60 @@
 import pool from "./db";
-import type { Especial } from "./types";
+import type { Especial, EspecialPagina } from "./types";
 
-/** Devuelve todos los especiales ordenados por updated_at DESC. */
-export async function getEspeciales(): Promise<Especial[]> {
+export type EspecialRow = {
+  id: number;
+  slug: string;
+  titulo: string;
+  status: string;
+  total_paginas: number;
+  created_at?: Date;
+};
+
+/** Devuelve todos los especiales ordenados por created_at DESC (campos listados). */
+export async function getAllEspeciales(): Promise<EspecialRow[]> {
   try {
-    const res = await pool.query<Especial>(
-      `SELECT id, slug, titulo, status, total_paginas, url_base, idioma, usar_imagenes_ia, created_at, updated_at
+    const res = await pool.query<EspecialRow>(
+      `SELECT id, slug, titulo, status, total_paginas, created_at
        FROM especiales
-       ORDER BY updated_at DESC`
+       ORDER BY created_at DESC`
     );
     return res.rows;
   } catch {
     return [];
+  }
+}
+
+/** @deprecated Use getAllEspeciales. */
+export async function getEspeciales(): Promise<EspecialRow[]> {
+  return getAllEspeciales();
+}
+
+/** Devuelve el especial por slug con sus páginas ordenadas por numero. */
+export async function getEspecialBySlug(slug: string): Promise<{
+  especial: Especial | null;
+  paginas: EspecialPagina[];
+}> {
+  try {
+    const especialRes = await pool.query<Especial>(
+      `SELECT id, slug, titulo, status, total_paginas, url_base, idioma, usar_imagenes_ia, created_at, updated_at
+       FROM especiales WHERE slug = $1`,
+      [slug]
+    );
+    const especial = especialRes.rows[0] ?? null;
+    if (!especial) return { especial: null, paginas: [] };
+
+    const paginasRes = await pool.query<EspecialPagina & { parrafos: string }>(
+      `SELECT id, especial_id, numero, titulo_item, imagen_url, imagen_original_url, parrafos, created_at
+       FROM especial_paginas WHERE especial_id = $1 ORDER BY numero ASC`,
+      [especial.id]
+    );
+    const paginas: EspecialPagina[] = paginasRes.rows.map((row) => ({
+      ...row,
+      parrafos: typeof row.parrafos === "string" ? JSON.parse(row.parrafos) : row.parrafos,
+    }));
+    return { especial, paginas };
+  } catch {
+    return { especial: null, paginas: [] };
   }
 }
 
