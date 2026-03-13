@@ -559,10 +559,34 @@ Respond in English, number each protagonist, one paragraph each.`;
           const { p, tituloRewritten, parrafos, imagenPrincipal, descripcionVisual } = page;
           let imagenUrl: string | null = null;
 
-          const pageText = (tituloRewritten && parrafos.length > 0)
-            ? `${tituloRewritten}. ${parrafos.join(" ")}`
-            : (parrafos.length > 0 ? parrafos.join(" ") : "");
-          const claudePromptForGemini = `You are a prompt engineer for AI image generation. Based on the story text below and the character descriptions, write a single detailed cinematic prompt for an AI image generator. The prompt must:
+          let promptParaGemini: string;
+          let imagenBase64: string | null = null;
+          let imagenMimeType: string = "image/png";
+
+          if (imagenPrincipal) {
+            try {
+              controller.enqueue(enc.encode(sseMessage({ mensaje: `Descargando imagen de referencia para página ${p}...` })));
+              const imgRes = await fetch(imagenPrincipal, { headers: { "User-Agent": UA } });
+              if (imgRes.ok) {
+                const buf = Buffer.from(await imgRes.arrayBuffer());
+                imagenBase64 = buf.toString("base64");
+                const ct = imgRes.headers.get("content-type") ?? "";
+                imagenMimeType = ct.startsWith("image/") ? ct.split(";")[0].trim() : "image/png";
+              }
+            } catch {
+              // seguir sin imagen de referencia
+            }
+          }
+
+          if (imagenBase64) {
+            promptParaGemini = protagonistaFijo?.trim()
+              ? `Recreate this exact scene maintaining the same composition, lighting, setting and atmosphere. If there is a person in the scene, replace them with this exact character: ${protagonistaFijo.trim()}. Keep all other elements (background, objects, lighting, mood) identical to the reference image. Do not copy the composition exactly — reinterpret it cinematically. Important: do not include any weapons, guns, knives, firearms, or violent imagery of any kind.`
+              : "Recreate this exact scene maintaining the same composition, lighting, setting and atmosphere. Keep all elements faithful to the reference image but reinterpret it cinematically. Important: do not include any weapons, guns, knives, firearms, or violent imagery of any kind.";
+          } else {
+            const pageText = (tituloRewritten && parrafos.length > 0)
+              ? `${tituloRewritten}. ${parrafos.join(" ")}`
+              : (parrafos.length > 0 ? parrafos.join(" ") : "");
+            const claudePromptForGemini = `You are a prompt engineer for AI image generation. Based on the story text below and the character descriptions, write a single detailed cinematic prompt for an AI image generator. The prompt must:
 1. Describe the exact scene happening in this page's text (setting, action, mood, time of day)
 2. Include precise physical descriptions of every character that appears in the scene: ${protagonistaFijo ?? "None specified"}
 3. Be photorealistic, documentary style, National Geographic quality
@@ -574,73 +598,54 @@ Page text: ${pageText}
 Original scene context: ${descripcionVisual ?? "None"}
 
 Write ONLY the image generation prompt, nothing else, no preamble, no explanation.`;
-
-          const CLAUDE_MODEL_PROMPT = "claude-haiku-4-5-20251001";
-          const CLAUDE_MAX_TOKENS_PROMPT = 1024; // >= 500
-
-          let promptParaGemini: string;
-          try {
-            controller.enqueue(enc.encode(sseMessage({ mensaje: `Claude: generando prompt cinematográfico para página ${p}...` })));
-            const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "x-api-key": anthropicKeyStr,
-                "anthropic-version": "2023-06-01",
-              },
-              body: JSON.stringify({
-                model: CLAUDE_MODEL_PROMPT,
-                max_tokens: CLAUDE_MAX_TOKENS_PROMPT,
-                messages: [{ role: "user", content: claudePromptForGemini }],
-              }),
-            });
-            const claudeBody = await claudeRes.json().catch(() => null);
-            if (!claudeRes.ok) {
-              const errDetail = `Claude prompt error: HTTP ${claudeRes.status}, body: ${JSON.stringify(claudeBody)}`;
-              console.error("[scrape] " + errDetail);
+            const CLAUDE_MODEL_PROMPT = "claude-haiku-4-5-20251001";
+            const CLAUDE_MAX_TOKENS_PROMPT = 1024;
+            try {
+              controller.enqueue(enc.encode(sseMessage({ mensaje: `Claude: generando prompt cinematográfico para página ${p}...` })));
+              const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-api-key": anthropicKeyStr,
+                  "anthropic-version": "2023-06-01",
+                },
+                body: JSON.stringify({
+                  model: CLAUDE_MODEL_PROMPT,
+                  max_tokens: CLAUDE_MAX_TOKENS_PROMPT,
+                  messages: [{ role: "user", content: claudePromptForGemini }],
+                }),
+              });
+              const claudeBody = await claudeRes.json().catch(() => null);
+              if (!claudeRes.ok || !(claudeBody?.content?.[0]?.text?.trim())) {
+                const errDetail = claudeRes.ok ? "Claude no devolvió prompt" : `Claude prompt error: HTTP ${claudeRes.status}`;
+                controller.enqueue(enc.encode(sseMessage({ pagina: p, total, status: "error", mensaje: errDetail })));
+                return { imagenUrl };
+              }
+              promptParaGemini = (claudeBody.content[0].text ?? "").trim() + " Important: do not include any weapons, guns, knives, firearms, or violent imagery of any kind.";
+            } catch (e) {
               controller.enqueue(enc.encode(sseMessage({
                 pagina: p,
                 total,
                 status: "error",
-                mensaje: errDetail,
+                mensaje: `Error Claude (prompt): ${e instanceof Error ? e.message : String(e)}`,
               })));
               return { imagenUrl };
             }
-            promptParaGemini = (claudeBody?.content?.[0]?.text ?? "").trim();
-            if (!promptParaGemini) {
-              const errDetail = `Claude no devolvió prompt. HTTP ${claudeRes.status}, body: ${JSON.stringify(claudeBody)}`;
-              console.error("[scrape] " + errDetail);
-              controller.enqueue(enc.encode(sseMessage({
-                pagina: p,
-                total,
-                status: "error",
-                mensaje: errDetail,
-              })));
-              return { imagenUrl };
-            }
-          } catch (e) {
-            const errDetail = `Error Claude (prompt): ${e instanceof Error ? e.message : String(e)}`;
-            console.error("[scrape] " + errDetail, e);
-            controller.enqueue(enc.encode(sseMessage({
-              pagina: p,
-              total,
-              status: "error",
-              mensaje: errDetail,
-            })));
-            return { imagenUrl };
           }
-
-          promptParaGemini = `${promptParaGemini.trim()} Important: do not include any weapons, guns, knives, firearms, or violent imagery of any kind.`;
 
           try {
             controller.enqueue(enc.encode(sseMessage({ mensaje: `Generando imagen con Gemini 2.5 para página ${p}...` })));
+            const geminiParts: Array<{ inlineData?: { mimeType: string; data: string } } | { text: string }> = [
+              ...(imagenBase64 ? [{ inlineData: { mimeType: imagenMimeType, data: imagenBase64 } }] : []),
+              { text: promptParaGemini },
+            ];
             const geminiRes: Response = await fetch(
               `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${googleApiKeyStr}`,
               {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  contents: [{ parts: [{ text: promptParaGemini }] }],
+                  contents: [{ parts: geminiParts }],
                   generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
                 }),
               }

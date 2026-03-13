@@ -206,8 +206,25 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        let descripcionVisual: string | null = null;
+        let imagenPrincipalBase64: string | null = null;
+        let imagenPrincipalMimeType: string = "image/png";
         if (imagenPrincipal) {
+          try {
+            controller.enqueue(enc.encode(sseMessage({ mensaje: "Descargando imagen de referencia..." })));
+            const imgRes = await fetch(imagenPrincipal, { headers: { "User-Agent": UA } });
+            if (imgRes.ok) {
+              const buf = Buffer.from(await imgRes.arrayBuffer());
+              imagenPrincipalBase64 = buf.toString("base64");
+              const ct = imgRes.headers.get("content-type") ?? "";
+              imagenPrincipalMimeType = ct.startsWith("image/") ? ct.split(";")[0].trim() : "image/png";
+            }
+          } catch {
+            // ignorar
+          }
+        }
+
+        let descripcionVisual: string | null = null;
+        if (imagenPrincipal && !imagenPrincipalBase64) {
           try {
             controller.enqueue(enc.encode(sseMessage({ mensaje: "Analizando imagen original..." })));
             const visionRes = await fetch("https://api.anthropic.com/v1/messages", {
@@ -248,21 +265,33 @@ export async function POST(req: NextRequest) {
             ? `${titulo}. ${String(parrafos[0]).slice(0, 300)}`
             : (titulo || String(parrafos[0] ?? "").slice(0, 400) || "Escena narrativa"));
 
-        controller.enqueue(enc.encode(sseMessage({ mensaje: "Generando imagen con Gemini 2.5..." })));
-        const imagenTienePersona = descripcionVisual
-          ? /\b(man|woman|person|people|elder|elderly|old|young|hombre|mujer|persona|anciano|anciana)\b/i.test(descripcionVisual)
-          : false;
-        const instruccionesRefYNarrativa = " CRITICAL INSTRUCTIONS: (1) The reference image is ONLY for knowing how the characters look. DO NOT copy the composition, pose, setting or scene from the reference image. Generate a completely new scene. (2) The image MUST illustrate specifically what is happening in the text of this page. The scene, action, place and context must faithfully reflect the narrative content of the text. Do not generate generic scenes.";
-        descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${protagonistaLine}${instruccionesRefYNarrativa}${imagenTienePersona && descripcionProtagonista ? ` Main character physical appearance: ${descripcionProtagonista}.` : ""} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels. Single image only, no split screen, no collage, no grid, no multiple panels, no divided image, no side by side comparison, no before and after, one single unified scene.`;
+        const useImageToImage = !!imagenPrincipalBase64;
+        if (useImageToImage) {
+          const promptParaGemini = descripcionProtagonistaFijo?.trim()
+            ? `Recreate this exact scene maintaining the same composition, lighting, setting and atmosphere. If there is a person in the scene, replace them with this exact character: ${descripcionProtagonistaFijo.trim()}. Keep all other elements (background, objects, lighting, mood) identical to the reference image. Do not copy the composition exactly — reinterpret it cinematically. Important: do not include any weapons, guns, knives, firearms, or violent imagery of any kind.`
+            : "Recreate this exact scene maintaining the same composition, lighting, setting and atmosphere. Keep all elements faithful to the reference image but reinterpret it cinematically. Important: do not include any weapons, guns, knives, firearms, or violent imagery of any kind.";
+          descripcion = promptParaGemini;
+        } else {
+          const imagenTienePersona = descripcionVisual
+            ? /\b(man|woman|person|people|elder|elderly|old|young|hombre|mujer|persona|anciano|anciana)\b/i.test(descripcionVisual)
+            : false;
+          const instruccionesRefYNarrativa = " CRITICAL INSTRUCTIONS: (1) The reference image is ONLY for knowing how the characters look. DO NOT copy the composition, pose, setting or scene from the reference image. Generate a completely new scene. (2) The image MUST illustrate specifically what is happening in the text of this page. The scene, action, place and context must faithfully reflect the narrative content of the text. Do not generate generic scenes.";
+          descripcion = `RAW photo, DSLR, photorealistic, hyperrealistic, real photograph, NOT a painting, NOT illustrated, NOT digital art, NOT CGI. Canon EOS R5, 85mm lens, f/2.8, natural lighting. Recreate this scene: ${temaBase}.${protagonistaLine}${instruccionesRefYNarrativa}${imagenTienePersona && descripcionProtagonista ? ` Main character physical appearance: ${descripcionProtagonista}.` : ""} Documentary photojournalism style, National Geographic. Sharp focus, film grain, real textures. Peaceful, non-violent scene. No dangerous objects. No text, no words, no letters, no signs, no logos, no watermarks, no icons, no symbols. No text, no words, no letters, no signs, no logos, no watermarks, no brands, no labels. Single image only, no split screen, no collage, no grid, no multiple panels, no divided image, no side by side comparison, no before and after, one single unified scene.`;
         }
 
-        const promptConReferencia = imagenReferenciaBase64
+        const promptConReferencia = imagenReferenciaBase64 && !useImageToImage
           ? `${descripcion} IMPORTANT: Maintain the exact same protagonist appearance as shown in the reference image. Same face, same age, same hair, same clothing style. IMPORTANT: Use the reference image ONLY to match the exact appearance of the characters (face, hair, clothing, body). DO NOT copy the composition, pose, angle, background or scene from the reference image. Generate a completely different scene based on the story text.`
           : descripcion;
-        const geminiBodyParts: Array<{ inlineData?: { mimeType: string; data: string } } | { text: string }> = [
-          ...(imagenReferenciaBase64 ? [{ inlineData: { mimeType: imagenReferenciaMimeType, data: imagenReferenciaBase64 } }] : []),
-          { text: promptConReferencia },
-        ];
+        const geminiBodyParts: Array<{ inlineData?: { mimeType: string; data: string } } | { text: string }> = useImageToImage
+          ? [
+              { inlineData: { mimeType: imagenPrincipalMimeType, data: imagenPrincipalBase64! } },
+              { text: promptConReferencia },
+            ]
+          : [
+              ...(imagenReferenciaBase64 ? [{ inlineData: { mimeType: imagenReferenciaMimeType, data: imagenReferenciaBase64 } }] : []),
+              { text: promptConReferencia },
+            ];
+        controller.enqueue(enc.encode(sseMessage({ mensaje: "Generando imagen con Gemini 2.5..." })));
         const geminiRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${googleApiKey}`,
           {
