@@ -38,10 +38,11 @@ function isParagraphLong(text: string): boolean {
   return t.length > 100 && isParagraphValid(text);
 }
 
-function isImageValid($: cheerio.CheerioAPI, el: cheerio.Element, src: string): boolean {
+function isImageValid($: cheerio.CheerioAPI, el: unknown, src: string): boolean {
   if (!src || src.startsWith("data:")) return false;
   if (IMG_SKIP.test(src)) return false;
-  if (/logo|icon|avatar/i.test($(el).attr("class") || "")) return false;
+  const $el = $(el as Parameters<typeof $>[0]);
+  if (/logo|icon|avatar/i.test($el.attr("class") || "")) return false;
   return true;
 }
 
@@ -57,8 +58,8 @@ function sseMessage(obj: object): string {
 type RawItem = { titulo: string; imagenUrl: string | null; parrafos: string[] };
 
 /** Resuelve src de una img y normaliza URL. */
-function resolveImgSrc($: cheerio.CheerioAPI, el: cheerio.Element, baseUrl: string): string | null {
-  const $el = $(el);
+function resolveImgSrc($: cheerio.CheerioAPI, el: unknown, baseUrl: string): string | null {
+  const $el = $(el as Parameters<typeof $>[0]);
   const src =
     $el.attr("data-layzr") ||
     $el.attr("data-lazy-src") ||
@@ -92,7 +93,7 @@ function extraerPorHeadings($: cheerio.CheerioAPI, baseUrl: string): RawItem[] {
       $firstImg.attr("data-src") ||
       $firstImg.attr("src") ||
       "";
-    const imgEl = $firstImg.length ? ($firstImg[0] as cheerio.Element) : null;
+    const imgEl = $firstImg.length ? $firstImg[0] : null;
     if (src && imgEl && isImageValid($, imgEl, src)) {
       try {
         imagenUrl = new URL(src, baseUrl).href;
