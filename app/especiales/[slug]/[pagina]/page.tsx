@@ -50,6 +50,7 @@ export default async function EspecialPaginaPage({ params }: Props) {
     <div className="min-h-screen bg-white">
       <div className="mx-auto max-w-2xl px-4 py-6">
         <h1 className="font-serif text-2xl font-bold text-[var(--negro)]">{especial.titulo}</h1>
+        <div className="mt-4 border-t border-[var(--negro)]/10" aria-hidden />
         <EspecialInfiniteScroll
           slug={slug}
           totalPaginas={totalPaginas}
