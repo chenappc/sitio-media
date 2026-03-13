@@ -22,11 +22,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-function optimizarImagenCloudinary(url: string) {
-  if (!url || !url.includes("res.cloudinary.com")) return url;
-  return url.replace("/upload/", "/upload/w_600,c_fit,q_auto/");
-}
-
 export default async function EspecialPaginaPage({ params }: Props) {
   const { slug, pagina } = await params;
   const numero = Math.max(1, parseInt(pagina, 10) || 1);
@@ -58,7 +53,6 @@ export default async function EspecialPaginaPage({ params }: Props) {
           totalPaginas={totalPaginas}
           initialNumero={numero}
           initialPage={initialPage}
-          optimizarImagen={optimizarImagenCloudinary}
         />
       </div>
     </div>

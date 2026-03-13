@@ -11,12 +11,16 @@ type PageData = {
   parrafos: string[];
 };
 
+function optimizarImagenCloudinary(url: string) {
+  if (!url || !url.includes("res.cloudinary.com")) return url;
+  return url.replace("/upload/", "/upload/w_600,c_fit,q_auto/");
+}
+
 type Props = {
   slug: string;
   totalPaginas: number;
   initialNumero: number;
   initialPage: PageData;
-  optimizarImagen: (url: string) => string;
 };
 
 export default function EspecialInfiniteScroll({
@@ -24,7 +28,6 @@ export default function EspecialInfiniteScroll({
   totalPaginas,
   initialNumero,
   initialPage,
-  optimizarImagen,
 }: Props) {
   const [pages, setPages] = useState<PageData[]>([initialPage]);
   const [loading, setLoading] = useState(false);
@@ -84,7 +87,7 @@ export default function EspecialInfiniteScroll({
           {page.imagen_url && (
             <div className="relative w-full">
               <Image
-                src={optimizarImagen(page.imagen_url)}
+                src={optimizarImagenCloudinary(page.imagen_url)}
                 alt={page.titulo_item || `Página ${page.numero}`}
                 width={600}
                 height={600}
