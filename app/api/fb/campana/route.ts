@@ -90,10 +90,10 @@ export async function POST(req: NextRequest) {
     const filterJson = JSON.stringify([
       { field: 'name', operator: 'EQUAL', value: campaignName },
     ]);
-    const listUrl = `https://graph.facebook.com/v19.0/${adAccountId}/campaigns?fields=id,name&filtering=${encodeURIComponent(filterJson)}&access_token=${encodeURIComponent(accessToken ?? '')}`;
+    const listUrl = `https://graph.facebook.com/v19.0/${adAccountId}/campaigns?fields=id,name,account_id&filtering=${encodeURIComponent(filterJson)}&access_token=${encodeURIComponent(accessToken ?? '')}`;
     console.log('FB CAMPANA DEBUG [list campaigns] request:', { url: listUrl.replace(accessToken ?? '', '[TOKEN]') });
     const listRes = await fetch(listUrl);
-    const listData = (await listRes.json()) as { data?: { id: string }[]; error?: { message: string } };
+    const listData = (await listRes.json()) as { data?: { id: string; name?: string; account_id?: string }[]; error?: { message: string } };
     console.log('FB CAMPANA DEBUG [list campaigns] response:', { status: listRes.status, body: listData });
     let fbCampaignId: string;
     if (listData.error) {
@@ -106,8 +106,13 @@ export async function POST(req: NextRequest) {
       });
       throw new Error(err.message ?? 'Error listando campañas');
     }
-    if (listData.data && listData.data.length > 0) {
-      fbCampaignId = listData.data[0].id;
+    const normalizeAccountId = (id: string | undefined) => String(id ?? '').replace(/^act_/i, '');
+    const ourAccountId = normalizeAccountId(adAccountId);
+    const campaignsInOurAccount = (listData.data ?? []).filter(
+      (c) => normalizeAccountId(c.account_id) === ourAccountId
+    );
+    if (campaignsInOurAccount.length > 0) {
+      fbCampaignId = campaignsInOurAccount[0].id;
     } else {
       const campaignBody = new URLSearchParams({
         name: campaignName,
