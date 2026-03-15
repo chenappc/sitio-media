@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
       targeting.locales = [1002];
     }
 
-    let fbAdsetId: string;
+    let fbAdsetId!: string;
 
     console.log('FB CAMPANA DEBUG campaign_id usado:', fbCampaignId);
 
