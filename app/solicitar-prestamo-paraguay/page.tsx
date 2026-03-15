@@ -80,7 +80,7 @@ export default function SolicitarPrestamoParaguayPage() {
           Acceder al Sitio Oficial
         </a>
         <p className={styles.note}>
-          Serás redirigido al sitio oficial de Banco Itaú Paraguay. sitio.media
+          Serás redirigido al sitio oficial de Banco Itaú Paraguay. Vahica.com
           no es responsable de las condiciones finales del producto.
         </p>
       </div>

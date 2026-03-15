@@ -1,4 +1,4 @@
--- Tablas para Stories (sitio.media)
+-- Tablas para Stories (Vahica.com)
 -- Ejecutar en PostgreSQL (Railway o local)
 
 CREATE TABLE IF NOT EXISTS stories (

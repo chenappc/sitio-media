@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Política de Privacidad",
-  description: "Política de privacidad de sitio.media",
+  description: "Política de privacidad de Vahica.com",
 };
 
 export default function PrivacidadPage() {
@@ -19,7 +19,7 @@ export default function PrivacidadPage() {
       <section className="mt-8">
         <h2 className="font-serif text-xl font-semibold">1. Responsable del tratamiento</h2>
         <p className="mt-2 text-[var(--negro)]/80 leading-relaxed">
-          El sitio web sitio.media («el Sitio») es operado por los titulares del proyecto. La presente política describe cómo recopilamos, usamos y protegemos la información de quienes visitan o utilizan el Sitio.
+          El sitio web Vahica.com («el Sitio») es operado por los titulares del proyecto. La presente política describe cómo recopilamos, usamos y protegemos la información de quienes visitan o utilizan el Sitio.
         </p>
       </section>
 

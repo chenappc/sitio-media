@@ -3,7 +3,7 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder");
 const TO_EMAIL = "chenappc@gmail.com";
-const FROM_EMAIL = process.env.RESEND_FROM ?? "sitio.media <onboarding@resend.dev>";
+const FROM_EMAIL = process.env.RESEND_FROM ?? "Vahica.com <onboarding@resend.dev>";
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const subject = `Contacto sitio.media - ${nombre.trim()}`;
+    const subject = `Contacto Vahica.com - ${nombre.trim()}`;
     const textContent = `Nombre: ${nombre.trim()}\nEmail: ${email.trim()}\n\nMensaje:\n${mensaje.trim()}`;
     const htmlContent = `
       <p><strong>Nombre:</strong> ${escapeHtml(nombre.trim())}</p>

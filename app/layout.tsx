@@ -23,13 +23,16 @@ const sourceSans = Source_Sans_3({
 
 export const metadata: Metadata = {
   title: {
-    default: "sitio.media",
-    template: "%s | sitio.media",
+    default: "Vahica.com",
+    template: "%s | Vahica.com",
   },
-  description: "Noticias virales en español",
-  metadataBase: new URL("https://sitio.media"),
+  description: "Noticias virales en español. Vahica.com",
+  metadataBase: new URL("https://vahica.com"),
   openGraph: {
-    siteName: "sitio.media",
+    siteName: "Vahica.com",
+  },
+  icons: {
+    icon: ["/favicon.ico", "/favicon.png"],
   },
   verification: {
     other: {

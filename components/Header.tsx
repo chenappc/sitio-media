@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import styles from "./Header.module.css";
 
@@ -8,8 +9,15 @@ export default function Header() {
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
-        <Link href="/" className={styles.logo} aria-label="sitio.media - Inicio">
-          sitio<span className={styles.logoDot}>.</span>media
+        <Link href="/" className={styles.logo} aria-label="Vahica.com - Inicio">
+          <Image
+            src="/logo-vahica.png"
+            alt="Vahica.com"
+            width={200}
+            height={60}
+            style={{ maxWidth: "200px", height: "auto" }}
+            priority
+          />
         </Link>
         <span className={styles.slogan}>Lo que todo el mundo está hablando</span>
       </div>

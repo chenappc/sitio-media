@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: nota.entradilla,
       images: nota.imagen_url ? [{ url: nota.imagen_url, width: 1200, height: 630 }] : [],
       type: "article",
-      url: `https://sitio.media/${nota.slug}`,
+      url: `https://vahica.com/${nota.slug}`,
     },
     twitter: {
       card: "summary_large_image",

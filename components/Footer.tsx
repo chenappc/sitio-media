@@ -9,7 +9,7 @@ export default function Footer() {
         <p className={styles.brand}>
           sitio<span className={styles.brandDot}>.</span>media
         </p>
-        <p className={styles.copyright}>© {anio} sitio.media</p>
+        <p className={styles.copyright}>© {anio} Vahica.com</p>
         <nav className={styles.nav} aria-label="Enlaces legales">
           <Link href="/privacidad" className={styles.navLink}>
             Privacidad

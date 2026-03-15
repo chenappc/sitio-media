@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const link = `https://www.sitio.media/${nota.slug}`;
+    const link = `https://www.vahica.com/${nota.slug}`;
     const message = nota.entradilla ?? "";
 
     const params = new URLSearchParams({

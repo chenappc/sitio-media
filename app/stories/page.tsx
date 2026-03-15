@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Historias",
-  description: "Historias paginadas en sitio.media",
+  description: "Historias paginadas en Vahica.com",
 };
 
 export default async function StoriesPage() {

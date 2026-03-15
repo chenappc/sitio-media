@@ -6,7 +6,7 @@ export const revalidate = 60;
 
 export const metadata = {
   title: "Especiales",
-  description: "Especiales en sitio.media",
+  description: "Especiales en Vahica.com",
 };
 
 export default async function EspecialesPage() {

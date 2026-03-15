@@ -1,4 +1,4 @@
--- Tabla de notas para sitio.media
+-- Tabla de notas para Vahica.com
 -- Ejecutar en PostgreSQL (Railway o local)
 
 CREATE TABLE IF NOT EXISTS notas (

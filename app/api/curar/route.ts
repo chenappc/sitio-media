@@ -229,7 +229,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const systemPrompt = `Sos un editor de noticias virales para sitio.media. Tu tarea es curar artículos para audiencias hispanohablantes. Seguís estas reglas estrictamente:
+    const systemPrompt = `Sos un editor de noticias virales para Vahica.com. Tu tarea es curar artículos para audiencias hispanohablantes. Seguís estas reglas estrictamente:
 
 1. EXTENSIÓN: El artículo curado debe tener exactamente la misma cantidad de palabras que el original, con una variación máxima del 5% (ni más ni menos).
 2. PRECISIÓN: No exagerés ni inventés datos. Si la nota dice que un video tiene visitas, usá el número exacto mencionado. Si no hay número confirmado, no digas 'millones' ni agregues cifras que no están en el original.

@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Términos de Servicio",
-  description: "Términos de servicio de sitio.media",
+  description: "Términos de servicio de Vahica.com",
 };
 
 export default function TerminosPage() {
@@ -19,7 +19,7 @@ export default function TerminosPage() {
       <section className="mt-8">
         <h2 className="font-serif text-xl font-semibold">1. Aceptación de los términos</h2>
         <p className="mt-2 text-[var(--negro)]/80 leading-relaxed">
-          Al acceder o utilizar el sitio web sitio.media («el Sitio»), usted acepta quedar vinculado por los presentes Términos de Servicio. Si no está de acuerdo con alguna parte de estos términos, no debe utilizar el Sitio.
+          Al acceder o utilizar el sitio web Vahica.com («el Sitio»), usted acepta quedar vinculado por los presentes Términos de Servicio. Si no está de acuerdo con alguna parte de estos términos, no debe utilizar el Sitio.
         </p>
       </section>
 
@@ -43,7 +43,7 @@ export default function TerminosPage() {
       <section className="mt-8">
         <h2 className="font-serif text-xl font-semibold">3. Propiedad intelectual</h2>
         <p className="mt-2 text-[var(--negro)]/80 leading-relaxed">
-          El Sitio y su contenido (textos, diseño, logotipos, imágenes propias, código y demás materiales) están protegidos por leyes de propiedad intelectual y son propiedad de sitio.media o de sus licenciantes. Queda prohibida la reproducción, distribución, modificación o uso comercial no autorizado de dicho contenido, salvo que se indique expresamente lo contrario o se conceda una licencia por escrito.
+          El Sitio y su contenido (textos, diseño, logotipos, imágenes propias, código y demás materiales) están protegidos por leyes de propiedad intelectual y son propiedad de Vahica.com o de sus licenciantes. Queda prohibida la reproducción, distribución, modificación o uso comercial no autorizado de dicho contenido, salvo que se indique expresamente lo contrario o se conceda una licencia por escrito.
         </p>
         <p className="mt-3 text-[var(--negro)]/80 leading-relaxed">
           Las noticias y artículos que publicamos pueden incluir material de fuentes externas; en esos casos, los derechos corresponden a sus respectivos titulares y el Sitio actúa como canal de divulgación, respetando los créditos y enlaces a las fuentes originales cuando corresponda.
@@ -60,7 +60,7 @@ export default function TerminosPage() {
       <section className="mt-8">
         <h2 className="font-serif text-xl font-semibold">5. Limitación de responsabilidad</h2>
         <p className="mt-2 text-[var(--negro)]/80 leading-relaxed">
-          El Sitio se ofrece «tal cual» y «según disponibilidad». En la máxima medida permitida por la ley aplicable, sitio.media y sus responsables no serán responsables por daños directos, indirectos, incidentales, especiales o consecuentes derivados del uso o la imposibilidad de uso del Sitio, incluyendo pero no limitándose a: errores u omisiones en el contenido, interrupciones del servicio, pérdida de datos o daños derivados de virus o de la conducta de terceros.
+          El Sitio se ofrece «tal cual» y «según disponibilidad». En la máxima medida permitida por la ley aplicable, Vahica.com y sus responsables no serán responsables por daños directos, indirectos, incidentales, especiales o consecuentes derivados del uso o la imposibilidad de uso del Sitio, incluyendo pero no limitándose a: errores u omisiones en el contenido, interrupciones del servicio, pérdida de datos o daños derivados de virus o de la conducta de terceros.
         </p>
         <p className="mt-3 text-[var(--negro)]/80 leading-relaxed">
           La información publicada en el Sitio tiene carácter informativo y no constituye asesoramiento legal, fiscal ni profesional. Para decisiones importantes, consulte siempre a un profesional cualificado.

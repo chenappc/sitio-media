@@ -3,19 +3,19 @@ import type { MetadataRoute } from "next";
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
-      url: "https://sitio.media",
+      url: "https://vahica.com",
       lastModified: new Date(),
     },
     {
-      url: "https://sitio.media/quiz-prestamos-py",
+      url: "https://vahica.com/quiz-prestamos-py",
       lastModified: new Date(),
     },
     {
-      url: "https://sitio.media/prestamos-paraguay",
+      url: "https://vahica.com/prestamos-paraguay",
       lastModified: new Date(),
     },
     {
-      url: "https://sitio.media/solicitar-prestamo-paraguay",
+      url: "https://vahica.com/solicitar-prestamo-paraguay",
       lastModified: new Date(),
     },
   ];

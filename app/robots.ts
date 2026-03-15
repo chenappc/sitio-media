@@ -6,6 +6,6 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
     },
-    sitemap: "https://sitio.media/sitemap.xml",
+    sitemap: "https://vahica.com/sitemap.xml",
   };
 }
