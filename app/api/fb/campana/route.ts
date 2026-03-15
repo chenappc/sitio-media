@@ -27,14 +27,20 @@ const EXPAT_BEHAVIOR_IDS = [
 const ADSET_NAME_PREFIX = 'Notas virales - ';
 const MAX_ADS_PER_ADSET = 6;
 
+const AD_EFFECTIVE_STATUSES_NON_DELETED = [
+  'ACTIVE', 'PAUSED', 'IN_REVIEW', 'PENDING_REVIEW', 'DISAPPROVED',
+  'ADSET_PAUSED', 'CAMPAIGN_PAUSED', 'PREAPPROVED',
+];
+
 async function countAdsInAdset(adsetId: string, accessToken: string): Promise<number> {
   const filter = JSON.stringify([
-    { field: 'effective_status', operator: 'IN', value: ['ACTIVE', 'PAUSED'] },
+    { field: 'effective_status', operator: 'IN', value: AD_EFFECTIVE_STATUSES_NON_DELETED },
   ]);
   const url = `https://graph.facebook.com/v19.0/${adsetId}/ads?fields=id,effective_status&filtering=${encodeURIComponent(filter)}&access_token=${encodeURIComponent(accessToken)}`;
   const res = await fetch(url);
   const data = (await res.json()) as { data?: { id: string }[]; error?: { message: string } };
   if (data.error) throw new Error(data.error.message);
+  console.log('FB CAMPANA DEBUG [countAdsInAdset] ads:', data.data);
   const count = data.data?.length ?? 0;
   console.log('FB CAMPANA DEBUG [countAdsInAdset]', { adsetId, count });
   return count;
