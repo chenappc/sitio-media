@@ -166,10 +166,24 @@ export async function POST(req: NextRequest) {
       [notaId]
     );
     const existingAdsetRow = existingAdsetRes.rows[0];
+    let adsetReused = false;
     if (existingAdsetRow?.fb_adset_id) {
-      fbAdsetId = existingAdsetRow.fb_adset_id;
-      console.log('FB CAMPANA DEBUG [reuse adset] nota ya tiene ad en otro pais, reutilizando adset:', fbAdsetId);
-    } else {
+      const candidateAdsetId = existingAdsetRow.fb_adset_id;
+      console.log('FB CAMPANA DEBUG [reuse adset] verificando adset guardado:', candidateAdsetId);
+      try {
+        const adsetCheckUrl = `https://graph.facebook.com/v19.0/${candidateAdsetId}?fields=id,campaign_id,account_id&access_token=${encodeURIComponent(accessToken ?? '')}`;
+        const adsetCheckRes = await fetch(adsetCheckUrl);
+        const adsetCheckData = (await adsetCheckRes.json()) as { id?: string; campaign_id?: string; account_id?: string; error?: { message?: string } };
+        if (!adsetCheckData.error && adsetCheckData.account_id && normalizeAccountId(adsetCheckData.account_id) === ourAccountId) {
+          fbAdsetId = candidateAdsetId;
+          adsetReused = true;
+          console.log('FB CAMPANA DEBUG [reuse adset] reutilizando adset (account_id OK):', fbAdsetId);
+        }
+      } catch (_) {
+        // Si falla el GET, seguir con búsqueda normal
+      }
+    }
+    if (!adsetReused) {
       const adsets = await listCampaignAdsets(fbCampaignId, accessToken ?? '');
       const adsetsWithCount: { id: string; name: string; count: number }[] = [];
       for (const aset of adsets) {
