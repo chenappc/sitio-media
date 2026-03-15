@@ -1,3 +1,4 @@
+/* Alto del header: no está fijo; lo define el contenido + padding del .inner (0.75rem arriba/abajo). */
 .header {
   position: sticky;
   top: 0;
@@ -17,6 +18,7 @@
   justify-content: space-between;
 }
 
+/* Tamaño del logo anterior (sitio.media, texto): font-size 1.25rem → 1.5rem en md. */
 .logo {
   font-family: "Merriweather", Georgia, serif;
   font-size: 1.25rem;

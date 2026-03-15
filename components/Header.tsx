@@ -10,12 +10,13 @@ export default function Header() {
     <header className={styles.header}>
       <div className={styles.inner}>
         <Link href="/" className={styles.logo} aria-label="Vahica.com - Inicio">
+          {/* Antes del cambio a Vahica: logo era texto "sitio.media", sin width/height. Ahora: width=120, height=36 (proporcional al texto anterior) */}
           <Image
             src="/logo-vahica.png"
             alt="Vahica.com"
-            width={200}
-            height={60}
-            style={{ maxWidth: "200px", height: "auto" }}
+            width={120}
+            height={36}
+            style={{ maxWidth: "120px", height: "auto" }}
             priority
           />
         </Link>
