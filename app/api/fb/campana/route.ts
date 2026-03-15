@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
+// SQL de referencia (ejecutar en Railway PostgreSQL si no existen las columnas en notas):
+// ALTER TABLE notas ADD COLUMN IF NOT EXISTS fb_ad_id TEXT;
+// ALTER TABLE notas ADD COLUMN IF NOT EXISTS fb_adset_id TEXT;
+
 const PAISES = {
   AR: { nombre: 'AR', geo: 'AR' },
   CL: { nombre: 'CL', geo: 'CL' },
@@ -19,6 +23,36 @@ const EXPAT_BEHAVIOR_IDS = [
   '6025000826583','6025054896983','6026404871583','6027149008183',
   '6059793664583','6071248894383'
 ];
+
+const ADSET_NAME_PREFIX = 'Notas virales - ';
+const MAX_ADS_PER_ADSET = 6;
+
+async function countAdsInAdset(adsetId: string, accessToken: string): Promise<number> {
+  const filter = JSON.stringify([
+    { field: 'effective_status', operator: 'IN', value: ['ACTIVE', 'PAUSED'] },
+  ]);
+  const url = `https://graph.facebook.com/v19.0/${adsetId}/ads?fields=id,effective_status&filtering=${encodeURIComponent(filter)}&access_token=${encodeURIComponent(accessToken)}`;
+  const res = await fetch(url);
+  const data = (await res.json()) as { data?: { id: string }[]; error?: { message: string } };
+  if (data.error) throw new Error(data.error.message);
+  return data.data?.length ?? 0;
+}
+
+async function listCampaignAdsets(campaignId: string, accessToken: string): Promise<{ id: string; name: string; status?: string }[]> {
+  const url = `https://graph.facebook.com/v19.0/${campaignId}/adsets?fields=id,name,status&limit=100&access_token=${encodeURIComponent(accessToken)}`;
+  const res = await fetch(url);
+  const data = (await res.json()) as { data?: { id: string; name: string; status?: string }[]; error?: { message: string } };
+  if (data.error) throw new Error(data.error.message);
+  return data.data ?? [];
+}
+
+function parseAdsetNumber(name: string): number | null {
+  if (!name.includes(ADSET_NAME_PREFIX)) return null;
+  const part = name.split(ADSET_NAME_PREFIX)[1];
+  if (!part) return null;
+  const num = parseInt(part.trim(), 10);
+  return Number.isNaN(num) ? null : num;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -47,15 +81,12 @@ export async function POST(req: NextRequest) {
       [notaId, pais]
     );
     const registro = existingRes.rows[0];
-    if (registro?.fb_campaign_id) {
+    if (registro?.fb_ad_id) {
       return NextResponse.json({ ok: true, already_exists: true, campana: registro });
     }
 
-    const nombreCampana = `${paisConfig.nombre} - Vahica.com - Interacciones`;
-    const nombreAdset = `${paisConfig.nombre} (55-65+) ${nota.titulo}`;
+    const campaignName = `${paisConfig.nombre} - Notas virales - Vahica.com - Interacciones`;
     const nombreAd = nota.titulo;
-
-    const campaignName = `${paisConfig.nombre} - Vahica.com - Interacciones`;
     const filterJson = JSON.stringify([
       { field: 'name', operator: 'EQUAL', value: campaignName },
     ]);
@@ -121,40 +152,74 @@ export async function POST(req: NextRequest) {
       targeting.locales = [1002];
     }
 
-    const adsetBody: Record<string, unknown> = {
-      name: nombreAdset,
-      campaign_id: fbCampaignId,
-      billing_event: 'IMPRESSIONS',
-      optimization_goal: 'POST_ENGAGEMENT',
-      destination_type: 'ON_POST',
-      daily_budget: 100,
-      bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
-      targeting,
-      status: 'ACTIVE',
-      dsa_beneficiary: 'Vahica.com',
-      dsa_payor: 'Vahica.com',
-      access_token: accessToken,
-    };
+    let fbAdsetId: string;
 
-    console.log('FB CAMPANA DEBUG [create adset] request:', { url: `https://graph.facebook.com/v19.0/${adAccountId}/adsets`, body: adsetBody });
-    const adsetRes = await fetch(`https://graph.facebook.com/v19.0/${adAccountId}/adsets`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(adsetBody),
-    });
-    const adsetData = await adsetRes.json();
-    console.log('FB CAMPANA DEBUG [create adset] response:', { status: adsetRes.status, body: adsetData });
-    if (adsetData.error) {
-      const err = adsetData.error as { message?: string; code?: number; error_subcode?: number };
-      console.error('FB error crear adset:', {
-        message: err.message,
-        code: err.code,
-        error_subcode: err.error_subcode,
-        fullResponse: adsetData,
-      });
-      throw new Error(err.message ?? 'Error creando ad set');
+    const existingAdsetRes = await pool.query(
+      'SELECT fb_adset_id FROM campanas WHERE nota_id = $1 AND fb_adset_id IS NOT NULL LIMIT 1',
+      [notaId]
+    );
+    const existingAdsetRow = existingAdsetRes.rows[0];
+    if (existingAdsetRow?.fb_adset_id) {
+      fbAdsetId = existingAdsetRow.fb_adset_id;
+      console.log('FB CAMPANA DEBUG [reuse adset] nota ya tiene ad en otro pais, reutilizando adset:', fbAdsetId);
+    } else {
+      const adsets = await listCampaignAdsets(fbCampaignId, accessToken ?? '');
+      const adsetsWithCount: { id: string; name: string; count: number }[] = [];
+      for (const aset of adsets) {
+        if (aset.status !== 'ACTIVE') continue;
+        const count = await countAdsInAdset(aset.id, accessToken ?? '');
+        adsetsWithCount.push({ id: aset.id, name: aset.name, count });
+      }
+      adsetsWithCount.sort((a, b) => b.id.localeCompare(a.id));
+
+      const withSpace = adsetsWithCount.find((a) => a.count < MAX_ADS_PER_ADSET);
+      if (withSpace) {
+        fbAdsetId = withSpace.id;
+        console.log('FB CAMPANA DEBUG [reuse adset] adset con espacio:', { id: fbAdsetId, name: withSpace.name, count: withSpace.count });
+      } else {
+        const numbers = adsetsWithCount
+          .map((a) => parseAdsetNumber(a.name))
+          .filter((n): n is number => n !== null);
+        const nextNum = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
+        const adsetNumberStr = String(nextNum).padStart(2, '0');
+        const nombreAdset = `${paisConfig.nombre} (55-65+) ${ADSET_NAME_PREFIX}${adsetNumberStr}`;
+
+        const adsetBody: Record<string, unknown> = {
+          name: nombreAdset,
+          campaign_id: fbCampaignId,
+          billing_event: 'IMPRESSIONS',
+          optimization_goal: 'POST_ENGAGEMENT',
+          destination_type: 'ON_POST',
+          daily_budget: 500,
+          bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
+          targeting,
+          status: 'ACTIVE',
+          dsa_beneficiary: 'Vahica.com',
+          dsa_payor: 'Vahica.com',
+          access_token: accessToken,
+        };
+
+        console.log('FB CAMPANA DEBUG [create adset] request:', { url: `https://graph.facebook.com/v19.0/${adAccountId}/adsets`, body: adsetBody });
+        const adsetRes = await fetch(`https://graph.facebook.com/v19.0/${adAccountId}/adsets`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(adsetBody),
+        });
+        const adsetData = await adsetRes.json();
+        console.log('FB CAMPANA DEBUG [create adset] response:', { status: adsetRes.status, body: adsetData });
+        if (adsetData.error) {
+          const err = adsetData.error as { message?: string; code?: number; error_subcode?: number };
+          console.error('FB error crear adset:', {
+            message: err.message,
+            code: err.code,
+            error_subcode: err.error_subcode,
+            fullResponse: adsetData,
+          });
+          throw new Error(err.message ?? 'Error creando ad set');
+        }
+        fbAdsetId = adsetData.id;
+      }
     }
-    const fbAdsetId = adsetData.id;
 
     const adBody = {
       name: nombreAd,
@@ -189,6 +254,11 @@ export async function POST(req: NextRequest) {
       ON CONFLICT (nota_id, pais) DO UPDATE SET
         fb_campaign_id = $3, fb_adset_id = $4, fb_ad_id = $5, updated_at = NOW()
     `, [notaId, pais, fbCampaignId, fbAdsetId, fbAdId]);
+
+    await pool.query(
+      'UPDATE notas SET fb_ad_id = $1, fb_adset_id = $2 WHERE id = $3',
+      [fbAdId, fbAdsetId, notaId]
+    );
 
     return NextResponse.json({ success: true, fbCampaignId, fbAdsetId, fbAdId });
 
