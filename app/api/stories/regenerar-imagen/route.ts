@@ -341,6 +341,7 @@ export async function POST(req: NextRequest) {
         controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen subida: ${imagenUrl}` })));
         await updateStoryPaginaImagen(story.id, pagina, imagenUrl);
         controller.enqueue(enc.encode(sseMessage({ done: true, imagenUrl })));
+      }
       } catch (e) {
         controller.enqueue(enc.encode(sseMessage({
           status: "error",
