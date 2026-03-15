@@ -27,25 +27,6 @@ const EXPAT_BEHAVIOR_IDS = [
 const ADSET_NAME_PREFIX = 'Notas virales - ';
 const MAX_ADS_PER_ADSET = 6;
 
-const AD_EFFECTIVE_STATUSES_NON_DELETED = [
-  'ACTIVE', 'PAUSED', 'IN_REVIEW', 'PENDING_REVIEW', 'DISAPPROVED',
-  'ADSET_PAUSED', 'CAMPAIGN_PAUSED', 'PREAPPROVED',
-];
-
-async function countAdsInAdset(adsetId: string, accessToken: string): Promise<number> {
-  const filter = JSON.stringify([
-    { field: 'effective_status', operator: 'IN', value: AD_EFFECTIVE_STATUSES_NON_DELETED },
-  ]);
-  const url = `https://graph.facebook.com/v19.0/${adsetId}/ads?fields=id,effective_status&filtering=${encodeURIComponent(filter)}&access_token=${encodeURIComponent(accessToken)}`;
-  const res = await fetch(url);
-  const data = (await res.json()) as { data?: { id: string }[]; error?: { message: string } };
-  if (data.error) throw new Error(data.error.message);
-  console.log('FB CAMPANA DEBUG [countAdsInAdset] ads:', data.data);
-  const count = data.data?.length ?? 0;
-  console.log('FB CAMPANA DEBUG [countAdsInAdset]', { adsetId, count });
-  return count;
-}
-
 async function listCampaignAdsets(campaignId: string, accessToken: string): Promise<{ id: string; name: string; status?: string }[]> {
   const url = `https://graph.facebook.com/v19.0/${campaignId}/adsets?fields=id,name,status&limit=100&access_token=${encodeURIComponent(accessToken)}`;
   const res = await fetch(url);
@@ -248,7 +229,8 @@ export async function POST(req: NextRequest) {
       const adsetsWithCount: { id: string; name: string; count: number }[] = [];
       for (const aset of adsets) {
         if (aset.status !== 'ACTIVE') continue;
-        const count = await countAdsInAdset(aset.id, accessToken ?? '');
+        const countResult = await pool.query('SELECT COUNT(*) AS count FROM campanas WHERE fb_adset_id = $1', [aset.id]);
+        const count = parseInt(String(countResult.rows[0]?.count ?? 0), 10);
         adsetsWithCount.push({ id: aset.id, name: aset.name, count });
       }
       adsetsWithCount.sort((a, b) => b.id.localeCompare(a.id));
