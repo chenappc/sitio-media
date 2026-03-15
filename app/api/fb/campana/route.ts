@@ -159,6 +159,8 @@ export async function POST(req: NextRequest) {
 
     let fbAdsetId: string;
 
+    console.log('FB CAMPANA DEBUG campaign_id usado:', fbCampaignId);
+
     const existingAdsetRes = await pool.query(
       'SELECT fb_adset_id FROM campanas WHERE nota_id = $1 AND fb_adset_id IS NOT NULL LIMIT 1',
       [notaId]
