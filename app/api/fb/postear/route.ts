@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
           access_token?: string;
           error?: { message?: string };
         };
+        console.log('FB token exchange resultado:', exchangeRes.status, exchangeData);
 
         if (exchangeRes.ok && exchangeData.access_token) {
           const longLivedUserToken = exchangeData.access_token;
@@ -78,6 +79,7 @@ export async function POST(req: NextRequest) {
               access_token?: string;
               error?: { message?: string };
             };
+            console.log('FB page token resultado:', pageTokenRes.status, pageTokenData);
 
             if (pageTokenRes.ok && pageTokenData.access_token) {
               accessToken = pageTokenData.access_token;
@@ -90,6 +92,7 @@ export async function POST(req: NextRequest) {
         // Si falla el exchange, se sigue con el token original
       }
     }
+    console.log('FB usando token renovado:', accessToken !== process.env.FB_PAGE_ACCESS_TOKEN);
 
     const link = `https://www.vahica.com/${nota.slug}`;
     const message = nota.entradilla ?? "";
