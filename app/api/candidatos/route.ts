@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
   const countOnly = req.nextUrl.searchParams.get("count") === "true";
+  const incluirDescartados = req.nextUrl.searchParams.get("incluirDescartados") === "true";
   try {
     if (countOnly) {
       const { rows } = await pool.query<{ count: string }>(
@@ -20,11 +21,14 @@ export async function GET(req: NextRequest) {
       );
       return NextResponse.json({ count: Number(rows[0]?.count ?? 0) });
     }
+    const statusFilter = incluirDescartados
+      ? "WHERE status IN ('pendiente', 'descartado')"
+      : "WHERE status = 'pendiente'";
     const { rows } = await pool.query(
       `SELECT id, titulo, url, thumbnail, total_facebook_shares, keyword, status, nota_id, created_at
        FROM candidatos_buzzsumo
-       WHERE status = 'pendiente'
-       ORDER BY total_facebook_shares DESC`
+       ${statusFilter}
+       ORDER BY status ASC, total_facebook_shares DESC`
     );
     return NextResponse.json(rows);
   } catch (err) {
