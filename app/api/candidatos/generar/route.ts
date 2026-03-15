@@ -34,13 +34,17 @@ function auth(req: NextRequest): boolean {
   return !!ADMIN_SECRET && secret === ADMIN_SECRET;
 }
 
-async function buscarBuzzSumo(q: string, apiKey: string): Promise<{ title?: string; url?: string; thumbnail?: string; total_facebook_shares?: number }[]> {
+async function buscarBuzzSumo(
+  q: string,
+  apiKey: string,
+  numResults: number = 10
+): Promise<{ title?: string; url?: string; thumbnail?: string; total_facebook_shares?: number }[]> {
   const desde = Math.floor(Date.now() / 1000) - 365 * 2 * 24 * 60 * 60;
   const hasta = Math.floor(Date.now() / 1000);
   const params = new URLSearchParams({
     api_key: apiKey,
     q,
-    num_results: "5",
+    num_results: String(Math.min(100, Math.max(1, numResults))),
     language: "es",
     sort_type: "facebook_shares",
     video: "0",
@@ -95,6 +99,11 @@ export async function POST(req: NextRequest) {
       { status: 503 }
     );
   }
+  const limitParam = req.nextUrl.searchParams.get("limit");
+  const limitRaw = limitParam ? parseInt(limitParam, 10) : 10;
+  const limit = [10, 20, 40].includes(limitRaw) ? limitRaw : 10;
+  const numPerKeyword = Math.min(20, Math.max(1, Math.ceil(limit / KEYWORDS.length)));
+
   try {
     const { rows: existingRows } = await pool.query<{ url: string }>("SELECT url FROM candidatos_buzzsumo");
     const existingUrls = new Set(existingRows.map((r) => r.url?.toLowerCase?.() ?? ""));
@@ -103,7 +112,7 @@ export async function POST(req: NextRequest) {
     const seenUrls = new Set<string>();
 
     for (const kw of KEYWORDS) {
-      const results = await buscarBuzzSumo(kw, buzzsumoKey);
+      const results = await buscarBuzzSumo(kw, buzzsumoKey, numPerKeyword);
       const filtered = results
         .filter((a) => (a.total_facebook_shares ?? 0) > 5000)
         .filter((a) => {

@@ -29,6 +29,7 @@ export default function CandidatosPage() {
   const [generando, setGenerando] = useState(false);
   const [mensajeGenerar, setMensajeGenerar] = useState<string | null>(null);
   const [mostrarDescartados, setMostrarDescartados] = useState(false);
+  const [limitGenerar, setLimitGenerar] = useState(10);
   const [page, setPage] = useState(1);
 
   const fetchCount = async () => {
@@ -122,7 +123,7 @@ export default function CandidatosPage() {
     setGenerando(true);
     setMensajeGenerar(null);
     try {
-      const res = await fetch("/api/candidatos/generar", {
+      const res = await fetch(`/api/candidatos/generar?limit=${limitGenerar}`, {
         method: "POST",
         headers: { "x-admin-secret": secret },
       });
@@ -173,6 +174,18 @@ export default function CandidatosPage() {
               className="rounded border-[var(--negro)]/30"
             />
             Mostrar descartados
+          </label>
+          <label className="flex items-center gap-2 text-sm text-[var(--negro)]/70">
+            <span>Generar:</span>
+            <select
+              value={limitGenerar}
+              onChange={(e) => setLimitGenerar(Number(e.target.value))}
+              className="rounded border border-[var(--negro)]/30 bg-white px-2 py-1 text-sm"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={40}>40</option>
+            </select>
           </label>
           <button
             type="button"
