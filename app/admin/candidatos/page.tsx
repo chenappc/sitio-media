@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -27,7 +27,9 @@ export default function CandidatosPage() {
   const [error, setError] = useState<string | null>(null);
   const [descartandoId, setDescartandoId] = useState<number | null>(null);
   const [generando, setGenerando] = useState(false);
+  const [progresoGenerar, setProgresoGenerar] = useState(0);
   const [mensajeGenerar, setMensajeGenerar] = useState<string | null>(null);
+  const progresoIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [mostrarDescartados, setMostrarDescartados] = useState(false);
   const [limitGenerar, setLimitGenerar] = useState(10);
   const [page, setPage] = useState(1);
@@ -122,23 +124,49 @@ export default function CandidatosPage() {
     }
     setGenerando(true);
     setMensajeGenerar(null);
+    setProgresoGenerar(0);
+    if (progresoIntervalRef.current) clearInterval(progresoIntervalRef.current);
+    progresoIntervalRef.current = setInterval(() => {
+      setProgresoGenerar((p) => {
+        if (p >= 90) {
+          if (progresoIntervalRef.current) {
+            clearInterval(progresoIntervalRef.current);
+            progresoIntervalRef.current = null;
+          }
+          return 90;
+        }
+        return p + 4;
+      });
+    }, 200);
+
     try {
       const res = await fetch(`/api/candidatos/generar?limit=${limitGenerar}`, {
         method: "POST",
         headers: { "x-admin-secret": secret },
       });
       const data = await res.json().catch(() => ({}));
+      if (progresoIntervalRef.current) {
+        clearInterval(progresoIntervalRef.current);
+        progresoIntervalRef.current = null;
+      }
+      setProgresoGenerar(100);
       if (res.ok && data?.ok) {
         const added = data.added ?? 0;
-        setMensajeGenerar(added === 0 ? "No se encontraron candidatos nuevos." : `Se encontraron ${added} candidatos nuevos.`);
+        setMensajeGenerar(added === 0 ? "No se encontraron candidatos nuevos." : `${added} candidatos nuevos encontrados.`);
         fetchCandidatos();
       } else {
         setMensajeGenerar(data?.error ?? "Error al generar candidatos");
       }
     } catch {
+      if (progresoIntervalRef.current) {
+        clearInterval(progresoIntervalRef.current);
+        progresoIntervalRef.current = null;
+      }
+      setProgresoGenerar(100);
       setMensajeGenerar("Error al generar candidatos");
     } finally {
       setGenerando(false);
+      setTimeout(() => setProgresoGenerar(0), 400);
     }
   };
 
@@ -198,6 +226,24 @@ export default function CandidatosPage() {
         </div>
       </div>
 
+      {generando && (
+        <div className="mb-4">
+          <p className="mb-1.5 text-sm text-[var(--negro)]/70">Buscando candidatos...</p>
+          <div
+            className="h-2 w-full overflow-hidden rounded-full bg-[var(--negro)]/10"
+            role="progressbar"
+            aria-valuenow={progresoGenerar}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            <div
+              className="h-full rounded-full bg-[var(--rojo)] transition-[width] duration-300 ease-out"
+              style={{ width: `${progresoGenerar}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       {loading && (
         <p className="text-[var(--negro)]/60 mb-4">Cargando candidatos...</p>
       )}
@@ -206,7 +252,7 @@ export default function CandidatosPage() {
         <p className="text-red-600 mb-4">{error}</p>
       )}
 
-      {mensajeGenerar && (
+      {mensajeGenerar && !generando && (
         <p className="mb-4 text-sm text-[var(--negro)]/80">{mensajeGenerar}</p>
       )}
 
