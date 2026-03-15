@@ -35,7 +35,9 @@ async function countAdsInAdset(adsetId: string, accessToken: string): Promise<nu
   const res = await fetch(url);
   const data = (await res.json()) as { data?: { id: string }[]; error?: { message: string } };
   if (data.error) throw new Error(data.error.message);
-  return data.data?.length ?? 0;
+  const count = data.data?.length ?? 0;
+  console.log('FB CAMPANA DEBUG [countAdsInAdset]', { adsetId, count });
+  return count;
 }
 
 async function listCampaignAdsets(campaignId: string, accessToken: string): Promise<{ id: string; name: string; status?: string }[]> {
