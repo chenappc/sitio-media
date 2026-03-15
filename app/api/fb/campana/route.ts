@@ -131,6 +131,8 @@ export async function POST(req: NextRequest) {
       bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
       targeting,
       status: 'ACTIVE',
+      dsa_beneficiary: 'Vahica.com',
+      dsa_payor: 'Vahica.com',
       access_token: accessToken,
     };
 
