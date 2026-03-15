@@ -51,11 +51,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, already_exists: true, campana: registro });
     }
 
-    const nombreCampana = `${paisConfig.nombre} - Sitio.media - Interacciones`;
+    const nombreCampana = `${paisConfig.nombre} - Vahica.com - Interacciones`;
     const nombreAdset = `${paisConfig.nombre} (55-65+) ${nota.titulo}`;
     const nombreAd = nota.titulo;
 
-    const campaignName = `${paisConfig.nombre} - Sitio.media - Interacciones`;
+    const campaignName = `${paisConfig.nombre} - Vahica.com - Interacciones`;
     const filterJson = JSON.stringify([
       { field: 'name', operator: 'EQUAL', value: campaignName },
     ]);
@@ -66,8 +66,14 @@ export async function POST(req: NextRequest) {
     console.log('FB CAMPANA DEBUG [list campaigns] response:', { status: listRes.status, body: listData });
     let fbCampaignId: string;
     if (listData.error) {
-      console.error('FB error campana list:', JSON.stringify(listData, null, 2));
-      throw new Error(listData.error.message);
+      const err = listData.error as { message?: string; code?: number; error_subcode?: number };
+      console.error('FB error campana list:', {
+        message: err.message,
+        code: err.code,
+        error_subcode: err.error_subcode,
+        fullResponse: listData,
+      });
+      throw new Error(err.message ?? 'Error listando campañas');
     }
     if (listData.data && listData.data.length > 0) {
       fbCampaignId = listData.data[0].id;
@@ -89,8 +95,14 @@ export async function POST(req: NextRequest) {
       const campanaData = await campanaRes.json();
       console.log('FB CAMPANA DEBUG [create campaign] response:', { status: campanaRes.status, body: campanaData });
       if (campanaData.error) {
-        console.error('FB error campana:', JSON.stringify(campanaData, null, 2));
-        throw new Error(campanaData.error.message);
+        const err = campanaData.error as { message?: string; code?: number; error_subcode?: number };
+        console.error('FB error crear campaña:', {
+          message: err.message,
+          code: err.code,
+          error_subcode: err.error_subcode,
+          fullResponse: campanaData,
+        });
+        throw new Error(err.message ?? 'Error creando campaña');
       }
       fbCampaignId = campanaData.id;
     }
@@ -131,8 +143,14 @@ export async function POST(req: NextRequest) {
     const adsetData = await adsetRes.json();
     console.log('FB CAMPANA DEBUG [create adset] response:', { status: adsetRes.status, body: adsetData });
     if (adsetData.error) {
-      console.error('FB error campana:', JSON.stringify(adsetData, null, 2));
-      throw new Error(adsetData.error.message);
+      const err = adsetData.error as { message?: string; code?: number; error_subcode?: number };
+      console.error('FB error crear adset:', {
+        message: err.message,
+        code: err.code,
+        error_subcode: err.error_subcode,
+        fullResponse: adsetData,
+      });
+      throw new Error(err.message ?? 'Error creando ad set');
     }
     const fbAdsetId = adsetData.id;
 
@@ -152,8 +170,14 @@ export async function POST(req: NextRequest) {
     const adData = await adRes.json();
     console.log('FB CAMPANA DEBUG [create ad] response:', { status: adRes.status, body: adData });
     if (adData.error) {
-      console.error('FB error campana:', JSON.stringify(adData, null, 2));
-      throw new Error(adData.error.message);
+      const err = adData.error as { message?: string; code?: number; error_subcode?: number };
+      console.error('FB error crear ad:', {
+        message: err.message,
+        code: err.code,
+        error_subcode: err.error_subcode,
+        fullResponse: adData,
+      });
+      throw new Error(err.message ?? 'Error creando anuncio');
     }
     const fbAdId = adData.id;
 
