@@ -271,7 +271,25 @@ export default function NotasList({
           {nota.fb_post_id && (
             <button
               type="button"
-              onClick={() => setModalNotaId(nota.id)}
+              onClick={async () => {
+                setModalNotaId(nota.id);
+                try {
+                  const secret = getAdminSecret();
+                  const res = await fetch(`/api/fb/campana?notaId=${nota.id}`, {
+                    headers: secret ? { "x-admin-secret": secret } : {},
+                  });
+                  if (!res.ok) return;
+                  const data = await res.json().catch(() => ({}));
+                  if (!data.ok || !Array.isArray(data.paises)) return;
+                  const preloaded: Record<string, boolean> = {};
+                  data.paises.forEach((p: string) => {
+                    preloaded[p] = true;
+                  });
+                  setCampanas((prev) => ({ ...prev, [nota.id]: preloaded }));
+                } catch {
+                  // si falla, no hacer nada
+                }
+              }}
               className="rounded border border-[var(--negro)]/20 px-3 py-1.5 text-sm font-medium text-[var(--negro)] hover:bg-[var(--negro)]/5"
             >
               Campañas

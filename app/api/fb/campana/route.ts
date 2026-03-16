@@ -307,3 +307,25 @@ export async function DELETE(req: NextRequest) {
   await pool.query('DELETE FROM campanas WHERE nota_id = $1 AND pais = $2', [notaIdNum, pais]);
   return NextResponse.json({ ok: true });
 }
+
+export async function GET(req: NextRequest) {
+  const adminSecret = req.headers.get('x-admin-secret');
+  if (adminSecret !== process.env.ADMIN_SECRET) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  }
+  const { searchParams } = new URL(req.url);
+  const notaId = searchParams.get('notaId');
+  if (!notaId) {
+    return NextResponse.json({ error: 'Falta notaId' }, { status: 400 });
+  }
+  const notaIdNum = parseInt(notaId, 10);
+  if (Number.isNaN(notaIdNum)) {
+    return NextResponse.json({ error: 'notaId inválido' }, { status: 400 });
+  }
+  const { rows } = await pool.query<{ pais: string }>(
+    'SELECT pais FROM campanas WHERE nota_id = $1 AND fb_ad_id IS NOT NULL',
+    [notaIdNum]
+  );
+  const paises = rows.map((r) => r.pais).filter(Boolean);
+  return NextResponse.json({ ok: true, paises });
+}
