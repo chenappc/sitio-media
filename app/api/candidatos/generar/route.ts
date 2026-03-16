@@ -145,6 +145,7 @@ export async function POST(req: NextRequest) {
 
     for (const kw of keywords) {
       const results = await buscarBuzzSumo(kw, buzzsumoKey, numPerKeyword, meses);
+      console.log("CANDIDATOS DEBUG antes de filtro shares:", { keyword: kw, total: results.length, primerShares: results[0]?.total_facebook_shares });
       const articulosFiltrados = results.filter((a) => (a.total_facebook_shares ?? 0) > minShares);
       console.log("CANDIDATOS DEBUG pasaron filtro shares:", articulosFiltrados.length);
       const filtered = articulosFiltrados
