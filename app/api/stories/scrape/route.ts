@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
   let urlBase: string;
   let paginaInicio: number;
   let paginaFin: number;
+  let sinImagenesIa = false;
   let initialStoryId: number | null = null;
   let initialStorySlug: string = "";
   try {
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest) {
     urlBase = String(body.urlBase ?? "").trim();
     paginaInicio = Math.max(1, parseInt(String(body.paginaInicio ?? 1), 10) || 1);
     paginaFin = Math.max(paginaInicio, parseInt(String(body.paginaFin ?? 1), 10) || 1);
+    sinImagenesIa = Boolean(body.sinImagenesIa);
     if (!urlBase) {
       return NextResponse.json({ error: "Falta urlBase" }, { status: 400 });
     }
@@ -244,6 +246,33 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
           let promptParaGemini: string;
           let imagenBase64: string | null = null;
           let imagenMimeType: string = "image/png";
+
+          if (sinImagenesIa) {
+            if (imagenPrincipal) {
+              try {
+                controller.enqueue(enc.encode(sseMessage({ mensaje: `Usando imagen original para página ${p} (sin IA)...` })));
+                const imgBuf = await fetch(imagenPrincipal, { headers: { "User-Agent": UA } }).then((r) => r.arrayBuffer());
+                const buf = Buffer.from(imgBuf);
+                imagenUrl = await new Promise<string>((resolve, reject) => {
+                  const uploadStream = cloudinary.uploader.upload_stream(
+                    { folder: "sitio-media/stories" },
+                    (err, result) => {
+                      if (err) reject(err);
+                      else resolve(result!.secure_url);
+                    }
+                  );
+                  Readable.from(buf).pipe(uploadStream);
+                });
+                controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen original subida: ${imagenUrl}` })));
+              } catch (e) {
+                controller.enqueue(enc.encode(sseMessage({
+                  status: "error",
+                  mensaje: `Error imagen original: ${e instanceof Error ? e.message : String(e)}`,
+                })));
+              }
+            }
+            return { imagenUrl };
+          }
 
           if (imagenPrincipal) {
             try {

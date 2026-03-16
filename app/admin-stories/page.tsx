@@ -20,6 +20,7 @@ export default function AdminStoriesPage() {
   const [urlBase, setUrlBase] = useState("");
   const [paginaInicio, setPaginaInicio] = useState(1);
   const [paginaFin, setPaginaFin] = useState(1);
+  const [sinImagenesIa, setSinImagenesIa] = useState(false);
   const [progressCurrent, setProgressCurrent] = useState(0);
   const [progressTotal, setProgressTotal] = useState(0);
   const [logLines, setLogLines] = useState<LogLine[]>([]);
@@ -70,7 +71,7 @@ export default function AdminStoriesPage() {
           "Content-Type": "application/json",
           "x-admin-secret": secret,
         },
-        body: JSON.stringify({ urlBase: base, paginaInicio: inicio, paginaFin: fin }),
+        body: JSON.stringify({ urlBase: base, paginaInicio: inicio, paginaFin: fin, sinImagenesIa }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: res.statusText }));
@@ -227,6 +228,18 @@ export default function AdminStoriesPage() {
                 className="w-24 rounded border border-[var(--negro)]/20 px-3 py-2 text-sm"
               />
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="sin-imagenes-ia"
+              checked={sinImagenesIa}
+              onChange={(e) => setSinImagenesIa(e.target.checked)}
+              className="rounded border-[var(--negro)]/20"
+            />
+            <label htmlFor="sin-imagenes-ia" className="text-sm text-[var(--negro)]/80">
+              Sin imágenes IA (usar imágenes originales)
+            </label>
           </div>
           <button
             type="button"
