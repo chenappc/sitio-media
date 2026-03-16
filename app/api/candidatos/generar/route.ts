@@ -58,7 +58,9 @@ async function buscarBuzzSumo(
   const res = await fetch(`${BUZZSUMO_API_BASE}/search/articles.json?${params}`);
   if (!res.ok) return [];
   const data = (await res.json()) as { results?: { title?: string; url?: string; thumbnail?: string; total_facebook_shares?: number }[] };
-  return data.results ?? [];
+  const articles = data.results ?? [];
+  console.log("CANDIDATOS DEBUG resultados BuzzSumo por keyword:", { keyword: q, total: articles.length });
+  return articles;
 }
 
 async function evaluarConClaude(titulo: string, url: string, apiKey: string): Promise<{ apto?: boolean; razon?: string; raw?: string; error?: string }> {
@@ -129,6 +131,9 @@ export async function POST(req: NextRequest) {
     // keep defaults
   }
 
+  console.log("CANDIDATOS DEBUG minShares recibido:", minShares);
+  console.log("CANDIDATOS DEBUG keywords recibidas:", keywords);
+
   const numPerKeyword = Math.min(20, Math.max(1, Math.ceil(limit / Math.max(1, keywords.length))));
 
   try {
@@ -140,8 +145,9 @@ export async function POST(req: NextRequest) {
 
     for (const kw of keywords) {
       const results = await buscarBuzzSumo(kw, buzzsumoKey, numPerKeyword, meses);
-      const filtered = results
-        .filter((a) => (a.total_facebook_shares ?? 0) > minShares)
+      const articulosFiltrados = results.filter((a) => (a.total_facebook_shares ?? 0) > minShares);
+      console.log("CANDIDATOS DEBUG pasaron filtro shares:", articulosFiltrados.length);
+      const filtered = articulosFiltrados
         .filter((a) => {
           const u = (a.url ?? "").toLowerCase();
           return !["youtube.com", "tiktok.com", "instagram.com", "twitter.com", "facebook.com"].some((d) => u.includes(d));
@@ -155,6 +161,7 @@ export async function POST(req: NextRequest) {
         seenUrls.add(urlNorm);
 
         const evalResult = await evaluarConClaude(a.title ?? "", url, anthropicKey);
+        console.log("CANDIDATOS DEBUG evaluacion Claude:", { titulo: a.title ?? "", apto: evalResult.apto });
         if (evalResult.error || evalResult.apto !== true) continue;
 
         const insertRes = await pool.query(
