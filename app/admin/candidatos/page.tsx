@@ -32,6 +32,11 @@ export default function CandidatosPage() {
   const progresoIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [mostrarDescartados, setMostrarDescartados] = useState(false);
   const [limitGenerar, setLimitGenerar] = useState(10);
+  const [minShares, setMinShares] = useState(500);
+  const [keyword1, setKeyword1] = useState("viral");
+  const [keyword2, setKeyword2] = useState("emotivo OR conmovedor");
+  const [keyword3, setKeyword3] = useState("abuelito OR abuelita OR anciano");
+  const [meses, setMeses] = useState(24);
   const [page, setPage] = useState(1);
 
   const fetchCount = async () => {
@@ -140,9 +145,19 @@ export default function CandidatosPage() {
     }, 200);
 
     try {
-      const res = await fetch(`/api/candidatos/generar?limit=${limitGenerar}`, {
+      const keywords = [keyword1.trim(), keyword2.trim(), keyword3.trim()].filter(Boolean);
+      const res = await fetch("/api/candidatos/generar", {
         method: "POST",
-        headers: { "x-admin-secret": secret },
+        headers: {
+          "x-admin-secret": secret,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          limit: limitGenerar,
+          minShares: Math.max(0, minShares),
+          keywords: keywords.length > 0 ? keywords : ["viral", "emotivo OR conmovedor", "abuelito OR abuelita OR anciano"],
+          meses: Math.max(1, Math.min(120, meses)),
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (progresoIntervalRef.current) {
@@ -193,7 +208,7 @@ export default function CandidatosPage() {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-end gap-3">
           <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--negro)]/70">
             <input
               type="checkbox"
@@ -202,6 +217,57 @@ export default function CandidatosPage() {
               className="rounded border-[var(--negro)]/30"
             />
             Mostrar descartados
+          </label>
+          <label className="flex flex-col gap-0.5 text-sm text-[var(--negro)]/70">
+            <span>Shares mínimos</span>
+            <input
+              type="number"
+              min={0}
+              value={minShares}
+              onChange={(e) => setMinShares(Number(e.target.value) || 0)}
+              className="w-20 rounded border border-[var(--negro)]/30 bg-white px-2 py-1 text-sm"
+            />
+          </label>
+          <label className="flex flex-col gap-0.5 text-sm text-[var(--negro)]/70">
+            <span>Keyword 1</span>
+            <input
+              type="text"
+              value={keyword1}
+              onChange={(e) => setKeyword1(e.target.value)}
+              placeholder="viral"
+              className="w-40 rounded border border-[var(--negro)]/30 bg-white px-2 py-1 text-sm"
+            />
+          </label>
+          <label className="flex flex-col gap-0.5 text-sm text-[var(--negro)]/70">
+            <span>Keyword 2</span>
+            <input
+              type="text"
+              value={keyword2}
+              onChange={(e) => setKeyword2(e.target.value)}
+              placeholder="emotivo OR conmovedor"
+              className="w-48 rounded border border-[var(--negro)]/30 bg-white px-2 py-1 text-sm"
+            />
+          </label>
+          <label className="flex flex-col gap-0.5 text-sm text-[var(--negro)]/70">
+            <span>Keyword 3</span>
+            <input
+              type="text"
+              value={keyword3}
+              onChange={(e) => setKeyword3(e.target.value)}
+              placeholder="abuelito OR abuelita OR anciano"
+              className="w-52 rounded border border-[var(--negro)]/30 bg-white px-2 py-1 text-sm"
+            />
+          </label>
+          <label className="flex flex-col gap-0.5 text-sm text-[var(--negro)]/70">
+            <span>Rango (meses)</span>
+            <input
+              type="number"
+              min={1}
+              max={120}
+              value={meses}
+              onChange={(e) => setMeses(Number(e.target.value) || 24)}
+              className="w-16 rounded border border-[var(--negro)]/30 bg-white px-2 py-1 text-sm"
+            />
           </label>
           <label className="flex items-center gap-2 text-sm text-[var(--negro)]/70">
             <span>Generar:</span>

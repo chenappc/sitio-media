@@ -37,10 +37,13 @@ function auth(req: NextRequest): boolean {
 async function buscarBuzzSumo(
   q: string,
   apiKey: string,
-  numResults: number = 10
+  numResults: number = 10,
+  meses: number = 24
 ): Promise<{ title?: string; url?: string; thumbnail?: string; total_facebook_shares?: number }[]> {
-  const desde = Math.floor(Date.now() / 1000) - 365 * 2 * 24 * 60 * 60;
-  const hasta = Math.floor(Date.now() / 1000);
+  const ahora = Math.floor(Date.now() / 1000);
+  const segundosPorMes = 30 * 24 * 60 * 60;
+  const desde = ahora - Math.max(1, Math.min(120, meses)) * segundosPorMes;
+  const hasta = ahora;
   const params = new URLSearchParams({
     api_key: apiKey,
     q,
@@ -99,10 +102,34 @@ export async function POST(req: NextRequest) {
       { status: 503 }
     );
   }
-  const limitParam = req.nextUrl.searchParams.get("limit");
-  const limitRaw = limitParam ? parseInt(limitParam, 10) : 10;
-  const limit = [10, 20, 40].includes(limitRaw) ? limitRaw : 10;
-  const numPerKeyword = Math.min(20, Math.max(1, Math.ceil(limit / KEYWORDS.length)));
+  let limit = 10;
+  let minShares = 500;
+  let keywords: string[] = KEYWORDS;
+  let meses = 24;
+  try {
+    const body = (await req.json().catch(() => ({}))) as {
+      limit?: number;
+      minShares?: number;
+      keywords?: string[];
+      meses?: number;
+    };
+    if (typeof body.limit === "number" && [10, 20, 40].includes(body.limit)) limit = body.limit;
+    else {
+      const limitParam = req.nextUrl.searchParams.get("limit");
+      const limitRaw = limitParam ? parseInt(limitParam, 10) : 10;
+      limit = [10, 20, 40].includes(limitRaw) ? limitRaw : 10;
+    }
+    if (typeof body.minShares === "number" && body.minShares >= 0) minShares = body.minShares;
+    if (Array.isArray(body.keywords) && body.keywords.length > 0) {
+      keywords = body.keywords.filter((k) => typeof k === "string" && k.trim() !== "").map((k) => k.trim());
+      if (keywords.length === 0) keywords = KEYWORDS;
+    }
+    if (typeof body.meses === "number" && body.meses >= 1 && body.meses <= 120) meses = body.meses;
+  } catch {
+    // keep defaults
+  }
+
+  const numPerKeyword = Math.min(20, Math.max(1, Math.ceil(limit / Math.max(1, keywords.length))));
 
   try {
     const { rows: existingRows } = await pool.query<{ url: string }>("SELECT url FROM candidatos_buzzsumo");
@@ -111,10 +138,10 @@ export async function POST(req: NextRequest) {
     let added = 0;
     const seenUrls = new Set<string>();
 
-    for (const kw of KEYWORDS) {
-      const results = await buscarBuzzSumo(kw, buzzsumoKey, numPerKeyword);
+    for (const kw of keywords) {
+      const results = await buscarBuzzSumo(kw, buzzsumoKey, numPerKeyword, meses);
       const filtered = results
-        .filter((a) => (a.total_facebook_shares ?? 0) > 5000)
+        .filter((a) => (a.total_facebook_shares ?? 0) > minShares)
         .filter((a) => {
           const u = (a.url ?? "").toLowerCase();
           return !["youtube.com", "tiktok.com", "instagram.com", "twitter.com", "facebook.com"].some((d) => u.includes(d));
