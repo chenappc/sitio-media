@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { especial } = await getEspecialBySlug(slug);
   if (!especial) return { title: "Especial no encontrado" };
   return {
-    title: especial.titulo,
+    title: { absolute: especial.titulo },
     description: `${especial.titulo}, parte ${numero} de ${especial.total_paginas}`,
   };
 }
