@@ -14,11 +14,19 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, pagina } = await params;
   const numero = Math.max(1, parseInt(pagina, 10) || 1);
-  const { especial } = await getEspecialBySlug(slug);
+  const { especial, paginas } = await getEspecialBySlug(slug);
   if (!especial) return { title: "Especial no encontrado" };
+  const paginaUno = paginas.find((p) => p.numero === 1);
   return {
     title: { absolute: especial.titulo },
-    description: `${especial.titulo}, parte ${numero} de ${especial.total_paginas}`,
+    description: especial.titulo,
+    openGraph: {
+      title: especial.titulo,
+      description: especial.titulo,
+      images: paginaUno?.imagen_url ? [{ url: paginaUno.imagen_url, width: 1200, height: 630 }] : [],
+      type: "article",
+      siteName: "Vahica.com",
+    },
   };
 }
 
