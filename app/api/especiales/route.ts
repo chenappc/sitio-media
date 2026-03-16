@@ -23,7 +23,7 @@ export async function GET() {
   }
 }
 
-/** PATCH: { id, status }. Requiere x-admin-secret. */
+/** PATCH: { id, status? } | { id, titulo? } | { id, pagina: { numero, titulo_item } }. Requiere x-admin-secret. */
 export async function PATCH(req: NextRequest) {
   if (!auth(req)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -34,11 +34,26 @@ export async function PATCH(req: NextRequest) {
     if (Number.isNaN(id) || !id) {
       return NextResponse.json({ error: "id requerido" }, { status: 400 });
     }
+
     const status = typeof body.status === "string" ? body.status.trim() : "";
-    if (!["draft", "published"].includes(status)) {
-      return NextResponse.json({ error: "status debe ser draft o published" }, { status: 400 });
+    const titulo = typeof body.titulo === "string" ? body.titulo.trim() : "";
+    const pagina = body.pagina && typeof body.pagina === "object" ? body.pagina : null;
+    const numeroPagina = pagina != null && typeof pagina.numero === "number" ? pagina.numero : parseInt(String(pagina?.numero ?? ""), 10);
+    const tituloItem = pagina != null && typeof pagina.titulo_item === "string" ? pagina.titulo_item.trim() : "";
+
+    if (["draft", "published"].includes(status)) {
+      await pool.query("UPDATE especiales SET status = $1, updated_at = NOW() WHERE id = $2", [status, id]);
     }
-    await pool.query("UPDATE especiales SET status = $1, updated_at = NOW() WHERE id = $2", [status, id]);
+    if (titulo.length > 0) {
+      await pool.query("UPDATE especiales SET titulo = $1, updated_at = NOW() WHERE id = $2", [titulo, id]);
+    }
+    if (pagina != null && !Number.isNaN(numeroPagina) && numeroPagina >= 1) {
+      await pool.query(
+        "UPDATE especial_paginas SET titulo_item = $1 WHERE especial_id = $2 AND numero = $3",
+        [tituloItem, id, numeroPagina]
+      );
+    }
+
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error(err);
