@@ -56,8 +56,10 @@ async function buscarBuzzSumo(
     end_date: String(hasta),
   });
   const res = await fetch(`${BUZZSUMO_API_BASE}/search/articles.json?${params}`);
-  if (!res.ok) return [];
   const data = (await res.json()) as { results?: { title?: string; url?: string; thumbnail?: string; total_facebook_shares?: number }[] };
+  console.log("CANDIDATOS DEBUG BuzzSumo response status:", res.status);
+  console.log("CANDIDATOS DEBUG BuzzSumo response body:", JSON.stringify(data).slice(0, 500));
+  if (!res.ok) return [];
   const articles = data.results ?? [];
   console.log("CANDIDATOS DEBUG resultados BuzzSumo por keyword:", { keyword: q, total: articles.length });
   return articles;
