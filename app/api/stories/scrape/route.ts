@@ -126,44 +126,46 @@ export async function POST(req: NextRequest) {
                 }
               }
             }
+            const tituloSecundario = $("h3").first().text().trim() || "";
             imagenPrincipal = null;
-            const imgClassContent = /entry-thumb|post-thumbnail|wp-post-image|featured|attachment/i;
-            $("img").each((_, el) => {
-              if (imagenPrincipal) return;
-              const cls = $(el).attr("class") || "";
+            const pickSrc = (el: cheerio.Element) => {
               const src =
                 $(el).attr("data-layzr") ||
                 $(el).attr("data-lazy-src") ||
                 $(el).attr("data-src") ||
-                $(el).attr("src") || "";
-              if (!src) return;
-              if (src.startsWith("data:")) return;
-              if (/logo|icon|avatar|sprite|pixel|1x1|tracking|badge|button/i.test(src)) return;
-              if (/logo|icon|avatar/i.test(cls)) return;
-              if (!imgClassContent.test(cls)) return;
+                $(el).attr("src") ||
+                "";
+              if (!src || src.startsWith("data:")) return null;
+              if (/logo|icon|avatar|sprite|pixel|1x1|tracking|badge|button/i.test(src)) return null;
+              const cls = $(el).attr("class") || "";
+              if (/logo|icon|avatar/i.test(cls)) return null;
               try {
-                imagenPrincipal = new URL(src, url).href;
+                return new URL(src, url).href;
               } catch {
-                imagenPrincipal = src;
+                return src;
               }
+            };
+            $("img").each((_, el) => {
+              if (imagenPrincipal) return;
+              if (!/wp-image/i.test($(el).attr("class") || "")) return;
+              const resolved = pickSrc(el);
+              if (resolved) imagenPrincipal = resolved;
             });
+            if (!imagenPrincipal) {
+              const imgClassContent = /entry-thumb|post-thumbnail|wp-post-image|featured|attachment/i;
+              $("img").each((_, el) => {
+                if (imagenPrincipal) return;
+                const cls = $(el).attr("class") || "";
+                if (!imgClassContent.test(cls)) return;
+                const resolved = pickSrc(el);
+                if (resolved) imagenPrincipal = resolved;
+              });
+            }
             if (!imagenPrincipal) {
               $("img").each((_, el) => {
                 if (imagenPrincipal) return;
-                const src =
-                  $(el).attr("data-layzr") ||
-                  $(el).attr("data-lazy-src") ||
-                  $(el).attr("data-src") ||
-                  $(el).attr("src") || "";
-                if (!src) return;
-                if (src.startsWith("data:")) return;
-                if (/logo|icon|avatar|sprite|pixel|1x1|tracking|badge|button/i.test(src)) return;
-                if (/logo|icon|avatar/i.test($(el).attr("class") || "")) return;
-                try {
-                  imagenPrincipal = new URL(src, url).href;
-                } catch {
-                  imagenPrincipal = src;
-                }
+                const resolved = pickSrc(el);
+                if (resolved) imagenPrincipal = resolved;
               });
             }
             $("p").each((_, el) => {
@@ -206,7 +208,7 @@ export async function POST(req: NextRequest) {
           if (parrafosFiltrados.length > 0 || titulo) {
             try {
               const payload = titulo
-                ? { titulo, parrafos: parrafosFiltrados }
+                ? { titulo, ...(tituloSecundario ? { tituloSecundario } : {}), parrafos: parrafosFiltrados }
                 : { parrafos: parrafosFiltrados };
               const prompt = titulo
                 ? `Reescribí el título y los párrafos siguientes.
@@ -217,6 +219,8 @@ TÍTULO (obligatorio):
 - Debe ser intrigante y generar curiosidad, estilo viral.
 - Máximo 12 palabras.
 - No uses el nombre del sitio fuente ni la URL.
+
+SUBTÍTULO DE PÁGINA (si existe): es el tema específico de esta página dentro del artículo. Úsalo como referencia para el contexto pero el título principal debe seguir basándose en el H1.
 
 PÁRRAFOS:
 - Mantené el hilo narrativo. No copies el texto original; reescribilo con tus propias palabras manteniendo hechos y secuencia.
