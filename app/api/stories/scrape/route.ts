@@ -127,8 +127,10 @@ export async function POST(req: NextRequest) {
               }
             }
             imagenPrincipal = null;
+            const imgClassContent = /entry-thumb|post-thumbnail|wp-post-image|featured|attachment/i;
             $("img").each((_, el) => {
               if (imagenPrincipal) return;
+              const cls = $(el).attr("class") || "";
               const src =
                 $(el).attr("data-layzr") ||
                 $(el).attr("data-lazy-src") ||
@@ -137,17 +139,57 @@ export async function POST(req: NextRequest) {
               if (!src) return;
               if (src.startsWith("data:")) return;
               if (/logo|icon|avatar|sprite|pixel|1x1|tracking|badge|button/i.test(src)) return;
-              if (/logo|icon|avatar/i.test($(el).attr("class") || "")) return;
+              if (/logo|icon|avatar/i.test(cls)) return;
+              if (!imgClassContent.test(cls)) return;
               try {
                 imagenPrincipal = new URL(src, url).href;
               } catch {
                 imagenPrincipal = src;
               }
             });
+            if (!imagenPrincipal) {
+              $("img").each((_, el) => {
+                if (imagenPrincipal) return;
+                const src =
+                  $(el).attr("data-layzr") ||
+                  $(el).attr("data-lazy-src") ||
+                  $(el).attr("data-src") ||
+                  $(el).attr("src") || "";
+                if (!src) return;
+                if (src.startsWith("data:")) return;
+                if (/logo|icon|avatar|sprite|pixel|1x1|tracking|badge|button/i.test(src)) return;
+                if (/logo|icon|avatar/i.test($(el).attr("class") || "")) return;
+                try {
+                  imagenPrincipal = new URL(src, url).href;
+                } catch {
+                  imagenPrincipal = src;
+                }
+              });
+            }
             $("p").each((_, el) => {
               const text = $(el).text().trim();
               if (text.length >= 50) parrafosRaw.push(text);
             });
+            if (parrafosRaw.length < 2) {
+              const contentSelectors = [".entry-content p", ".post-content p", ".td-post-content p", "article p"];
+              for (const sel of contentSelectors) {
+                $(sel).each((_, el) => {
+                  const text = $(el).text().trim();
+                  if (text.length >= 50) parrafosRaw.push(text);
+                });
+                if (parrafosRaw.length >= 2) break;
+              }
+            }
+            if (parrafosRaw.length < 2) {
+              const divSelectors = [".entry-content div", ".post-content div"];
+              for (const sel of divSelectors) {
+                $(sel).each((_, el) => {
+                  const text = $(el).text().trim();
+                  if (text.length >= 50 && !CODE_OR_NOISE.test(text)) parrafosRaw.push(text);
+                });
+                if (parrafosRaw.length >= 2) break;
+              }
+            }
           } catch (e) {
             controller.enqueue(enc.encode(sseMessage({
               pagina: p,
