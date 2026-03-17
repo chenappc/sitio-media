@@ -212,8 +212,8 @@ export async function POST(req: NextRequest) {
                 ? `Reescribí el título y los párrafos siguientes.
 
 TÍTULO (obligatorio):
-- Reescribí el título por completo, no copies el original.
-- El título debe tener sentido propio sin conocer la historia (el lector no sabe de qué trata).
+- El título DEBE estar basado en el título original que se te provee, no en los párrafos.
+- Reescribilo con otras palabras pero manteniendo el tema y sujeto principal del título original.
 - Debe ser intrigante y generar curiosidad, estilo viral.
 - Máximo 12 palabras.
 - No uses el nombre del sitio fuente ni la URL.
