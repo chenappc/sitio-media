@@ -178,10 +178,12 @@ export default async function NotaPage({ params }: Props) {
         )}
       </article>
 
-      <aside className="hidden shrink-0 md:block md:w-1/4">
-        <div className="sticky top-6 space-y-6">
+      <aside className="hidden shrink-0 self-start md:block md:w-1/4">
+        <div className="space-y-6">
           <AdXSlot slotId="gpt-vahica-single-left" minHeight={600} />
-          <AdXSlot slotId="gpt-vahica-single-right" minHeight={600} />
+          <div style={{ position: "sticky", top: "624px" }}>
+            <AdXSlot slotId="gpt-vahica-single-right" minHeight={600} />
+          </div>
         </div>
       </aside>
     </div>
