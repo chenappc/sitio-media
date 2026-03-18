@@ -325,6 +325,7 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
           if (imagenPrincipal) {
             try {
               controller.enqueue(enc.encode(sseMessage({ mensaje: `Descargando imagen de referencia para página ${p}...` })));
+              console.log(`[DEBUG página ${p}] imagenPrincipal =`, imagenPrincipal ?? "(null)");
               const imgRes = await fetch(imagenPrincipal, { headers: { "User-Agent": UA } });
               if (imgRes.ok) {
                 const buf = Buffer.from(await imgRes.arrayBuffer());
@@ -402,6 +403,12 @@ Write ONLY the image generation prompt, nothing else, no preamble, no explanatio
               ...(imagenBase64 ? [{ inlineData: { mimeType: imagenMimeType, data: imagenBase64 } }] : []),
               { text: promptParaGemini },
             ];
+            console.log(
+              `[DEBUG página ${p}] imagenBase64 tiene datos:`,
+              !!imagenBase64,
+              "| imagenReferenciaPersonajes tiene datos:",
+              !!imagenReferenciaPersonajes
+            );
             const geminiRes: Response = await fetch(
               `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${googleApiKeyStr}`,
               {
