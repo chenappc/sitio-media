@@ -3,6 +3,7 @@ import Script from "next/script";
 import { Merriweather, Source_Sans_3 } from "next/font/google";
 import "./globals.css";
 import LayoutShell from "@/components/LayoutShell";
+import StatCounterDual from "@/components/StatCounterDual";
 
 const merriweather = Merriweather({
   weight: ["400", "700", "900"],
@@ -66,26 +67,7 @@ export default function RootLayout({
       </head>
       <body>
         <LayoutShell>{children}</LayoutShell>
-        <Script id="statcounter" strategy="afterInteractive">
-          {`var sc_project=13196069; var sc_invisible=1; var sc_security="af334f2e";`}
-        </Script>
-        <Script
-          src="https://www.statcounter.com/counter/counter.js"
-          strategy="afterInteractive"
-          async
-        />
-        <noscript>
-          <div className="statcounter">
-            <a title="Web Analytics" href="https://statcounter.com/" target="_blank" rel="noreferrer">
-              <img
-                className="statcounter"
-                src="https://c.statcounter.com/13196069/0/af334f2e/1/"
-                alt="Web Analytics"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
-            </a>
-          </div>
-        </noscript>
+        <StatCounterDual />
       </body>
     </html>
   );
