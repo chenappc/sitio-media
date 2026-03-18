@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as cheerio from "cheerio";
-import type { Element } from "domhandler";
 import { Readable } from "stream";
 import cloudinary from "@/lib/cloudinary";
 import pool from "@/lib/db";
@@ -109,7 +108,6 @@ export async function POST(req: NextRequest) {
         async function leerYProcesarPagina(p: number): Promise<PageData | null> {
           const url = `${urlBase.replace(/\/$/, "")}/${p}/`;
           let titulo = "";
-          let tituloSecundario = "";
           let imagenPrincipal: string | null = null;
           let parrafosRaw: string[] = [];
 
@@ -128,72 +126,28 @@ export async function POST(req: NextRequest) {
                 }
               }
             }
-            tituloSecundario = $("h3").first().text().trim() || "";
             imagenPrincipal = null;
-            const pickSrc = (el: Element) => {
+            $("img").each((_, el) => {
+              if (imagenPrincipal) return;
               const src =
                 $(el).attr("data-layzr") ||
                 $(el).attr("data-lazy-src") ||
                 $(el).attr("data-src") ||
-                $(el).attr("src") ||
-                "";
-              if (!src || src.startsWith("data:")) return null;
-              if (/logo|icon|avatar|sprite|pixel|1x1|tracking|badge|button/i.test(src)) return null;
-              const cls = $(el).attr("class") || "";
-              if (/logo|icon|avatar/i.test(cls)) return null;
+                $(el).attr("src") || "";
+              if (!src) return;
+              if (src.startsWith("data:")) return;
+              if (/logo|icon|avatar|sprite|pixel|1x1|tracking|badge|button/i.test(src)) return;
+              if (/logo|icon|avatar/i.test($(el).attr("class") || "")) return;
               try {
-                return new URL(src, url).href;
+                imagenPrincipal = new URL(src, url).href;
               } catch {
-                return src;
+                imagenPrincipal = src;
               }
-            };
-            $("img").each((_, el) => {
-              if (imagenPrincipal) return;
-              if (!/wp-image/i.test($(el).attr("class") || "")) return;
-              const resolved = pickSrc(el);
-              if (resolved) imagenPrincipal = resolved;
             });
-            if (!imagenPrincipal) {
-              const imgClassContent = /entry-thumb|post-thumbnail|wp-post-image|featured|attachment/i;
-              $("img").each((_, el) => {
-                if (imagenPrincipal) return;
-                const cls = $(el).attr("class") || "";
-                if (!imgClassContent.test(cls)) return;
-                const resolved = pickSrc(el);
-                if (resolved) imagenPrincipal = resolved;
-              });
-            }
-            if (!imagenPrincipal) {
-              $("img").each((_, el) => {
-                if (imagenPrincipal) return;
-                const resolved = pickSrc(el);
-                if (resolved) imagenPrincipal = resolved;
-              });
-            }
             $("p").each((_, el) => {
               const text = $(el).text().trim();
               if (text.length >= 50) parrafosRaw.push(text);
             });
-            if (parrafosRaw.length < 2) {
-              const contentSelectors = [".entry-content p", ".post-content p", ".td-post-content p", "article p"];
-              for (const sel of contentSelectors) {
-                $(sel).each((_, el) => {
-                  const text = $(el).text().trim();
-                  if (text.length >= 50) parrafosRaw.push(text);
-                });
-                if (parrafosRaw.length >= 2) break;
-              }
-            }
-            if (parrafosRaw.length < 2) {
-              const divSelectors = [".entry-content div", ".post-content div"];
-              for (const sel of divSelectors) {
-                $(sel).each((_, el) => {
-                  const text = $(el).text().trim();
-                  if (text.length >= 50 && !CODE_OR_NOISE.test(text)) parrafosRaw.push(text);
-                });
-                if (parrafosRaw.length >= 2) break;
-              }
-            }
           } catch (e) {
             controller.enqueue(enc.encode(sseMessage({
               pagina: p,
@@ -210,19 +164,17 @@ export async function POST(req: NextRequest) {
           if (parrafosFiltrados.length > 0 || titulo) {
             try {
               const payload = titulo
-                ? { titulo, ...(tituloSecundario ? { tituloSecundario } : {}), parrafos: parrafosFiltrados }
+                ? { titulo, parrafos: parrafosFiltrados }
                 : { parrafos: parrafosFiltrados };
               const prompt = titulo
                 ? `Reescribí el título y los párrafos siguientes.
 
 TÍTULO (obligatorio):
-- El título DEBE estar basado en el título original que se te provee, no en los párrafos.
-- Reescribilo con otras palabras pero manteniendo el tema y sujeto principal del título original.
+- Reescribí el título por completo, no copies el original.
+- El título debe tener sentido propio sin conocer la historia (el lector no sabe de qué trata).
 - Debe ser intrigante y generar curiosidad, estilo viral.
 - Máximo 12 palabras.
 - No uses el nombre del sitio fuente ni la URL.
-
-SUBTÍTULO DE PÁGINA (si existe): es el tema específico de esta página dentro del artículo. Úsalo como referencia para el contexto pero el título principal debe seguir basándose en el H1.
 
 PÁRRAFOS:
 - Mantené el hilo narrativo. No copies el texto original; reescribilo con tus propias palabras manteniendo hechos y secuencia.
@@ -325,7 +277,6 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
           if (imagenPrincipal) {
             try {
               controller.enqueue(enc.encode(sseMessage({ mensaje: `Descargando imagen de referencia para página ${p}...` })));
-              console.log(`[DEBUG página ${p}] imagenPrincipal =`, imagenPrincipal ?? "(null)");
               const imgRes = await fetch(imagenPrincipal, { headers: { "User-Agent": UA } });
               if (imgRes.ok) {
                 const buf = Buffer.from(await imgRes.arrayBuffer());
@@ -403,12 +354,6 @@ Write ONLY the image generation prompt, nothing else, no preamble, no explanatio
               ...(imagenBase64 ? [{ inlineData: { mimeType: imagenMimeType, data: imagenBase64 } }] : []),
               { text: promptParaGemini },
             ];
-            console.log(
-              `[DEBUG página ${p}] imagenBase64 tiene datos:`,
-              !!imagenBase64,
-              "| imagenReferenciaPersonajes tiene datos:",
-              !!imagenReferenciaPersonajes
-            );
             const geminiRes: Response = await fetch(
               `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${googleApiKeyStr}`,
               {
