@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as cheerio from "cheerio";
+import type { Element } from "domhandler";
 import { Readable } from "stream";
 import cloudinary from "@/lib/cloudinary";
 import pool from "@/lib/db";
@@ -108,6 +109,7 @@ export async function POST(req: NextRequest) {
         async function leerYProcesarPagina(p: number): Promise<PageData | null> {
           const url = `${urlBase.replace(/\/$/, "")}/${p}/`;
           let titulo = "";
+          let tituloSecundario = "";
           let imagenPrincipal: string | null = null;
           let parrafosRaw: string[] = [];
 
@@ -126,9 +128,9 @@ export async function POST(req: NextRequest) {
                 }
               }
             }
-            const tituloSecundario = $("h3").first().text().trim() || "";
+            tituloSecundario = $("h3").first().text().trim() || "";
             imagenPrincipal = null;
-            const pickSrc = (el: cheerio.Element) => {
+            const pickSrc = (el: Element) => {
               const src =
                 $(el).attr("data-layzr") ||
                 $(el).attr("data-lazy-src") ||

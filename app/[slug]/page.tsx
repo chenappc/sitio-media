@@ -5,7 +5,7 @@ import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
 import { getNotaBySlug, getNotasRelacionadas, incrementarVisitas } from "@/lib/notas";
-import AdSense from "@/components/AdSense";
+import AdXSlot from "@/components/AdXSlot";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import type { Metadata } from "next";
 import styles from "./page.module.css";
@@ -28,6 +28,22 @@ function cuerpoConImagen2(cuerpo: string, imagen2_url: string | null, alt: strin
   const before = paragraphs.slice(0, mid + 1).join("");
   const after = paragraphs.slice(mid + 1).join("");
   return before + img + after;
+}
+
+/** Parte el HTML del cuerpo después del n-ésimo párrafo <p>...</p> (para insertar anuncio entre bloques). */
+function splitCuerpoAfterParagraphs(html: string, n: number): { head: string; tail: string } {
+  const re = /<p\b[^>]*>[\s\S]*?<\/p>/gi;
+  const matches: RegExpExecArray[] = [];
+  let m: RegExpExecArray | null;
+  const s = html;
+  re.lastIndex = 0;
+  while ((m = re.exec(s)) !== null) {
+    matches.push(m);
+  }
+  if (matches.length <= n) return { head: html, tail: "" };
+  const lastOfHead = matches[n - 1];
+  const endHead = lastOfHead.index! + lastOfHead[0].length;
+  return { head: html.slice(0, endHead), tail: html.slice(endHead) };
 }
 
 type Props = { params: Promise<{ slug: string }> };
@@ -62,99 +78,112 @@ export default async function NotaPage({ params }: Props) {
   await incrementarVisitas(nota.id);
   const relacionadas = await getNotasRelacionadas(nota.slug, nota.titulo, 4);
 
+  const cuerpoHtml = cuerpoConImagen2(nota.cuerpo, nota.imagen2_url, nota.imagen_alt ?? nota.titulo);
+  const { head: cuerpoHead, tail: cuerpoTail } = splitCuerpoAfterParagraphs(cuerpoHtml, 3);
+
   return (
-    <article className="mx-auto max-w-3xl px-4 py-6">
-      <span className="inline-block rounded bg-[var(--rojo)] px-2 py-0.5 text-sm font-semibold text-white">
-        🔥 Viral
-      </span>
-      <h1 className="mt-3 font-serif text-2xl font-bold leading-tight md:text-3xl">
-        {nota.titulo}
-      </h1>
-      {/* Slot anterior: 4862111765
-      <div className="mt-4">
-        <AdSense slot="4862111765" />
-      </div> */}
-      <p className="mt-2 text-sm text-[var(--negro)]/60">
-        {formatHora(nota.fecha)}
-      </p>
+    <div className="mx-auto flex max-w-6xl gap-6 px-4 py-6">
+      <article className="min-w-0 md:w-3/4">
+        <span className="inline-block rounded bg-[var(--rojo)] px-2 py-0.5 text-sm font-semibold text-white">
+          🔥 Viral
+        </span>
+        <h1 className="mt-3 font-serif text-2xl font-bold leading-tight md:text-3xl">
+          {nota.titulo}
+        </h1>
+        <p className="mt-2 text-sm text-[var(--negro)]/60">{formatHora(nota.fecha)}</p>
 
-      {nota.imagen_url && (
-        <div className="relative mt-4 aspect-video w-full overflow-hidden rounded-lg bg-[var(--negro)]/5">
-          <Image
-            src={nota.imagen_url}
-            alt={nota.imagen_alt ?? nota.titulo}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, 672px"
-            priority
-          />
-        </div>
-      )}
-
-      <p className="mt-4 text-lg font-medium text-[var(--negro)]/90">
-        {nota.entradilla}
-      </p>
-
-      <WhatsAppButton titulo={nota.titulo} slug={nota.slug} />
-
-      <div
-        className={`prose prose-lg mt-6 max-w-none prose-a:text-[var(--rojo)] prose-a:no-underline hover:prose-a:underline ${styles.cuerpo}`}
-        dangerouslySetInnerHTML={{
-          __html: cuerpoConImagen2(nota.cuerpo, nota.imagen2_url, nota.imagen_alt ?? nota.titulo),
-        }}
-      />
-
-      <div className="mt-8">
-        {/* Slot anterior: 8801356773 */}
-        <AdSense slot="7922354756" />
-      </div>
-
-      {nota.fuente_url && (
-        <p style={{ fontSize: 14, color: "#666", marginTop: 24 }}>
-          Fuente:{" "}
-          <a
-            href={nota.fuente_url}
-            target="_blank"
-            rel="nofollow noopener noreferrer"
-          >
-            {nota.fuente_nombre || "Enlace externo"}
-          </a>
-        </p>
-      )}
-
-      {relacionadas.length > 0 && (
-        <section className="mt-10">
-          <h2 className="font-serif text-2xl font-bold text-[var(--negro)] mb-4 md:text-3xl">
-            También te puede interesar:
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {relacionadas.map((r) => (
-              <Link
-                key={r.id}
-                href={`/${r.slug}`}
-                className="group block rounded-lg overflow-hidden bg-[var(--negro)]/5"
-              >
-                <div className="relative aspect-video w-full overflow-hidden">
-                  {r.imagen_url ? (
-                    <Image
-                      src={r.imagen_url}
-                      alt=""
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-200"
-                      sizes="(max-width: 768px) 100vw, 50vw"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 bg-[var(--negro)]/10" />
-                  )}
-                </div>
-                <p className="mt-2 px-0 py-0 font-serif text-base font-bold text-[var(--negro)] line-clamp-2 group-hover:text-[var(--rojo)]">
-                  {r.titulo}
-                </p>
-              </Link>
-            ))}
+        {nota.imagen_url && (
+          <div className="relative mt-4 aspect-video w-full overflow-hidden rounded-lg bg-[var(--negro)]/5">
+            <Image
+              src={nota.imagen_url}
+              alt={nota.imagen_alt ?? nota.titulo}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 75vw"
+              priority
+            />
           </div>
-        </section>
-      )}
-    </article>
+        )}
+
+        <div className="my-4">
+          <AdXSlot slotId="gpt-vahica-single-top" />
+        </div>
+
+        <p className="mt-4 text-lg font-medium text-[var(--negro)]/90">{nota.entradilla}</p>
+
+        <WhatsAppButton titulo={nota.titulo} slug={nota.slug} />
+
+        {cuerpoHead && (
+          <div
+            className={`prose prose-lg mt-6 max-w-none prose-a:text-[var(--rojo)] prose-a:no-underline hover:prose-a:underline ${styles.cuerpo}`}
+            dangerouslySetInnerHTML={{ __html: cuerpoHead }}
+          />
+        )}
+        {cuerpoTail && (
+          <>
+            <div className="my-6">
+              <AdXSlot slotId="gpt-vahica-single-middle" />
+            </div>
+            <div
+              className={`prose prose-lg max-w-none prose-a:text-[var(--rojo)] prose-a:no-underline hover:prose-a:underline ${styles.cuerpo}`}
+              dangerouslySetInnerHTML={{ __html: cuerpoTail }}
+            />
+          </>
+        )}
+        <div className="mt-8">
+          <AdXSlot slotId="gpt-vahica-single-bottom" />
+        </div>
+
+        {nota.fuente_url && (
+          <p style={{ fontSize: 14, color: "#666", marginTop: 24 }}>
+            Fuente:{" "}
+            <a href={nota.fuente_url} target="_blank" rel="nofollow noopener noreferrer">
+              {nota.fuente_nombre || "Enlace externo"}
+            </a>
+          </p>
+        )}
+
+        {relacionadas.length > 0 && (
+          <section className="mt-10">
+            <h2 className="font-serif text-2xl font-bold text-[var(--negro)] mb-4 md:text-3xl">
+              También te puede interesar:
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {relacionadas.map((r) => (
+                <Link
+                  key={r.id}
+                  href={`/${r.slug}`}
+                  className="group block rounded-lg overflow-hidden bg-[var(--negro)]/5"
+                >
+                  <div className="relative aspect-video w-full overflow-hidden">
+                    {r.imagen_url ? (
+                      <Image
+                        src={r.imagen_url}
+                        alt=""
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-200"
+                        sizes="(max-width: 768px) 100vw, 37vw"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-[var(--negro)]/10" />
+                    )}
+                  </div>
+                  <p className="mt-2 px-0 py-0 font-serif text-base font-bold text-[var(--negro)] line-clamp-2 group-hover:text-[var(--rojo)]">
+                    {r.titulo}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+      </article>
+
+      <aside className="hidden shrink-0 md:block md:w-1/4">
+        <div className="sticky top-6 space-y-6">
+          <AdXSlot slotId="gpt-vahica-single-left" minHeight={600} />
+          <AdXSlot slotId="gpt-vahica-single-right" minHeight={600} />
+        </div>
+      </aside>
+    </div>
   );
 }

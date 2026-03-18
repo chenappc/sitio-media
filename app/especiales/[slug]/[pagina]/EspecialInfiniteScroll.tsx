@@ -2,8 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
-import AdSense from "@/components/AdSense";
 import type { Bloque } from "@/lib/types";
+import AdXSlot from "@/components/AdXSlot";
+import EspecialAdSlot from "./EspecialAdSlot";
+
+const INTERSTITIAL_ID = "div-gpt-ad-1773725445265-0";
 
 type PageData = {
   numero: number;
@@ -33,7 +36,9 @@ export default function EspecialInfiniteScroll({
 }: Props) {
   const [pages, setPages] = useState<PageData[]>([initialPage]);
   const [loading, setLoading] = useState(false);
+  const [interstitialOpen, setInterstitialOpen] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const interstitialShownForCount = useRef<Set<number>>(new Set());
 
   const loadNext = useCallback(async () => {
     const nextNumero = initialNumero + pages.length;
@@ -50,34 +55,55 @@ export default function EspecialInfiniteScroll({
         parrafos: Array.isArray(data.parrafos) ? data.parrafos : [],
         bloques: Array.isArray(data.bloques) ? data.bloques : undefined,
       };
-      setPages((prev) => [...prev, newPage]);
+      setPages((prev) => {
+        const next = [...prev, newPage];
+        const n = next.length;
+        if (n >= 5 && n % 5 === 0 && !interstitialShownForCount.current.has(n)) {
+          interstitialShownForCount.current.add(n);
+          queueMicrotask(() => {
+            setInterstitialOpen(true);
+            window.setTimeout(() => {
+              try {
+                (
+                  window as unknown as { googletag?: { cmd: { push: (fn: () => void) => void } } }
+                ).googletag?.cmd.push(function () {
+                  (
+                    window as unknown as { googletag?: { display: (id: string) => void } }
+                  ).googletag?.display(INTERSTITIAL_ID);
+                });
+              } catch {
+                /* ignore */
+              }
+            }, 120);
+            window.setTimeout(() => setInterstitialOpen(false), 4500);
+          });
+        }
+        return next;
+      });
       const url = `/especiales/${slug}/${nextNumero}`;
       window.history.pushState(null, "", url);
-      try {
-        (window as unknown as { adsbygoogle?: unknown[] }).adsbygoogle?.push({});
-      } catch {
-        // ignore
-      }
     } finally {
       setLoading(false);
     }
   }, [slug, totalPaginas, initialNumero, pages.length, loading]);
 
+  const lastNumero = pages[pages.length - 1]?.numero ?? initialNumero;
+  const hasMore = lastNumero < totalPaginas;
+
   useEffect(() => {
     const sentinel = sentinelRef.current;
-    if (!sentinel) return;
+    if (!sentinel || !hasMore) return;
     const observer = new IntersectionObserver(
       (entries) => {
         const [e] = entries;
         if (!e?.isIntersecting) return;
-        if (pages.length >= totalPaginas) return;
         loadNext();
       },
       { threshold: 0.75, rootMargin: "0px" }
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [pages.length, totalPaginas, loadNext]);
+  }, [hasMore, loadNext, pages.length]);
 
   const getParrafosAndImagen = (page: PageData): { parrafos: string[]; imagenUrl: string | null } => {
     if (Array.isArray(page.bloques) && page.bloques.length > 0) {
@@ -94,29 +120,24 @@ export default function EspecialInfiniteScroll({
   };
 
   const pClass = "text-xl leading-relaxed text-[var(--negro)]";
-  const adSlot = "7922354756";
 
   return (
-    <div className="mt-4 space-y-10">
-      {pages.map((page, pageIndex) => {
-        const { parrafos, imagenUrl } = getParrafosAndImagen(page);
-        const isFirstPage = pageIndex === 0;
+    <>
+    <div className="flex gap-6">
+      <div className="min-w-0 md:w-3/4">
+        <div className="mt-4 space-y-10">
+          {pages.map((page) => {
+            const { parrafos, imagenUrl } = getParrafosAndImagen(page);
 
-        return (
-          <article
-            key={page.numero}
-            className="pb-10"
-            data-numero={page.numero}
-          >
-            <div className="space-y-4">
-              {page.titulo_item && (
-                <h2 className="font-serif text-xl font-semibold text-[var(--negro)]">
-                  {page.titulo_item}
-                </h2>
-              )}
+            return (
+              <article key={page.numero} className="pb-10" data-numero={page.numero}>
+                <div className="space-y-4">
+                  {page.titulo_item && (
+                    <h2 className="font-serif text-xl font-semibold text-[var(--negro)]">
+                      {page.titulo_item}
+                    </h2>
+                  )}
 
-              {isFirstPage ? (
-                <>
                   {imagenUrl && (
                     <div className="relative w-full">
                       <Image
@@ -124,60 +145,62 @@ export default function EspecialInfiniteScroll({
                         alt={page.titulo_item || `Página ${page.numero}`}
                         width={600}
                         height={600}
-                        className="w-full h-auto"
+                        className="h-auto w-full"
                         priority={page.numero === initialNumero}
                       />
                     </div>
                   )}
-                  <div className="min-h-[90px] rounded-sm bg-[var(--negro)]/5">
-                    <AdSense slot={adSlot} />
+
+                  <div className="my-2">
+                    <EspecialAdSlot numero={page.numero} kind="top" />
                   </div>
+
                   {parrafos.map((texto, i) => (
                     <p key={i} className={pClass}>
                       {texto}
                     </p>
                   ))}
-                </>
-              ) : (
-                <>
-                  {parrafos[0] != null && (
-                    <p className={pClass}>{parrafos[0]}</p>
-                  )}
-                  {imagenUrl && (
-                    <div className="relative w-full">
-                      <Image
-                        src={optimizarImagenCloudinary(imagenUrl)}
-                        alt={page.titulo_item || `Página ${page.numero}`}
-                        width={600}
-                        height={600}
-                        className="w-full h-auto"
-                        priority={false}
-                      />
-                    </div>
-                  )}
-                  <div className="min-h-[90px] rounded-sm bg-[var(--negro)]/5">
-                    <AdSense slot={adSlot} />
+
+                  <div className="mt-6">
+                    <EspecialAdSlot numero={page.numero} kind="bottom" />
                   </div>
-                  {parrafos.slice(1).map((texto, i) => (
-                    <p key={i} className={pClass}>
-                      {texto}
-                    </p>
-                  ))}
-                </>
-              )}
+                </div>
+              </article>
+            );
+          })}
+          {hasMore && (
+            <div
+              ref={sentinelRef}
+              className="flex min-h-[120px] items-center justify-center py-6 text-sm text-[var(--negro)]/50"
+              aria-hidden
+            >
+              {loading ? "Cargando…" : ""}
             </div>
-          </article>
-        );
-      })}
-      {pages.length < totalPaginas && (
-        <div
-          ref={sentinelRef}
-          className="flex min-h-[120px] items-center justify-center py-6 text-[var(--negro)]/50 text-sm"
-          aria-hidden
-        >
-          {loading ? "Cargando…" : ""}
+          )}
         </div>
-      )}
+      </div>
+
+      <aside className="hidden shrink-0 md:block md:w-1/4">
+        <div className="sticky top-6 space-y-6">
+          <AdXSlot slotId="gpt-vahica-single-left" minHeight={600} />
+          <AdXSlot slotId="gpt-vahica-single-right" minHeight={600} />
+        </div>
+      </aside>
     </div>
+
+    <div
+      className={
+        interstitialOpen
+          ? "fixed inset-0 z-[200] flex items-center justify-center bg-black/70 p-4"
+          : "pointer-events-none fixed left-0 top-0 z-[-1] h-px w-px overflow-hidden opacity-0"
+      }
+      aria-hidden={!interstitialOpen}
+    >
+      <div
+        id={INTERSTITIAL_ID}
+        className="min-h-[250px] min-w-[300px] rounded bg-white p-2 shadow-lg"
+      />
+    </div>
+    </>
   );
 }
