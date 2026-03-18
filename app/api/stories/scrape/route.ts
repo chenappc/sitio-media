@@ -277,6 +277,7 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
           if (imagenPrincipal) {
             try {
               controller.enqueue(enc.encode(sseMessage({ mensaje: `Descargando imagen de referencia para página ${p}...` })));
+              console.log(`[DEBUG página ${p}] imagenPrincipal =`, imagenPrincipal ?? "(null)");
               const imgRes = await fetch(imagenPrincipal, { headers: { "User-Agent": UA } });
               if (imgRes.ok) {
                 const buf = Buffer.from(await imgRes.arrayBuffer());
@@ -354,6 +355,12 @@ Write ONLY the image generation prompt, nothing else, no preamble, no explanatio
               ...(imagenBase64 ? [{ inlineData: { mimeType: imagenMimeType, data: imagenBase64 } }] : []),
               { text: promptParaGemini },
             ];
+            console.log(
+              `[DEBUG página ${p}] imagenBase64:`,
+              !!imagenBase64,
+              "| refPersonajes:",
+              !!imagenReferenciaPersonajes
+            );
             const geminiRes: Response = await fetch(
               `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${googleApiKeyStr}`,
               {
@@ -369,6 +376,16 @@ Write ONLY the image generation prompt, nothing else, no preamble, no explanatio
             const geminiData = (await geminiRes.json().catch(() => ({}))) as {
               candidates?: Array<{ content?: { parts?: GeminiPart[] } }>;
             };
+            console.log(
+              `[DEBUG página ${p}] Gemini candidates:`,
+              JSON.stringify(geminiData?.candidates?.length),
+              "| parts:",
+              JSON.stringify(
+                geminiData?.candidates?.[0]?.content?.parts?.map(
+                  (prt: GeminiPart) => prt.inlineData?.mimeType ?? "text"
+                )
+              )
+            );
             const parts: GeminiPart[] = geminiData.candidates?.[0]?.content?.parts ?? [];
             const imagePart = parts.find((part: GeminiPart) =>
               part.inlineData?.mimeType?.startsWith("image/")
