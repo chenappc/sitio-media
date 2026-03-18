@@ -114,11 +114,9 @@ export default function StoryPaginaClient({
       </main>
 
       <aside className="hidden shrink-0 self-start md:block md:w-1/4">
-        <div className="space-y-6">
-          <AdXSlot slotId="gpt-vahica-single-left" minHeight={600} />
-          <div style={{ position: "sticky", top: "624px" }}>
-            <AdXSlot slotId="gpt-vahica-single-right" minHeight={600} />
-          </div>
+        <AdXSlot slotId="gpt-vahica-single-left" minHeight={600} />
+        <div className="sticky top-4 mt-6">
+          <AdXSlot slotId="gpt-vahica-single-right" minHeight={600} />
         </div>
       </aside>
     </div>

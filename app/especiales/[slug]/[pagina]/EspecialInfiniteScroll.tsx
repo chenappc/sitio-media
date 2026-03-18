@@ -180,9 +180,9 @@ export default function EspecialInfiniteScroll({
         </div>
       </div>
 
-      <aside className="hidden shrink-0 md:block md:w-1/4">
-        <div className="sticky top-6 space-y-6">
-          <AdXSlot slotId="gpt-vahica-single-left" minHeight={600} />
+      <aside className="hidden shrink-0 self-start md:block md:w-1/4">
+        <AdXSlot slotId="gpt-vahica-single-left" minHeight={600} />
+        <div className="sticky top-4 mt-6">
           <AdXSlot slotId="gpt-vahica-single-right" minHeight={600} />
         </div>
       </aside>
