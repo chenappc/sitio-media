@@ -5,8 +5,7 @@
  */
 const cheerio = require("cheerio");
 
-const URL =
-  "https://kingbuiltbullies.com/las-estrellas-de-los-80-celebridades-que-transformaron-hollywood-y-dejaron-una-huella-historica/1/";
+const URL = "https://www.consejosytrucos.co/online/es-farmerrevenge/1/";
 
 const UA = "Mozilla/5.0 (compatible; sitio-media-bot/1.0)";
 const CODE_OR_NOISE = /JavaScript|CSS|código|script|function\(|var\s|const\s|let\s|\{|\}|querySelector|getElementById/i;
@@ -27,18 +26,36 @@ async function main() {
   const $ = cheerio.load(html);
   const url = URL;
 
-  console.log("\n--- H1 ---");
-  const h1s = $("h1").toArray();
-  console.log("Total h1:", h1s.length);
-  h1s.forEach((el, i) => {
+  console.log("\n--- H1 (texto completo) ---");
+  const h1Text = $("h1").first().text().trim();
+  console.log(h1Text || "(vacío)");
+
+  console.log("\n--- Primeros 3 H2 ---");
+  $("h2").slice(0, 3).each((i, el) => {
     console.log(`  [${i}]`, $(el).text().trim());
   });
 
-  console.log("\n--- H2 ---");
-  const h2s = $("h2").toArray();
-  console.log("Total h2:", h2s.length);
-  h2s.forEach((el, i) => {
+  console.log("\n--- Primeras 6 imágenes (todos los atributos y clases) ---");
+  $("img").slice(0, 6).each((i, el) => {
+    const attrs = el.attribs || {};
+    console.log(`\n[${i}]`, JSON.stringify(attrs, null, 2).replace(/\n/g, "\n    "));
+  });
+
+  console.log("\n--- strong y b (texto) ---");
+  $("strong, b").each((i, el) => {
+    const t = $(el).text().trim();
+    if (t) console.log(`  [${i}]`, t);
+  });
+
+  console.log("\n--- H3 (texto) ---");
+  $("h3").each((i, el) => {
     console.log(`  [${i}]`, $(el).text().trim());
+  });
+
+  console.log("\n--- Imágenes con clase wp-image (todas) ---");
+  $('img[class*="wp-image"]').each((i, el) => {
+    const attrs = el.attribs || {};
+    console.log(`\n[${i}]`, JSON.stringify(attrs, null, 2).replace(/\n/g, "\n    "));
   });
 
   // Misma lógica de imagen que el scraper
@@ -85,11 +102,11 @@ async function main() {
     });
   }
 
-  console.log("\n--- Imagen principal (lógica del scraper) ---");
+  console.log("\n--- Imagen seleccionada (entry-thumb primero, luego fallback) ---");
   if (imagenPrincipal) {
-    console.log("  URL:", imagenPrincipal);
+    console.log(imagenPrincipal);
   } else {
-    console.log("  (ninguna imagen elegida)");
+    console.log("(ninguna)");
   }
 
   // Misma lógica de párrafos que el scraper
@@ -121,11 +138,9 @@ async function main() {
 
   const parrafosFiltrados = filterParrafos(parrafosRaw);
 
-  console.log("\n--- Párrafos (parrafosRaw, luego filterParrafos) ---");
-  console.log("Total parrafosRaw (>= 50 chars):", parrafosRaw.length);
-  console.log("Total después de filterParrafos:", parrafosFiltrados.length);
-  parrafosFiltrados.slice(0, 5).forEach((p, i) => {
-    console.log(`  [${i}] (${p.length} chars)`, p.slice(0, 80) + (p.length > 80 ? "..." : ""));
+  console.log("\n--- Los 2 párrafos que encontró ---");
+  parrafosFiltrados.slice(0, 2).forEach((p, i) => {
+    console.log(`\n[${i + 1}]`, p);
   });
 }
 

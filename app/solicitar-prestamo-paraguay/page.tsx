@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import AdSense from "@/components/AdSense";
+import AdXSlot from "@/components/AdXSlot";
 import styles from "./SolicitarPrestamoParaguay.module.css";
 
 export const metadata: Metadata = {
@@ -26,8 +26,9 @@ export default function SolicitarPrestamoParaguayPage() {
         institución reconocida, te ofrece libertad y confianza en cada paso.
       </p>
 
-      {/* Slot anterior: 8857811296 */}
-      <AdSense slot="7922354756" />
+      <div className="my-6">
+        <AdXSlot slotId="gpt-vahica-single-top" />
+      </div>
 
       <h2 className={styles.sectionTitle}>
         ¿Cuáles son los requisitos para solicitar el Mi Préstamo?
@@ -58,8 +59,9 @@ export default function SolicitarPrestamoParaguayPage() {
         a tus posibilidades, evitando desequilibrios financieros en el futuro.
       </p>
 
-      {/* Slot anterior: 9784384730 */}
-      <AdSense slot="7922354756" />
+      <div className="my-6">
+        <AdXSlot slotId="gpt-vahica-single-middle" />
+      </div>
 
       <h2 className={styles.sectionTitle}>
         ¿Cómo solicitar el préstamo de Banco Itaú?

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import AdSense from "@/components/AdSense";
+import AdXSlot from "@/components/AdXSlot";
 import styles from "./PrestamosParaguay.module.css";
 
 export const metadata: Metadata = {
@@ -25,8 +25,9 @@ export default function PrestamosParaguayPage() {
         buscan concretar proyectos personales o organizar sus finanzas.
       </p>
 
-      {/* Slot anterior: 8857811296 */}
-      <AdSense slot="7922354756" />
+      <div className="my-6">
+        <AdXSlot slotId="gpt-vahica-single-top" />
+      </div>
 
       <ul className={styles.list}>
         <li className={styles.listItem}>
@@ -82,8 +83,9 @@ export default function PrestamosParaguayPage() {
         tasas y condiciones, consultá directamente con Banco Itaú.
       </p>
 
-      {/* Slot anterior: 9784384730 */}
-      <AdSense slot="7922354756" />
+      <div className="my-6">
+        <AdXSlot slotId="gpt-vahica-single-middle" />
+      </div>
 
       <h2 className={styles.sectionTitle}>
         ¿Cómo solicitar Itaú Mi Préstamo?
