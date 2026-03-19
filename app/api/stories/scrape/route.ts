@@ -405,6 +405,7 @@ Write ONLY the image generation prompt, nothing else, no preamble, no explanatio
               );
               Readable.from(buf).pipe(uploadStream);
             });
+            console.log(`[DEBUG página ${p}] Cloudinary upload exitoso:`, imagenUrl);
             controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen subida: ${imagenUrl}` })));
             // Actualizar referencia encadenada de personajes con la imagen generada
             try {
@@ -444,6 +445,7 @@ Write ONLY the image generation prompt, nothing else, no preamble, no explanatio
                 );
                 Readable.from(buf).pipe(uploadStream);
               });
+              console.log(`[DEBUG página ${p}] FALLBACK usado, imagenUrl:`, imagenUrl);
               controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen fallback subida: ${imagenUrl}` })));
             } catch (e) {
               controller.enqueue(enc.encode(sseMessage({
