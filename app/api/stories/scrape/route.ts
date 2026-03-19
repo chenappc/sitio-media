@@ -87,8 +87,6 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       const enc = new TextEncoder();
       let contextoPaginas: string = "";
-      let imagenReferenciaPersonajes: string | null = null;
-      let imagenReferenciaPersonajesMime: string = "image/png";
       if (initialStoryId != null) {
         storyId = initialStoryId;
         storySlug = initialStorySlug;
@@ -291,13 +289,8 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
           }
 
           if (imagenBase64) {
-            if (imagenReferenciaPersonajes) {
-              promptParaGemini =
-                "You will receive two images. Use them as follows:\n- Image 1 (CHARACTER REFERENCE): study the faces, hair, age and clothing of the people in it. This is ONLY a character reference — do not copy the scene, background or composition from this image.\n- Image 2 (SCENE TO RECREATE): this is the actual scene you must recreate. Study the setting, action, composition and atmosphere.\n\nYour task: Generate a brand new cinematic image of the scene from Image 2, with the characters rendered to look like the people from Image 1. The output must look visually different from both input images — new camera angle, dramatic cinematic lighting, rich atmosphere. Do not copy either image directly.\n\nDo not include any weapons, guns, knives, firearms, or violent imagery of any kind.\n\nOutput: a single cinematic photorealistic scene.";
-            } else {
-              promptParaGemini =
-                "You are a cinematic image generator. Recreate this scene as a brand new cinematic illustration. Do NOT copy or upscale the original image — generate a completely new artistic interpretation. Rules: 1. Identify the characters, setting and action in the image. 2. Redraw the entire scene from scratch in a cinematic, photorealistic style with dramatic lighting, rich colors and depth. 3. Keep the same characters, setting and action but render them as if shot by a professional cinematographer. 4. The output must look visually different from the input — new camera angle, new lighting, richer atmosphere. 5. Do not include any weapons, guns, knives, firearms, or violent imagery of any kind. Output: a single cinematic photorealistic scene.";
-            }
+            promptParaGemini =
+              "You are a cinematic image generator. Recreate this scene as a brand new cinematic illustration. Do NOT copy or upscale the original image — generate a completely new artistic interpretation. Rules: 1. Identify the characters, setting and action in the image. 2. Redraw the entire scene from scratch in a cinematic, photorealistic style with dramatic lighting, rich colors and depth. 3. Keep the same characters, setting and action but render them as if shot by a professional cinematographer. 4. The output must look visually different from the input — new camera angle, new lighting, richer atmosphere. 5. Do not include any weapons, guns, knives, firearms, or violent imagery of any kind. Output: a single cinematic photorealistic scene.";
           } else {
             const pageText = (tituloRewritten && parrafos.length > 0)
               ? `${tituloRewritten}. ${parrafos.join(" ")}`
@@ -349,17 +342,12 @@ Write ONLY the image generation prompt, nothing else, no preamble, no explanatio
           try {
             controller.enqueue(enc.encode(sseMessage({ mensaje: `Generando imagen con Gemini 2.5 para página ${p}...` })));
             const geminiParts: Array<{ inlineData?: { mimeType: string; data: string } } | { text: string }> = [
-              ...(imagenReferenciaPersonajes
-                ? [{ inlineData: { mimeType: imagenReferenciaPersonajesMime, data: imagenReferenciaPersonajes } }]
-                : []),
               ...(imagenBase64 ? [{ inlineData: { mimeType: imagenMimeType, data: imagenBase64 } }] : []),
               { text: promptParaGemini },
             ];
             console.log(
               `[DEBUG página ${p}] imagenBase64:`,
               !!imagenBase64,
-              "| refPersonajes:",
-              !!imagenReferenciaPersonajes
             );
             const geminiRes: Response = await fetch(
               `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${googleApiKeyStr}`,
@@ -407,20 +395,6 @@ Write ONLY the image generation prompt, nothing else, no preamble, no explanatio
             });
             console.log(`[DEBUG página ${p}] Cloudinary upload exitoso:`, imagenUrl);
             controller.enqueue(enc.encode(sseMessage({ mensaje: `Imagen subida: ${imagenUrl}` })));
-            // Actualizar referencia encadenada de personajes con la imagen generada
-            try {
-              const refRes = await fetch(imagenUrl, { headers: { "User-Agent": UA } });
-              if (refRes.ok) {
-                const refBuf = Buffer.from(await refRes.arrayBuffer());
-                imagenReferenciaPersonajes = refBuf.toString("base64");
-                const ctRef = refRes.headers.get("content-type") ?? "";
-                imagenReferenciaPersonajesMime = ctRef.startsWith("image/")
-                  ? ctRef.split(";")[0].trim()
-                  : "image/png";
-              }
-            } catch {
-              // ignorar, se puede regenerar referencia en la siguiente página si hace falta
-            }
           } catch (e) {
             controller.enqueue(enc.encode(sseMessage({
               pagina: p,
