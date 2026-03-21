@@ -32,8 +32,8 @@ export default function StoryPaginaClient({
   const rest = parrafos.slice(1);
 
   return (
-    <div className="mx-auto flex max-w-6xl gap-6 px-4 py-6">
-      <main className="min-w-0 md:w-3/4">
+    <div className="mx-auto max-w-6xl px-4 py-6">
+      <main className="min-w-0 w-full">
         <h1 className="font-serif text-2xl font-bold text-[var(--negro)] md:text-4xl">{storyTitulo}</h1>
 
         <div className="hidden md:block">
@@ -120,14 +120,14 @@ export default function StoryPaginaClient({
         </nav>
       </main>
 
-      <aside className="hidden shrink-0 self-start md:block md:w-1/4">
+      {/* <aside className="hidden shrink-0 self-start md:block md:w-1/4">
         <div className="max-w-full overflow-hidden">
           <AdXSlot slotId="gpt-vahica-single-left" />
           <div className="sticky top-4 mt-6">
             <AdXSlot slotId="gpt-vahica-single-right" />
           </div>
         </div>
-      </aside>
+      </aside> */}
     </div>
   );
 }

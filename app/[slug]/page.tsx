@@ -82,8 +82,8 @@ export default async function NotaPage({ params }: Props) {
   const { head: cuerpoHead, tail: cuerpoTail } = splitCuerpoAfterParagraphs(cuerpoHtml, 3);
 
   return (
-    <div className="mx-auto flex max-w-6xl gap-6 px-4 py-6">
-      <article className="min-w-0 md:w-3/4">
+    <div className="mx-auto max-w-6xl px-4 py-6">
+      <article className="min-w-0 w-full">
         <span className="inline-block rounded bg-[var(--rojo)] px-2 py-0.5 text-sm font-semibold text-white">
           🔥 Viral
         </span>
@@ -178,12 +178,12 @@ export default async function NotaPage({ params }: Props) {
         )}
       </article>
 
-      <aside className="hidden shrink-0 self-start md:block md:w-1/4">
+      {/* <aside className="hidden shrink-0 self-start md:block md:w-1/4">
         <AdXSlot slotId="gpt-vahica-single-left" />
         <div className="sticky top-4 mt-6">
           <AdXSlot slotId="gpt-vahica-single-right" />
         </div>
-      </aside>
+      </aside> */}
     </div>
   );
 }

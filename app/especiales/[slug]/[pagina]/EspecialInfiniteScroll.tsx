@@ -123,8 +123,8 @@ export default function EspecialInfiniteScroll({
 
   return (
     <>
-    <div className="flex gap-6">
-      <div className="min-w-0 md:w-3/4">
+    <div className="mx-auto max-w-6xl px-4 py-6">
+      <div className="min-w-0 w-full">
         <div className="mt-4 space-y-10">
           {pages.map((page) => {
             const { parrafos, imagenUrl } = getParrafosAndImagen(page);
@@ -180,12 +180,12 @@ export default function EspecialInfiniteScroll({
         </div>
       </div>
 
-      <aside className="hidden shrink-0 self-start md:block md:w-1/4">
+      {/* <aside className="hidden shrink-0 self-start md:block md:w-1/4">
         <AdXSlot slotId="gpt-vahica-single-left" />
         <div className="sticky top-4 mt-6">
           <AdXSlot slotId="gpt-vahica-single-right" />
         </div>
-      </aside>
+      </aside> */}
     </div>
 
     <div
