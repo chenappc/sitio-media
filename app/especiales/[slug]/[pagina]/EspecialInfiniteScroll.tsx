@@ -18,7 +18,7 @@ type PageData = {
 
 function optimizarImagenCloudinary(url: string) {
   if (!url || !url.includes("res.cloudinary.com")) return url;
-  return url.replace("/upload/", "/upload/w_600,c_fit,q_auto/");
+  return url.replace("/upload/", "/upload/h_550,c_fit,q_auto/");
 }
 
 type Props = {

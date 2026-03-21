@@ -44,6 +44,7 @@ const GPT_INIT = `
     googletag.defineSlot('/186299052/Vahica.com/Vahica_Single_Left', [300, 600], 'gpt-vahica-single-left').addService(googletag.pubads());
     googletag.defineSlot('/186299052/Vahica.com/Vahica_Single_Middle', [[300, 250], 'fluid'], 'gpt-vahica-single-middle').addService(googletag.pubads());
     googletag.defineSlot('/186299052/Vahica.com/Vahica_Single_Right', [300, 600], 'gpt-vahica-single-right').addService(googletag.pubads());
+    googletag.defineSlot('/186299052/Vahica.com/Vahica_Single_Horizontal', [728, 90], 'div-gpt-ad-1774064935710-0').addService(googletag.pubads());
     googletag.defineSlot('/186299052/Vahica.com/Vahica_Interstitial', [[336, 280], [300, 250], [320, 480]], 'div-gpt-ad-1773725445265-0').addService(googletag.pubads());
     googletag.pubads().enableSingleRequest();
     googletag.enableServices();

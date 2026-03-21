@@ -26,7 +26,7 @@ export default function StoryPaginaClient({
 
   const optimizarImagenCloudinary = (url: string) => {
     if (!url || !url.includes("res.cloudinary.com")) return url;
-    return url.replace("/upload/", "/upload/w_600,c_fit,q_auto/");
+    return url.replace("/upload/", "/upload/h_550,c_fit,q_auto/");
   };
 
   const first = parrafos[0];
@@ -36,6 +36,11 @@ export default function StoryPaginaClient({
     <div className="mx-auto flex max-w-6xl gap-6 px-4 py-6">
       <main className="min-w-0 md:w-3/4">
         <h1 className="font-serif text-2xl font-bold text-[var(--negro)]">{storyTitulo}</h1>
+
+        <div className="my-4 rounded border border-[var(--negro)]/10 p-3 flex flex-col items-center">
+          <p className="mb-2 text-center text-xs text-[var(--negro)]/30 tracking-widest">-- ANUNCIO --</p>
+          <AdXSlot slotId="div-gpt-ad-1774064935710-0" minWidth={728} minHeight={90} />
+        </div>
 
         {imagenUrl && (
           <div className="relative mt-4 w-full">
