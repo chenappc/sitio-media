@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import Image from "next/image";
 import type { Bloque } from "@/lib/types";
 import AdXSlot from "@/components/AdXSlot";
 import EspecialAdSlot from "./EspecialAdSlot";
@@ -139,19 +138,16 @@ export default function EspecialInfiniteScroll({
                   )}
 
                   {imagenUrl && (
-                    <div className="relative w-full">
-                      <Image
+                    <div className="relative mt-4 w-full flex justify-center">
+                      <img
                         src={optimizarImagenCloudinary(imagenUrl)}
                         alt={page.titulo_item || `Página ${page.numero}`}
-                        width={600}
-                        height={600}
-                        className="h-auto w-full"
-                        priority={page.numero === initialNumero}
+                        style={{ maxHeight: "550px", width: "auto", maxWidth: "100%" }}
                       />
                     </div>
                   )}
 
-                  <div className="my-2">
+                  <div className="my-2 max-w-full overflow-hidden rounded border border-[var(--negro)]/10 p-3 flex flex-col items-center">
                     <EspecialAdSlot numero={page.numero} kind="top" />
                   </div>
 
@@ -161,7 +157,7 @@ export default function EspecialInfiniteScroll({
                     </p>
                   ))}
 
-                  <div className="mt-6">
+                  <div className="mt-6 max-w-full overflow-hidden rounded border border-[var(--negro)]/10 p-3 flex flex-col items-center">
                     <EspecialAdSlot numero={page.numero} kind="bottom" />
                   </div>
                 </div>

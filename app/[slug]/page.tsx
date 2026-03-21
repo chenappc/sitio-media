@@ -105,7 +105,7 @@ export default async function NotaPage({ params }: Props) {
           </div>
         )}
 
-        <div className="my-4">
+        <div className="my-4 max-w-full overflow-hidden rounded border border-[var(--negro)]/10 p-3 flex flex-col items-center">
           <AdXSlot slotId="div-gpt-ad-1774066671869-0" />
         </div>
 
@@ -121,7 +121,7 @@ export default async function NotaPage({ params }: Props) {
         )}
         {cuerpoTail && (
           <>
-            <div className="my-6">
+            <div className="my-6 max-w-full overflow-hidden rounded border border-[var(--negro)]/10 p-3 flex flex-col items-center">
               <AdXSlot slotId="div-gpt-ad-1774066837194-0" />
             </div>
             <div
@@ -130,7 +130,7 @@ export default async function NotaPage({ params }: Props) {
             />
           </>
         )}
-        <div className="mt-8">
+        <div className="mt-8 max-w-full overflow-hidden rounded border border-[var(--negro)]/10 p-3 flex flex-col items-center">
           <AdXSlot slotId="div-gpt-ad-1774066088689-0" />
         </div>
 
