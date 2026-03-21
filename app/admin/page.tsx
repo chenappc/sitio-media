@@ -3,6 +3,7 @@ import { getTodasLasNotas, getTotalNotas } from "@/lib/notas";
 import NotasList from "./NotasList";
 import CandidatosLink from "./CandidatosLink";
 import CerrarSesionBtn from "./CerrarSesionBtn";
+import AdminNotasIdiomaBar from "./AdminNotasIdiomaBar";
 
 const NOTAS_PER_PAGE = 20;
 
@@ -59,6 +60,8 @@ export default async function AdminPage({ searchParams }: Props) {
           </div>
         </div>
       </div>
+
+      <AdminNotasIdiomaBar />
 
       <NotasList
         notas={notas}
