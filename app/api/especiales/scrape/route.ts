@@ -641,6 +641,49 @@ ${JSON.stringify(payload)}`,
             } catch {
               // keep original
             }
+          } else if (idioma === "original" && (item.titulo || parrafos.length > 0)) {
+            try {
+              enq({ mensaje: `Claude: curando ítem ${numero} en idioma original...` });
+              const payload = { titulo: item.titulo, parrafos };
+              const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-api-key": anthropicKeyStr,
+                  "anthropic-version": "2023-06-01",
+                },
+                body: JSON.stringify({
+                  model: "claude-haiku-4-5-20251001",
+                  max_tokens: 2048,
+                  messages: [
+                    {
+                      role: "user",
+                      content: `${ADSENSE_FACEBOOK_RULE}
+Clean up and improve this content keeping the EXACT SAME LANGUAGE as the original. Fix grammar, remove noise, improve readability, keep the same meaning. Short catchy title. Return ONLY a JSON: { "titulo": "string", "parrafos": ["string", ...] }.
+${JSON.stringify(payload)}`,
+                    },
+                  ],
+                }),
+              });
+              const data = await claudeRes.json().catch(() => ({}));
+              const text = (data.content?.[0]?.text ?? "").trim();
+              const objMatch = text.match(/\{[\s\S]*\}/);
+              if (objMatch) {
+                const parsed = JSON.parse(objMatch[0]) as { titulo?: string; parrafos?: string[] };
+                if (typeof parsed.titulo === "string" && parsed.titulo.trim()) tituloItem = parsed.titulo.trim();
+                if (Array.isArray(parsed.parrafos)) parrafos = parsed.parrafos.filter((x): x is string => typeof x === "string");
+                let pi = 0;
+                bloques = item.bloques.map((b) => {
+                  if (b.tipo === "parrafo") {
+                    const texto = parrafos[pi++] ?? b.texto;
+                    return { tipo: "parrafo" as const, texto };
+                  }
+                  return b;
+                });
+              }
+            } catch {
+              // keep original
+            }
           }
 
           let imagenUrl: string | null = null;
