@@ -9,11 +9,6 @@ import {
   setAdminSecret as saveAdminSecretToStorage,
 } from "../CerrarSesionBtn";
 import CerrarSesionBtn from "../CerrarSesionBtn";
-import {
-  loadIdiomaNotasFromStorage,
-  saveIdiomaNotasToStorage,
-  type IdiomaNotas,
-} from "../IdiomaNotasSelect";
 
 const PAISES = [
   { value: "general", label: "General" },
@@ -23,6 +18,26 @@ const PAISES = [
   { value: "co", label: "Colombia" },
   { value: "es", label: "España" },
 ] as const;
+
+type IdiomaCurar = "es" | "en" | "original";
+
+/** Misma clave que antes (IdiomaNotasSelect) para no perder la preferencia en sessionStorage. */
+const IDIOMA_CURAR_STORAGE_KEY = "vahica-admin-notas-idioma";
+
+function loadIdiomaCurarFromSession(): IdiomaCurar {
+  if (typeof window === "undefined") return "es";
+  const v = sessionStorage.getItem(IDIOMA_CURAR_STORAGE_KEY);
+  if (v === "en" || v === "original" || v === "es") return v;
+  return "es";
+}
+
+function saveIdiomaCurarToSession(v: IdiomaCurar) {
+  try {
+    sessionStorage.setItem(IDIOMA_CURAR_STORAGE_KEY, v);
+  } catch {
+    /* ignore */
+  }
+}
 
 const PROGRESS_STEPS: { label: string; percent: number }[] = [
   { label: "Obteniendo artículo...", percent: 25 },
@@ -50,7 +65,7 @@ function CurarPageContent() {
   const [mode, setMode] = useState<CurarMode>("url");
   const [url, setUrl] = useState("");
   const [pais, setPais] = useState("general");
-  const [idioma, setIdioma] = useState<IdiomaNotas>("es");
+  const [idioma, setIdioma] = useState<IdiomaCurar>("es");
   const [secret, setSecret] = useState("");
   const [loading, setLoading] = useState(false);
   const [progressStep, setProgressStep] = useState(0);
@@ -82,7 +97,7 @@ function CurarPageContent() {
   }, []);
 
   useEffect(() => {
-    setIdioma(loadIdiomaNotasFromStorage());
+    setIdioma(loadIdiomaCurarFromSession());
   }, []);
 
   useEffect(() => {
@@ -459,11 +474,8 @@ function CurarPageContent() {
           />
         </div>
 
-        <div className={`${styles.field} rounded-lg border border-[var(--negro)]/10 bg-white p-4 shadow-sm`}>
-          <label
-            htmlFor="admin-curar-idioma"
-            className="mb-1 block text-sm text-[var(--negro)]/70"
-          >
+        <div className={styles.field}>
+          <label htmlFor="admin-curar-idioma" className={styles.label}>
             Idioma
           </label>
           <select
@@ -471,11 +483,11 @@ function CurarPageContent() {
             name="idioma"
             value={idioma}
             onChange={(e) => {
-              const v = e.target.value as IdiomaNotas;
+              const v = e.target.value as IdiomaCurar;
               setIdioma(v);
-              saveIdiomaNotasToStorage(v);
+              saveIdiomaCurarToSession(v);
             }}
-            className={`${styles.select} w-full max-w-xs`}
+            className={styles.select}
           >
             <option value="es">Español (es)</option>
             <option value="en">English (en)</option>
