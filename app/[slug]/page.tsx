@@ -93,20 +93,17 @@ export default async function NotaPage({ params }: Props) {
         <p className="mt-2 text-sm text-[var(--negro)]/60">{formatHora(nota.fecha)}</p>
 
         {nota.imagen_url && (
-          <div className="relative mt-4 aspect-video w-full overflow-hidden rounded-lg bg-[var(--negro)]/5">
-            <Image
+          <div className="relative mt-4 w-full flex justify-center">
+            <img
               src={nota.imagen_url}
               alt={nota.imagen_alt ?? nota.titulo}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 75vw"
-              priority
+              style={{ maxHeight: "550px", width: "auto", maxWidth: "100%" }}
             />
           </div>
         )}
 
         <div className="my-4 max-w-full overflow-hidden rounded border border-[var(--negro)]/10 p-3 flex flex-col items-center">
-          <AdXSlot slotId="div-gpt-ad-1774066671869-0" />
+          <AdXSlot slotId="div-gpt-ad-1774066671869-0" showLabel />
         </div>
 
         <p className="mt-4 text-lg font-medium text-[var(--negro)]/90">{nota.entradilla}</p>
@@ -122,7 +119,7 @@ export default async function NotaPage({ params }: Props) {
         {cuerpoTail && (
           <>
             <div className="my-6 max-w-full overflow-hidden rounded border border-[var(--negro)]/10 p-3 flex flex-col items-center">
-              <AdXSlot slotId="div-gpt-ad-1774066837194-0" />
+              <AdXSlot slotId="div-gpt-ad-1774066837194-0" showLabel />
             </div>
             <div
               className={`prose prose-lg max-w-none prose-a:text-[var(--rojo)] prose-a:no-underline hover:prose-a:underline ${styles.cuerpo}`}
@@ -131,7 +128,7 @@ export default async function NotaPage({ params }: Props) {
           </>
         )}
         <div className="mt-8 max-w-full overflow-hidden rounded border border-[var(--negro)]/10 p-3 flex flex-col items-center">
-          <AdXSlot slotId="div-gpt-ad-1774066088689-0" />
+          <AdXSlot slotId="div-gpt-ad-1774066088689-0" showLabel />
         </div>
 
         {nota.fuente_url && (

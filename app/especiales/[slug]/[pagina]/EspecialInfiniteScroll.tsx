@@ -148,6 +148,7 @@ export default function EspecialInfiniteScroll({
                   )}
 
                   <div className="my-2 max-w-full overflow-hidden rounded border border-[var(--negro)]/10 p-3 flex flex-col items-center">
+                    <p className="mb-2 text-center text-xs font-normal text-[#aaaaaa]">-- ANUNCIO --</p>
                     <EspecialAdSlot numero={page.numero} kind="top" />
                   </div>
 
@@ -158,6 +159,7 @@ export default function EspecialInfiniteScroll({
                   ))}
 
                   <div className="mt-6 max-w-full overflow-hidden rounded border border-[var(--negro)]/10 p-3 flex flex-col items-center">
+                    <p className="mb-2 text-center text-xs font-normal text-[#aaaaaa]">-- ANUNCIO --</p>
                     <EspecialAdSlot numero={page.numero} kind="bottom" />
                   </div>
                 </div>
