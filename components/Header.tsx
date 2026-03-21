@@ -33,6 +33,15 @@ export default function Header() {
           <Link href="/especiales" className={`${styles.navLink} ${pathname?.startsWith("/especiales") ? styles.navLinkActive : ""}`}>
             Especiales
           </Link>
+          {pathname?.startsWith("/en") ? (
+            <Link href="/" className={styles.langLink} title="Ver en español">
+              ES
+            </Link>
+          ) : (
+            <Link href="/en" className={styles.langLink} title="English">
+              EN
+            </Link>
+          )}
         </div>
       </nav>
     </header>
