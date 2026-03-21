@@ -42,9 +42,10 @@ export default function StoryPaginaClient({
             <Image
               src={optimizarImagenCloudinary(imagenUrl)}
               alt={storyTitulo}
-              width={600}
-              height={600}
+              width={800}
+              height={550}
               className="h-auto w-full"
+              style={{ maxHeight: "550px", width: "100%", height: "auto" }}
               priority
             />
           </div>
@@ -66,10 +67,10 @@ export default function StoryPaginaClient({
           <AdXSlot slotId="gpt-vahica-single-bottom" />
         </div>
 
-        <nav className="mt-8 border-t border-[var(--negro)]/10 pt-6" aria-label="Navegación entre páginas">
-          <p className="mb-4 text-sm italic text-[var(--rojo)]">
-            Usa los botones rojos de abajo para avanzar o retroceder por las páginas de esta historia.
-          </p>
+        <p className="mb-4 mt-8 text-lg italic text-[var(--rojo)]">
+          Usa los botones rojos de abajo para avanzar o retroceder por las páginas de esta historia.
+        </p>
+        <nav className="border-t border-[var(--negro)]/10 pt-6" aria-label="Navegación entre páginas">
           {hasAnterior && hasSiguiente ? (
             <div className="flex gap-2">
               <Link
