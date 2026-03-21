@@ -53,7 +53,8 @@ export default function StoryPaginaClient({
 
         <div className="mt-6 space-y-6 text-[var(--negro)]">
           {first != null && <p className="text-xl leading-relaxed">{first}</p>}
-          <div className="my-4">
+          <div className="my-4 rounded border border-[var(--negro)]/10 p-3 flex flex-col items-center">
+            <p className="mb-2 text-center text-xs text-[var(--negro)]/30 tracking-widest">-- ANUNCIO --</p>
             <AdXSlot slotId="gpt-vahica-single-top" />
           </div>
           {rest.map((texto, i) => (
@@ -64,7 +65,10 @@ export default function StoryPaginaClient({
         </div>
 
         <div className="mt-8">
-          <AdXSlot slotId="gpt-vahica-single-bottom" />
+          <div className="my-4 rounded border border-[var(--negro)]/10 p-3 flex flex-col items-center">
+            <p className="mb-2 text-center text-xs text-[var(--negro)]/30 tracking-widest">-- ANUNCIO --</p>
+            <AdXSlot slotId="gpt-vahica-single-bottom" />
+          </div>
         </div>
 
         <p className="mb-4 mt-8 text-lg italic text-[var(--rojo)]">
