@@ -5,6 +5,7 @@ import cloudinary from "@/lib/cloudinary";
 import pool from "@/lib/db";
 import { createStory, addStoryPagina } from "@/lib/stories";
 import slugify from "slugify";
+import sharp from "sharp";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
 const UA = "Mozilla/5.0 (compatible; sitio-media-bot/1.0)";
@@ -382,7 +383,9 @@ Write ONLY the image generation prompt, nothing else, no preamble, no explanatio
             if (!imagePart?.inlineData?.data) throw new Error("Gemini no devolvió imagen");
 
             controller.enqueue(enc.encode(sseMessage({ mensaje: `Subiendo imagen a Cloudinary...` })));
-            const buf = Buffer.from(imagePart.inlineData.data, "base64");
+            const buf = await sharp(Buffer.from(imagePart.inlineData.data, "base64"))
+              .resize({ height: 550, fit: "inside", withoutEnlargement: true })
+              .toBuffer();
             imagenUrl = await new Promise<string>((resolve, reject) => {
               const uploadStream = cloudinary.uploader.upload_stream(
                 { folder: "sitio-media/stories" },
@@ -408,7 +411,9 @@ Write ONLY the image generation prompt, nothing else, no preamble, no explanatio
             try {
               controller.enqueue(enc.encode(sseMessage({ mensaje: `Usando imagen original como fallback...` })));
               const imgBuf = await fetch(imagenPrincipal, { headers: { "User-Agent": UA } }).then((r) => r.arrayBuffer());
-              const buf = Buffer.from(imgBuf);
+              const buf = await sharp(Buffer.from(imgBuf))
+                .resize({ height: 550, fit: "inside", withoutEnlargement: true })
+                .toBuffer();
               imagenUrl = await new Promise<string>((resolve, reject) => {
                 const uploadStream = cloudinary.uploader.upload_stream(
                   { folder: "sitio-media/stories" },
