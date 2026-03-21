@@ -5,7 +5,6 @@ import { useEffect } from "react";
 type Props = {
   slotId: string;
   minWidth?: number;
-  minHeight?: number;
   /** Muestra el rótulo centrado “-- ANUNCIO --” encima del slot (estilo secundario, discreto). */
   showLabel?: boolean;
 };
@@ -13,7 +12,6 @@ type Props = {
 export default function AdXSlot({
   slotId,
   minWidth = 300,
-  minHeight = 250,
   showLabel = false,
 }: Props) {
   useEffect(() => {
@@ -30,7 +28,7 @@ export default function AdXSlot({
     }
   }, [slotId]);
 
-  const slot = <div id={slotId} style={{ minWidth, minHeight }} />;
+  const slot = <div id={slotId} style={{ minWidth }} />;
 
   if (!showLabel) {
     return slot;
