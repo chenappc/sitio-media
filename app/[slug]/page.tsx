@@ -106,7 +106,7 @@ export default async function NotaPage({ params }: Props) {
         )}
 
         <div className="my-4">
-          <AdXSlot slotId="gpt-vahica-single-top" />
+          <AdXSlot slotId="div-gpt-ad-1774066671869-0" />
         </div>
 
         <p className="mt-4 text-lg font-medium text-[var(--negro)]/90">{nota.entradilla}</p>
@@ -122,7 +122,7 @@ export default async function NotaPage({ params }: Props) {
         {cuerpoTail && (
           <>
             <div className="my-6">
-              <AdXSlot slotId="gpt-vahica-single-middle" />
+              <AdXSlot slotId="div-gpt-ad-1774066837194-0" />
             </div>
             <div
               className={`prose prose-lg max-w-none prose-a:text-[var(--rojo)] prose-a:no-underline hover:prose-a:underline ${styles.cuerpo}`}
@@ -131,7 +131,7 @@ export default async function NotaPage({ params }: Props) {
           </>
         )}
         <div className="mt-8">
-          <AdXSlot slotId="gpt-vahica-single-bottom" />
+          <AdXSlot slotId="div-gpt-ad-1774066088689-0" />
         </div>
 
         {nota.fuente_url && (
