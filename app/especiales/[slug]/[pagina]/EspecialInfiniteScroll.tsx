@@ -142,7 +142,7 @@ export default function EspecialInfiniteScroll({
                       <img
                         src={optimizarImagenCloudinary(imagenUrl)}
                         alt={page.titulo_item || `Página ${page.numero}`}
-                        style={{ maxHeight: "550px", width: "auto", maxWidth: "100%" }}
+                        style={{ maxHeight: "485px", width: "auto", maxWidth: "100%" }}
                       />
                     </div>
                   )}
