@@ -92,15 +92,13 @@ export default async function NotaPage({ params }: Props) {
         </h1>
         <p className="mt-2 text-sm text-[var(--negro)]/60">{formatHora(nota.fecha)}</p>
 
-        {nota.imagen_url && (
-          <div className="relative mt-4 w-full flex justify-center">
-            <img
-              src={nota.imagen_url ?? ""}
-              alt={nota.imagen_alt ?? nota.titulo}
-              style={{ maxHeight: "550px", width: "auto", maxWidth: "100%" }}
-            />
-          </div>
-        )}
+        <div className="relative mt-4 w-full flex justify-center">
+          <img
+            src={nota.imagen_url ?? ""}
+            alt={nota.imagen_alt ?? nota.titulo}
+            style={{ maxHeight: "550px", width: "auto", maxWidth: "100%" }}
+          />
+        </div>
 
         <div className="my-4 max-w-full overflow-hidden rounded border border-[var(--negro)]/10 p-3 flex flex-col items-center">
           <AdXSlot slotId="div-gpt-ad-1774066671869-0" showLabel />
