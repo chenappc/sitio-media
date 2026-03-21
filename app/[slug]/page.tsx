@@ -96,7 +96,7 @@ export default async function NotaPage({ params }: Props) {
           <img
             src={nota.imagen_url ?? ""}
             alt={nota.imagen_alt ?? nota.titulo}
-            style={{ maxHeight: "550px", width: "auto", maxWidth: "100%" }}
+            style={{ maxHeight: "550px", maxWidth: "728px", width: "100%", height: "auto" }}
           />
         </div>
 
