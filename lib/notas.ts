@@ -5,7 +5,7 @@ import type { Nota } from "./types";
 export async function getTotalNotasPublicadas(): Promise<number> {
   try {
     const res = await pool.query<{ count: string }>(
-      "SELECT COUNT(*) AS count FROM notas WHERE publicado = true"
+      "SELECT COUNT(*) AS count FROM notas WHERE publicado = true AND (idioma = 'es' OR idioma IS NULL)"
     );
     return parseInt(res.rows[0]?.count ?? "0", 10);
   } catch {
@@ -23,7 +23,7 @@ export async function getNotasPublicadas(opts: {
       `SELECT id, slug, titulo, entradilla, cuerpo, imagen_url, imagen2_url, imagen_alt,
               fuente_nombre, fuente_url, shares_buzzsumo, pais, publicado, fecha
        FROM notas
-       WHERE publicado = true
+       WHERE publicado = true AND (idioma = 'es' OR idioma IS NULL)
        ORDER BY fecha DESC
        LIMIT $1 OFFSET $2`,
       [limit, offset]
