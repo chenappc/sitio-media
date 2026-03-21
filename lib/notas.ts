@@ -47,14 +47,13 @@ export async function getTotalNotasPublicadasPorIdioma(idioma: string): Promise<
   }
 }
 
-export async function getNotasPublicadasPorIdioma(
-  idioma: string,
-  pagina: number,
-  porPagina: number
-): Promise<Nota[]> {
+export async function getNotasPublicadasPorIdioma(opts: {
+  limit: number;
+  offset?: number;
+  idioma: string;
+}): Promise<Nota[]> {
   try {
-    const limit = porPagina;
-    const offset = (pagina - 1) * porPagina;
+    const { limit, offset = 0, idioma } = opts;
     const res = await pool.query<Nota>(
       `SELECT id, slug, titulo, entradilla, cuerpo, imagen_url, imagen2_url, imagen_alt,
               fuente_nombre, fuente_url, shares_buzzsumo, pais, publicado, fecha, idioma
