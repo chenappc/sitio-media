@@ -9,6 +9,11 @@ import {
   setAdminSecret as saveAdminSecretToStorage,
 } from "../CerrarSesionBtn";
 import CerrarSesionBtn from "../CerrarSesionBtn";
+import {
+  loadIdiomaNotasFromStorage,
+  saveIdiomaNotasToStorage,
+  type IdiomaNotas,
+} from "../IdiomaNotasSelect";
 
 const PAISES = [
   { value: "general", label: "General" },
@@ -45,6 +50,7 @@ function CurarPageContent() {
   const [mode, setMode] = useState<CurarMode>("url");
   const [url, setUrl] = useState("");
   const [pais, setPais] = useState("general");
+  const [idioma, setIdioma] = useState<IdiomaNotas>("es");
   const [secret, setSecret] = useState("");
   const [loading, setLoading] = useState(false);
   const [progressStep, setProgressStep] = useState(0);
@@ -56,6 +62,8 @@ function CurarPageContent() {
   const [manualImage2Base64, setManualImage2Base64] = useState<string | null>(null);
   const [published, setPublished] = useState(false);
   const [createdSlug, setCreatedSlug] = useState<string | null>(null);
+  /** Borrador creado por POST /api/notas/scrape (publicado: false). */
+  const [draftNotaId, setDraftNotaId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileInput2Ref = useRef<HTMLInputElement>(null);
 
@@ -71,6 +79,10 @@ function CurarPageContent() {
   useEffect(() => {
     const saved = getStoredAdminSecret();
     if (saved) setSecret(saved);
+  }, []);
+
+  useEffect(() => {
+    setIdioma(loadIdiomaNotasFromStorage());
   }, []);
 
   useEffect(() => {
@@ -99,6 +111,7 @@ function CurarPageContent() {
     e.preventDefault();
     setError(null);
     setPreview(null);
+    setDraftNotaId(null);
     setManualImageBase64(null);
     setManualImage2Base64(null);
     if (mode === "manual") {
@@ -117,16 +130,18 @@ function CurarPageContent() {
     try {
       const body =
         mode === "url"
-          ? { url: url.trim(), pais }
+          ? { url: url.trim(), pais, idioma, publicado: false }
           : {
               texto: manualTexto.trim(),
               fuente_nombre: manualFuenteNombre.trim(),
               fuente_url: manualFuenteUrl.trim(),
               pais,
+              idioma,
+              publicado: false,
               imagenBase64: manualModeFoto1Base64,
               ...(manualModeFoto2Base64 && { imagen2Base64: manualModeFoto2Base64 }),
             };
-      const res = await fetch("/api/curar", {
+      const res = await fetch("/api/notas/scrape", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -145,7 +160,19 @@ function CurarPageContent() {
       }
       setError(null);
       saveAdminSecretToStorage(secret);
-      setPreview(data);
+      const id = typeof data?.id === "number" ? data.id : null;
+      setDraftNotaId(id);
+      setPreview({
+        titulo: String(data.titulo ?? ""),
+        cuerpo: String(data.cuerpo ?? ""),
+        entradilla: String(data.entradilla ?? ""),
+        imagen_url: data.imagen_url != null ? String(data.imagen_url) : null,
+        imagen2_url: data.imagen2_url != null ? String(data.imagen2_url) : null,
+        fuente_nombre:
+          data.fuente_nombre != null ? String(data.fuente_nombre) : undefined,
+        fuente_url: String(data.fuente_url ?? ""),
+        pais: String(data.pais ?? "general"),
+      });
       setManualImageBase64(null);
       setManualImage2Base64(null);
       setTimeout(() => setLoading(false), 500);
@@ -230,6 +257,104 @@ function CurarPageContent() {
             return "Fuente";
           }
         })();
+
+      // imagen2 manual: POST /api/notas admite imagen2Base64; PUT no. Se borra el borrador y se crea la nota publicada.
+      if (draftNotaId != null && manualImage2Base64) {
+        await fetch(`/api/notas/${draftNotaId}`, {
+          method: "DELETE",
+          headers: { "x-admin-secret": secret },
+        });
+        setDraftNotaId(null);
+        const body: Record<string, unknown> = {
+          titulo: preview.titulo,
+          entradilla,
+          cuerpo: preview.cuerpo,
+          imagen_alt: preview.titulo,
+          fuente_nombre: fuenteNombre,
+          fuente_url: preview.fuente_url,
+          shares_buzzsumo: 0,
+          pais: preview.pais,
+          publicado: true,
+          idioma,
+        };
+        if (manualImageBase64) {
+          body.imagenBase64 = manualImageBase64;
+        } else {
+          body.imagen_url = preview.imagen_url || undefined;
+        }
+        body.imagen2Base64 = manualImage2Base64;
+        const res = await fetch("/api/notas", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-secret": secret,
+          },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setError(data.error ?? `Error ${res.status}`);
+          return;
+        }
+        saveAdminSecretToStorage(secret);
+        setCreatedSlug(data.slug ?? null);
+        setPublished(true);
+        return;
+      }
+
+      let imagenUrlParaPut: string | null | undefined =
+        preview.imagen_url ?? undefined;
+      if (draftNotaId != null && manualImageBase64) {
+        const form = new FormData();
+        const blob = await (await fetch(manualImageBase64)).blob();
+        form.append("file", blob, "cover.jpg");
+        form.append("notaId", String(draftNotaId));
+        const up = await fetch("/api/notas/upload-imagen", {
+          method: "POST",
+          headers: { "x-admin-secret": secret },
+          body: form,
+        });
+        const upData = await up.json().catch(() => ({}));
+        if (!up.ok) {
+          setError(upData.error ?? "Error al subir la imagen principal");
+          return;
+        }
+        if (typeof upData.imagen_url === "string") {
+          imagenUrlParaPut = upData.imagen_url;
+        }
+      }
+
+      if (draftNotaId != null) {
+        const res = await fetch(`/api/notas/${draftNotaId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-secret": secret,
+          },
+          body: JSON.stringify({
+            titulo: preview.titulo,
+            entradilla,
+            cuerpo: preview.cuerpo,
+            imagen_url: imagenUrlParaPut ?? null,
+            imagen_alt: preview.titulo,
+            fuente_nombre: fuenteNombre,
+            fuente_url: preview.fuente_url,
+            shares_buzzsumo: 0,
+            pais: preview.pais,
+            publicado: true,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setError(data.error ?? `Error ${res.status}`);
+          return;
+        }
+        saveAdminSecretToStorage(secret);
+        setCreatedSlug(data.slug ?? null);
+        setPublished(true);
+        return;
+      }
+
       const body: Record<string, unknown> = {
         titulo: preview.titulo,
         entradilla,
@@ -240,6 +365,7 @@ function CurarPageContent() {
         shares_buzzsumo: 0,
         pais: preview.pais,
         publicado: true,
+        idioma,
       };
       if (manualImageBase64) {
         body.imagenBase64 = manualImageBase64;
@@ -331,6 +457,30 @@ function CurarPageContent() {
             onChange={(e) => setSecret(e.target.value)}
             className={styles.input}
           />
+        </div>
+
+        <div className={`${styles.field} rounded-lg border border-[var(--negro)]/10 bg-white p-4 shadow-sm`}>
+          <label
+            htmlFor="admin-curar-idioma"
+            className="mb-1 block text-sm text-[var(--negro)]/70"
+          >
+            Idioma
+          </label>
+          <select
+            id="admin-curar-idioma"
+            name="idioma"
+            value={idioma}
+            onChange={(e) => {
+              const v = e.target.value as IdiomaNotas;
+              setIdioma(v);
+              saveIdiomaNotasToStorage(v);
+            }}
+            className={`${styles.select} w-full max-w-xs`}
+          >
+            <option value="es">Español (es)</option>
+            <option value="en">English (en)</option>
+            <option value="original">Idioma original</option>
+          </select>
         </div>
 
         {mode === "url" ? (
