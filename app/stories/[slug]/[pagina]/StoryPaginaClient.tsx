@@ -34,11 +34,10 @@ export default function StoryPaginaClient({
   return (
     <div className="mx-auto flex max-w-6xl gap-6 px-4 py-6">
       <main className="min-w-0 md:w-3/4">
-        <h1 className="font-serif text-2xl font-bold text-[var(--negro)]">{storyTitulo}</h1>
+        <h1 className="font-serif text-2xl font-bold text-[var(--negro)] md:text-4xl">{storyTitulo}</h1>
 
         <div className="my-4 rounded border border-[var(--negro)]/10 p-3 flex flex-col items-center">
-          <p className="mb-2 text-center text-xs text-[var(--negro)]/30 tracking-widest">-- ANUNCIO --</p>
-          <AdXSlot slotId="div-gpt-ad-1774064935710-0" minWidth={728} minHeight={90} />
+          <AdXSlot slotId="div-gpt-ad-1774064935710-0" minWidth={728} minHeight={90} showLabel />
         </div>
 
         {imagenUrl && (
@@ -54,8 +53,7 @@ export default function StoryPaginaClient({
         <div className="mt-6 space-y-6 text-[var(--negro)]">
           {first != null && <p className="text-xl leading-relaxed">{first}</p>}
           <div className="my-4 rounded border border-[var(--negro)]/10 p-3 flex flex-col items-center">
-            <p className="mb-2 text-center text-xs text-[var(--negro)]/30 tracking-widest">-- ANUNCIO --</p>
-            <AdXSlot slotId="gpt-vahica-single-top" />
+            <AdXSlot slotId="gpt-vahica-single-top" showLabel />
           </div>
           {rest.map((texto, i) => (
             <p key={i} className="text-xl leading-relaxed">
@@ -66,8 +64,7 @@ export default function StoryPaginaClient({
 
         <div className="mt-8">
           <div className="my-4 rounded border border-[var(--negro)]/10 p-3 flex flex-col items-center">
-            <p className="mb-2 text-center text-xs text-[var(--negro)]/30 tracking-widest">-- ANUNCIO --</p>
-            <AdXSlot slotId="gpt-vahica-single-bottom" />
+            <AdXSlot slotId="gpt-vahica-single-bottom" showLabel />
           </div>
         </div>
 
