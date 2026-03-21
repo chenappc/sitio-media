@@ -21,6 +21,59 @@ function filterParrafos(arr: string[]): string[] {
   });
 }
 
+type StoryIdioma = "es" | "en" | "original";
+
+/** Prompt Claude para reescritura/límpieza según idioma (body.idioma del scraper). */
+function buildStoryClaudeRewritePrompt(
+  idioma: StoryIdioma,
+  titulo: string,
+  parrafosFiltrados: string[],
+): string {
+  if (titulo) {
+    const payload = { titulo, parrafos: parrafosFiltrados };
+    if (idioma === "es") {
+      return `Reescribí el título y los párrafos siguientes en español neutro latinoamericano (como en especiales: natural para lectores de cualquier país de América Latina; usá "ustedes" en lugar de "vosotros", conjugaciones sin voseo español peninsular).
+
+TÍTULO (obligatorio):
+- Reescribí el título por completo en español neutro latinoamericano, no copies el original.
+- El título debe tener sentido propio sin conocer la historia (el lector no sabe de qué trata).
+- Debe ser intrigante y generar curiosidad, estilo viral.
+- Máximo 12 palabras.
+- No uses el nombre del sitio fuente ni la URL.
+
+PÁRRAFOS:
+- Mantené el hilo narrativo en español neutro latinoamericano. No copies el texto original; reescribilo con tus propias palabras manteniendo hechos y secuencia.
+
+Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": ["string", ...] }.\n\n${JSON.stringify(payload)}`;
+    }
+    if (idioma === "en") {
+      return `Rewrite the title and the following paragraphs.
+
+TITLE (required):
+- Rewrite the title completely; do not copy the original.
+- The title must make sense on its own (the reader does not know the story yet).
+- Intriguing, viral-style hook.
+- Maximum 12 words.
+- Do not use the source site name or URL.
+
+PARAGRAPHS:
+- Keep the narrative thread. Do not copy the original text; rewrite in your own words while preserving facts and sequence.
+
+Return ONLY valid JSON with this shape: { "titulo": "string", "parrafos": ["string", ...] }.\n\n${JSON.stringify(payload)}`;
+    }
+    return `Clean up and improve the title and paragraphs below, keeping the EXACT SAME LANGUAGE as the source. Fix grammar, remove noise, improve readability. Do not translate to another language.
+
+Return ONLY valid JSON with this shape: { "titulo": "string", "parrafos": ["string", ...] }.\n\n${JSON.stringify(payload)}`;
+  }
+  if (idioma === "es") {
+    return `Reescribí estos párrafos en español neutro latinoamericano manteniendo el hilo narrativo. No copies el texto original; reescribilo con tus propias palabras manteniendo hechos y secuencia. Devolvé SOLO un JSON array de strings: ["párrafo1", "párrafo2", ...].\n\n${JSON.stringify(parrafosFiltrados)}`;
+  }
+  if (idioma === "en") {
+    return `Rewrite these paragraphs while keeping the narrative thread. Do not copy the original text; rewrite in your own words while preserving facts and sequence. Return ONLY a JSON array of strings: ["paragraph1", "paragraph2", ...].\n\n${JSON.stringify(parrafosFiltrados)}`;
+  }
+  return `Clean up and improve these paragraphs, keeping the EXACT SAME LANGUAGE as the source. Fix grammar, remove noise, improve readability. Do not translate. Return ONLY a JSON array of strings: ["paragraph1", "paragraph2", ...].\n\n${JSON.stringify(parrafosFiltrados)}`;
+}
+
 function auth(req: NextRequest): boolean {
   const secret = req.headers.get("x-admin-secret");
   return !!ADMIN_SECRET && secret === ADMIN_SECRET;
@@ -39,6 +92,7 @@ export async function POST(req: NextRequest) {
   let paginaInicio: number;
   let paginaFin: number;
   let sinImagenesIa = false;
+  let idioma: StoryIdioma = "es";
   let initialStoryId: number | null = null;
   let initialStorySlug: string = "";
   try {
@@ -47,6 +101,11 @@ export async function POST(req: NextRequest) {
     paginaInicio = Math.max(1, parseInt(String(body.paginaInicio ?? 1), 10) || 1);
     paginaFin = Math.max(paginaInicio, parseInt(String(body.paginaFin ?? 1), 10) || 1);
     sinImagenesIa = Boolean(body.sinImagenesIa);
+    {
+      let id = String(body.idioma ?? "es").trim().toLowerCase();
+      if (id !== "es" && id !== "en" && id !== "original") id = "es";
+      idioma = id as StoryIdioma;
+    }
     if (!urlBase) {
       return NextResponse.json({ error: "Falta urlBase" }, { status: 400 });
     }
@@ -162,24 +221,7 @@ export async function POST(req: NextRequest) {
           let parrafos: string[] = parrafosFiltrados;
           if (parrafosFiltrados.length > 0 || titulo) {
             try {
-              const payload = titulo
-                ? { titulo, parrafos: parrafosFiltrados }
-                : { parrafos: parrafosFiltrados };
-              const prompt = titulo
-                ? `Reescribí el título y los párrafos siguientes.
-
-TÍTULO (obligatorio):
-- Reescribí el título por completo, no copies el original.
-- El título debe tener sentido propio sin conocer la historia (el lector no sabe de qué trata).
-- Debe ser intrigante y generar curiosidad, estilo viral.
-- Máximo 12 palabras.
-- No uses el nombre del sitio fuente ni la URL.
-
-PÁRRAFOS:
-- Mantené el hilo narrativo. No copies el texto original; reescribilo con tus propias palabras manteniendo hechos y secuencia.
-
-Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": ["string", ...] }.\n\n${JSON.stringify(payload)}`
-                : `Reescribí estos párrafos manteniendo el hilo narrativo. No copies el texto original; reescribilo con tus propias palabras manteniendo hechos y secuencia. Devolvé SOLO un JSON array de strings: ["párrafo1", "párrafo2", ...].\n\n${JSON.stringify(parrafosFiltrados)}`;
+              const prompt = buildStoryClaudeRewritePrompt(idioma, titulo, parrafosFiltrados);
               const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
                 method: "POST",
                 headers: {
@@ -235,7 +277,13 @@ Devolvé SOLO un JSON válido con esta forma: { "titulo": "string", "parrafos": 
             slug = `${baseSlug}-${n}`;
           }
           storySlug = slug;
-          storyId = await createStory(slug, first.tituloRewritten || `Story ${paginaInicio}`, total, urlBase || null);
+          storyId = await createStory(
+            slug,
+            first.tituloRewritten || `Story ${paginaInicio}`,
+            total,
+            urlBase || null,
+            idioma
+          );
         }
 
         async function generarImagenYSubir(page: PageData): Promise<{ imagenUrl: string | null }> {
