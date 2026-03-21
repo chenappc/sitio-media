@@ -39,10 +39,22 @@ export const metadata: Metadata = {
 const GPT_INIT = `
   window.googletag = window.googletag || { cmd: [] };
   googletag.cmd.push(function () {
-    googletag.defineSlot('/186299052/Vahica.com/Vahica_Single_Top', [[300, 250], 'fluid'], 'gpt-vahica-single-top').addService(googletag.pubads());
-    googletag.defineSlot('/186299052/Vahica.com/Vahica_Single_Bottom', [[300, 250], 'fluid'], 'gpt-vahica-single-bottom').addService(googletag.pubads());
+    var responsiveMapping = googletag.sizeMapping()
+      .addSize([1024, 0], [[970, 250], [728, 90]])
+      .addSize([768, 0], [[728, 90]])
+      .addSize([0, 0], [[336, 280], [300, 250]])
+      .build();
+
+    googletag.defineSlot('/186299052/Vahica.com/Vahica_Single_Top', [[336, 280], [300, 250], [728, 90], [970, 250]], 'div-gpt-ad-1774066671869-0')
+      .defineSizeMapping(responsiveMapping).addService(googletag.pubads());
+
+    googletag.defineSlot('/186299052/Vahica.com/Vahica_Single_Middle', [[336, 280], [300, 250], [728, 90], [970, 250]], 'div-gpt-ad-1774066837194-0')
+      .defineSizeMapping(responsiveMapping).addService(googletag.pubads());
+
+    googletag.defineSlot('/186299052/Vahica.com/Vahica_Single_Bottom', [[336, 280], [300, 250], [728, 90], [970, 250]], 'div-gpt-ad-1774066088689-0')
+      .defineSizeMapping(responsiveMapping).addService(googletag.pubads());
+
     googletag.defineSlot('/186299052/Vahica.com/Vahica_Single_Left', [300, 600], 'gpt-vahica-single-left').addService(googletag.pubads());
-    googletag.defineSlot('/186299052/Vahica.com/Vahica_Single_Middle', [[300, 250], 'fluid'], 'gpt-vahica-single-middle').addService(googletag.pubads());
     googletag.defineSlot('/186299052/Vahica.com/Vahica_Single_Right', [300, 600], 'gpt-vahica-single-right').addService(googletag.pubads());
     googletag.defineSlot('/186299052/Vahica.com/Vahica_Single_Horizontal', [728, 90], 'div-gpt-ad-1774064935710-0').addService(googletag.pubads());
     googletag.defineSlot('/186299052/Vahica.com/Vahica_Interstitial', [[336, 280], [300, 250], [320, 480]], 'div-gpt-ad-1773725445265-0').addService(googletag.pubads());
