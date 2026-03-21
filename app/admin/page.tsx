@@ -1,11 +1,14 @@
 import Link from "next/link";
+import Script from "next/script";
 import { getTodasLasNotas, getTotalNotas } from "@/lib/notas";
 import NotasList from "./NotasList";
 import CandidatosLink from "./CandidatosLink";
 import CerrarSesionBtn from "./CerrarSesionBtn";
-import AdminNotasIdiomaBar from "./AdminNotasIdiomaBar";
 
 const NOTAS_PER_PAGE = 20;
+
+/** Misma clave que en IdiomaNotasSelect (Curar con IA). */
+const IDIOMA_NOTAS_STORAGE_KEY = "vahica-admin-notas-idioma";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -61,7 +64,28 @@ export default async function AdminPage({ searchParams }: Props) {
         </div>
       </div>
 
-      <AdminNotasIdiomaBar />
+      <div className="mb-6 rounded-lg border border-[var(--negro)]/10 bg-white p-4 shadow-sm">
+        <label
+          htmlFor="admin-notas-idioma"
+          className="mb-1 block text-sm text-[var(--negro)]/70"
+        >
+          Idioma
+        </label>
+        <select
+          id="admin-notas-idioma"
+          name="idioma"
+          defaultValue="es"
+          className="w-full max-w-xs rounded border border-[var(--negro)]/20 px-3 py-2 text-sm"
+          suppressHydrationWarning
+        >
+          <option value="es">Español (es)</option>
+          <option value="en">English (en)</option>
+          <option value="original">Idioma original</option>
+        </select>
+        <Script id="sync-admin-notas-idioma" strategy="afterInteractive">
+          {`(function(){var k=${JSON.stringify(IDIOMA_NOTAS_STORAGE_KEY)};var s=document.getElementById("admin-notas-idioma");if(!s)return;try{var v=sessionStorage.getItem(k);if(v==="en"||v==="original"||v==="es")s.value=v;}catch(e){}s.addEventListener("change",function(){try{sessionStorage.setItem(k,s.value);}catch(e){}});})();`}
+        </Script>
+      </div>
 
       <NotasList
         notas={notas}
