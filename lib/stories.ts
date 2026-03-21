@@ -83,18 +83,56 @@ export async function getStoryPagina(
   }
 }
 
+/** Igual que getStoryPagina pero la story debe tener el idioma indicado (p. ej. feed /en/stories/...). */
+export async function getStoryPaginaYIdioma(
+  slug: string,
+  pagina: number,
+  idioma: string
+): Promise<{ story: Story | null; pagina: StoryPagina | null }> {
+  try {
+    const storyRes = await pool.query<Story>(
+      `SELECT id, slug, titulo, status, total_paginas, url_base, created_at, updated_at, idioma
+       FROM stories
+       WHERE slug = $1 AND idioma = $2`,
+      [slug, idioma]
+    );
+    const story = storyRes.rows[0] ?? null;
+    if (!story) return { story: null, pagina: null };
+
+    const paginaRes = await pool.query<StoryPagina & { parrafos: string }>(
+      `SELECT id, story_id, numero, imagen_url, parrafos, created_at
+       FROM story_paginas
+       WHERE story_id = $1 AND numero = $2`,
+      [story.id, pagina]
+    );
+    const row = paginaRes.rows[0];
+    if (!row) return { story, pagina: null };
+
+    const paginaStory: StoryPagina = {
+      ...row,
+      parrafos: typeof row.parrafos === "string" ? JSON.parse(row.parrafos) : row.parrafos,
+    };
+    return { story, pagina: paginaStory };
+  } catch {
+    return { story: null, pagina: null };
+  }
+}
+
 /** Crea una story y devuelve su id. */
 export async function createStory(
   slug: string,
   titulo: string,
   totalPaginas: number,
-  urlBase?: string | null
+  urlBase?: string | null,
+  idioma?: string
 ): Promise<number> {
+  let idiomaNorm = String(idioma ?? "es").trim().toLowerCase();
+  if (idiomaNorm !== "es" && idiomaNorm !== "en" && idiomaNorm !== "original") idiomaNorm = "es";
   const res = await pool.query<{ id: number }>(
-    `INSERT INTO stories (slug, titulo, status, total_paginas, url_base)
-     VALUES ($1, $2, 'draft', $3, $4)
+    `INSERT INTO stories (slug, titulo, status, total_paginas, url_base, idioma)
+     VALUES ($1, $2, 'draft', $3, $4, $5)
      RETURNING id`,
-    [slug, titulo, totalPaginas, urlBase ?? null]
+    [slug, titulo, totalPaginas, urlBase ?? null, idiomaNorm]
   );
   return res.rows[0].id;
 }
