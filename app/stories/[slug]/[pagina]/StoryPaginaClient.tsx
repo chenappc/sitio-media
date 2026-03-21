@@ -10,6 +10,8 @@ type Props = {
   storyTitulo: string;
   imagenUrl: string | null;
   parrafos: string[];
+  /** Base de ruta para enlaces; default "/stories". Usar "/en/stories" en la versión en inglés. */
+  routePrefix?: string;
 };
 
 export default function StoryPaginaClient({
@@ -19,6 +21,7 @@ export default function StoryPaginaClient({
   storyTitulo,
   imagenUrl,
   parrafos,
+  routePrefix = "/stories",
 }: Props) {
   const hasAnterior = numero > 1;
   const hasSiguiente = numero < totalPaginas;
@@ -77,14 +80,14 @@ export default function StoryPaginaClient({
           {hasAnterior && hasSiguiente ? (
             <div className="flex gap-2">
               <Link
-                href={`/stories/${slug}/${numero - 1}`}
+                href={`${routePrefix}/${slug}/${numero - 1}`}
                 className="flex-1 rounded-sm py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
                 style={{ backgroundColor: "#e00000" }}
               >
                 ← Anterior
               </Link>
               <Link
-                href={`/stories/${slug}/${numero + 1}`}
+                href={`${routePrefix}/${slug}/${numero + 1}`}
                 className="flex-1 rounded-sm py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
                 style={{ backgroundColor: "#e00000" }}
               >
@@ -93,7 +96,7 @@ export default function StoryPaginaClient({
             </div>
           ) : hasSiguiente ? (
             <Link
-              href={`/stories/${slug}/${numero + 1}`}
+              href={`${routePrefix}/${slug}/${numero + 1}`}
               className="block w-full rounded-sm py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
               style={{ backgroundColor: "#e00000" }}
             >
@@ -102,14 +105,14 @@ export default function StoryPaginaClient({
           ) : hasAnterior ? (
             <div className="space-y-2">
               <Link
-                href={`/stories/${slug}/${numero - 1}`}
+                href={`${routePrefix}/${slug}/${numero - 1}`}
                 className="block w-full rounded-sm py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
                 style={{ backgroundColor: "#e00000" }}
               >
                 ← Anterior
               </Link>
               <Link
-                href="/stories"
+                href={routePrefix}
                 className="block w-full rounded-sm py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
                 style={{ backgroundColor: "#e00000" }}
               >
