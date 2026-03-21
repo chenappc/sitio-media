@@ -122,9 +122,9 @@ export default function StoryPaginaClient({
 
       <aside className="hidden shrink-0 self-start md:block md:w-1/4">
         <div className="max-w-full overflow-hidden">
-          <AdXSlot slotId="gpt-vahica-single-left" minHeight={600} />
+          <AdXSlot slotId="gpt-vahica-single-left" />
           <div className="sticky top-4 mt-6">
-            <AdXSlot slotId="gpt-vahica-single-right" minHeight={600} />
+            <AdXSlot slotId="gpt-vahica-single-right" />
           </div>
         </div>
       </aside>
