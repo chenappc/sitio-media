@@ -123,7 +123,7 @@ export default function EspecialInfiniteScroll({
   return (
     <>
     <div className="mx-auto max-w-6xl px-4 py-6">
-      <div className="min-w-0 w-full px-4">
+      <div className="min-w-0 w-full">
         <div className="mt-4 space-y-10">
           {pages.map((page) => {
             const { parrafos, imagenUrl } = getParrafosAndImagen(page);
