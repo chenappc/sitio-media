@@ -95,7 +95,7 @@ export default async function NotaPage({ params }: Props) {
         {nota.imagen_url && (
           <div className="relative mt-4 w-full flex justify-center">
             <img
-              src={nota.imagen_url}
+              src={nota.imagen_url ?? ""}
               alt={nota.imagen_alt ?? nota.titulo}
               style={{ maxHeight: "550px", width: "auto", maxWidth: "100%" }}
             />
