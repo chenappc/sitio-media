@@ -67,19 +67,22 @@ export default function StoryPaginaClient({
         </div>
 
         <nav className="mt-8 border-t border-[var(--negro)]/10 pt-6" aria-label="Navegación entre páginas">
+          <p className="mb-4 text-sm italic text-[var(--rojo)]">
+            Usa los botones rojos de abajo para avanzar o retroceder por las páginas de esta historia.
+          </p>
           {hasAnterior && hasSiguiente ? (
             <div className="flex gap-2">
               <Link
                 href={`/stories/${slug}/${numero - 1}`}
                 className="flex-1 rounded-sm py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
-                style={{ backgroundColor: "#1a56db" }}
+                style={{ backgroundColor: "#e00000" }}
               >
                 ← Anterior
               </Link>
               <Link
                 href={`/stories/${slug}/${numero + 1}`}
                 className="flex-1 rounded-sm py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
-                style={{ backgroundColor: "#1a56db" }}
+                style={{ backgroundColor: "#e00000" }}
               >
                 Próximo →
               </Link>
@@ -88,7 +91,7 @@ export default function StoryPaginaClient({
             <Link
               href={`/stories/${slug}/${numero + 1}`}
               className="block w-full rounded-sm py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
-              style={{ backgroundColor: "#1a56db" }}
+              style={{ backgroundColor: "#e00000" }}
             >
               Próximo →
             </Link>
@@ -97,14 +100,14 @@ export default function StoryPaginaClient({
               <Link
                 href={`/stories/${slug}/${numero - 1}`}
                 className="block w-full rounded-sm py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
-                style={{ backgroundColor: "#1a56db" }}
+                style={{ backgroundColor: "#e00000" }}
               >
                 ← Anterior
               </Link>
               <Link
                 href="/stories"
                 className="block w-full rounded-sm py-4 text-center text-lg font-semibold text-white no-underline hover:opacity-95"
-                style={{ backgroundColor: "#1a56db" }}
+                style={{ backgroundColor: "#e00000" }}
               >
                 Más historias
               </Link>
