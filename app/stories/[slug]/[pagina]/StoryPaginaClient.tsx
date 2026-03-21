@@ -38,7 +38,7 @@ export default function StoryPaginaClient({
 
         <div className="hidden md:block">
           <div className="my-4 max-w-full overflow-hidden rounded border border-[var(--negro)]/10 p-3 flex flex-col items-center">
-            <AdXSlot slotId="div-gpt-ad-1774064935710-0" minWidth={728} minHeight={90} showLabel />
+            <AdXSlot slotId="div-gpt-ad-1774064935710-0" minWidth={728} showLabel />
           </div>
         </div>
 
