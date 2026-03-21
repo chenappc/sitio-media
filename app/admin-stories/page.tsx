@@ -5,6 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getAdminSecret } from "@/app/admin/CerrarSesionBtn";
 
+/** Misma idea que el selector en app/admin/page.tsx (persistencia por story). */
+const IDIOMA_STORIES_STORAGE_KEY = "vahica-admin-stories-idioma";
+
+type IdiomaStories = "es" | "en" | "original";
+
 type StoryRow = {
   id: number;
   slug: string;
@@ -29,6 +34,7 @@ export default function AdminStoriesPage() {
   const [scraping, setScraping] = useState(false);
   const [publishingId, setPublishingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [idioma, setIdioma] = useState<IdiomaStories>("es");
   const router = useRouter();
 
   const fetchStories = useCallback(() => {
@@ -44,6 +50,15 @@ export default function AdminStoriesPage() {
   useEffect(() => {
     fetchStories();
   }, [fetchStories]);
+
+  useEffect(() => {
+    try {
+      const v = sessionStorage.getItem(IDIOMA_STORIES_STORAGE_KEY);
+      if (v === "en" || v === "original" || v === "es") setIdioma(v);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const handleScrapear = async () => {
     const base = urlBase.trim();
@@ -71,7 +86,13 @@ export default function AdminStoriesPage() {
           "Content-Type": "application/json",
           "x-admin-secret": secret,
         },
-        body: JSON.stringify({ urlBase: base, paginaInicio: inicio, paginaFin: fin, sinImagenesIa }),
+        body: JSON.stringify({
+          urlBase: base,
+          paginaInicio: inicio,
+          paginaFin: fin,
+          sinImagenesIa,
+          idioma,
+        }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: res.statusText }));
@@ -197,6 +218,33 @@ export default function AdminStoriesPage() {
       <section className="mb-8 rounded-lg border border-[var(--negro)]/10 bg-white p-4 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold">Nueva Story</h2>
         <div className="space-y-3">
+          <div className="mb-6 rounded-lg border border-[var(--negro)]/10 bg-white p-4 shadow-sm">
+            <label
+              htmlFor="admin-stories-idioma"
+              className="mb-1 block text-sm text-[var(--negro)]/70"
+            >
+              Idioma
+            </label>
+            <select
+              id="admin-stories-idioma"
+              name="idioma"
+              value={idioma}
+              onChange={(e) => {
+                const v = e.target.value as IdiomaStories;
+                setIdioma(v);
+                try {
+                  sessionStorage.setItem(IDIOMA_STORIES_STORAGE_KEY, v);
+                } catch {
+                  /* ignore */
+                }
+              }}
+              className="w-full max-w-xs rounded border border-[var(--negro)]/20 px-3 py-2 text-sm"
+            >
+              <option value="es">Español (es)</option>
+              <option value="en">English (en)</option>
+              <option value="original">Idioma original</option>
+            </select>
+          </div>
           <div>
             <label className="mb-1 block text-sm text-[var(--negro)]/70">URL base</label>
             <input
