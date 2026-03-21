@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import AdXSlot from "@/components/AdXSlot";
 
@@ -43,15 +42,11 @@ export default function StoryPaginaClient({
         </div>
 
         {imagenUrl && (
-          <div className="relative mt-4 w-full">
-            <Image
+          <div className="relative mt-4 w-full flex justify-center">
+            <img
               src={optimizarImagenCloudinary(imagenUrl)}
               alt={storyTitulo}
-              width={800}
-              height={550}
-              className="h-auto w-full"
-              style={{ maxHeight: "550px", width: "100%", height: "auto" }}
-              priority
+              style={{ maxHeight: "550px", width: "auto", maxWidth: "100%" }}
             />
           </div>
         )}
