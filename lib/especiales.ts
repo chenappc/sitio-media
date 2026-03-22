@@ -7,6 +7,7 @@ export type EspecialRow = {
   titulo: string;
   status: string;
   total_paginas: number;
+  idioma?: string;
   created_at?: Date;
   imagen_portada?: string | null;
 };
@@ -15,7 +16,7 @@ export type EspecialRow = {
 export async function getAllEspeciales(): Promise<EspecialRow[]> {
   try {
     const res = await pool.query<EspecialRow>(
-      `SELECT e.id, e.slug, e.titulo, e.status, e.total_paginas, e.created_at,
+      `SELECT e.id, e.slug, e.titulo, e.status, e.total_paginas, e.idioma, e.created_at,
         (SELECT imagen_url FROM especial_paginas WHERE especial_id = e.id AND numero = 1 LIMIT 1) as imagen_portada
        FROM especiales e
        ORDER BY e.created_at DESC`
