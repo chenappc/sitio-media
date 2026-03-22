@@ -13,8 +13,11 @@ export default function EspecialAdSlot({
   const id = getSlotId(numero, kind);
 
   useEffect(() => {
-    defineSlotIfNeededAndDisplay(numero, kind);
+    const timer = setTimeout(() => {
+      defineSlotIfNeededAndDisplay(numero, kind);
+    }, 100);
+    return () => clearTimeout(timer);
   }, [numero, kind]);
 
-  return <div id={id} style={{ minWidth: 300, minHeight: 250 }} />;
+  return <div id={id} />;
 }
