@@ -1,9 +1,21 @@
 "use client";
 
-export default function WhatsAppButton({ titulo, slug }: { titulo: string; slug: string }) {
+type Props = {
+  titulo: string;
+  slug: string;
+  /** ej. "/en" para notas en inglés → …/en/slug */
+  pathPrefix?: string;
+};
+
+export default function WhatsAppButton({
+  titulo,
+  slug,
+  pathPrefix = "",
+}: Props) {
+  const path = pathPrefix + "/" + slug;
   return (
     <a
-      href={`https://wa.me/?text=${encodeURIComponent(titulo + " " + "https://www.vahica.com/" + slug)}`}
+      href={`https://wa.me/?text=${encodeURIComponent(titulo + " " + "https://www.vahica.com" + path)}`}
       target="_blank"
       rel="noopener noreferrer"
       className="w-full"
