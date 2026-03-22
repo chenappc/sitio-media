@@ -5,7 +5,7 @@ import type { Bloque } from "@/lib/types";
 import AdXSlot from "@/components/AdXSlot";
 import EspecialAdSlot from "./EspecialAdSlot";
 
-const INTERSTITIAL_ID = "div-gpt-ad-1773725445265-0";
+// const INTERSTITIAL_ID = "div-gpt-ad-1773725445265-0";
 
 type PageData = {
   numero: number;
@@ -35,9 +35,9 @@ export default function EspecialInfiniteScroll({
 }: Props) {
   const [pages, setPages] = useState<PageData[]>([initialPage]);
   const [loading, setLoading] = useState(false);
-  const [interstitialOpen, setInterstitialOpen] = useState(false);
+  // const [interstitialOpen, setInterstitialOpen] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const interstitialShownForCount = useRef<Set<number>>(new Set());
+  // const interstitialShownForCount = useRef<Set<number>>(new Set());
 
   const loadNext = useCallback(async () => {
     const nextNumero = initialNumero + pages.length;
@@ -56,27 +56,27 @@ export default function EspecialInfiniteScroll({
       };
       setPages((prev) => {
         const next = [...prev, newPage];
-        const n = next.length;
-        if (n >= 5 && n % 5 === 0 && !interstitialShownForCount.current.has(n)) {
-          interstitialShownForCount.current.add(n);
-          queueMicrotask(() => {
-            setInterstitialOpen(true);
-            window.setTimeout(() => {
-              try {
-                (
-                  window as unknown as { googletag?: { cmd: { push: (fn: () => void) => void } } }
-                ).googletag?.cmd.push(function () {
-                  (
-                    window as unknown as { googletag?: { display: (id: string) => void } }
-                  ).googletag?.display(INTERSTITIAL_ID);
-                });
-              } catch {
-                /* ignore */
-              }
-            }, 120);
-            window.setTimeout(() => setInterstitialOpen(false), 4500);
-          });
-        }
+        // const n = next.length;
+        // if (n >= 5 && n % 5 === 0 && !interstitialShownForCount.current.has(n)) {
+        //   interstitialShownForCount.current.add(n);
+        //   queueMicrotask(() => {
+        //     setInterstitialOpen(true);
+        //     window.setTimeout(() => {
+        //       try {
+        //         (
+        //           window as unknown as { googletag?: { cmd: { push: (fn: () => void) => void } } }
+        //         ).googletag?.cmd.push(function () {
+        //           (
+        //             window as unknown as { googletag?: { display: (id: string) => void } }
+        //           ).googletag?.display(INTERSTITIAL_ID);
+        //         });
+        //       } catch {
+        //         /* ignore */
+        //       }
+        //     }, 120);
+        //     window.setTimeout(() => setInterstitialOpen(false), 4500);
+        //   });
+        // }
         return next;
       });
       const url = `/especiales/${slug}/${nextNumero}`;
@@ -186,6 +186,7 @@ export default function EspecialInfiniteScroll({
       </aside> */}
     </div>
 
+    {/*
     <div
       className={
         interstitialOpen
@@ -199,6 +200,7 @@ export default function EspecialInfiniteScroll({
         className="min-h-[250px] min-w-[300px] rounded bg-white p-2 shadow-lg"
       />
     </div>
+    */}
     </>
   );
 }
