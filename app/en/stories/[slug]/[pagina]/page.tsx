@@ -45,6 +45,7 @@ export default async function StoryPaginaEnPage({ params }: Props) {
         imagenUrl={paginaData.imagen_url ?? null}
         parrafos={parrafos}
         routePrefix="/en/stories"
+        locale="en"
       />
     </div>
   );

@@ -13,7 +13,9 @@ export const metadata = {
 
 export default async function StoriesPage() {
   const stories: Story[] = await getStories();
-  const publicadas = stories.filter((s) => s.status === "published");
+  const publicadas = stories.filter(
+    (s) => s.status === "published" && (s.idioma === "es" || !s.idioma)
+  );
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">

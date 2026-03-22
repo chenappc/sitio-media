@@ -5,14 +5,16 @@ import { useEffect } from "react";
 type Props = {
   slotId: string;
   minWidth?: number;
-  /** Muestra el rótulo centrado “-- ANUNCIO --” encima del slot (estilo secundario, discreto). */
+  /** Muestra el rótulo centrado encima del slot (estilo secundario, discreto). */
   showLabel?: boolean;
+  locale?: "es" | "en";
 };
 
 export default function AdXSlot({
   slotId,
   minWidth = 300,
   showLabel = false,
+  locale = "es",
 }: Props) {
   useEffect(() => {
     try {
@@ -34,9 +36,10 @@ export default function AdXSlot({
     return slot;
   }
 
+  const labelText = locale === "en" ? "-- ADVERTISEMENT --" : "-- ANUNCIO --";
   return (
     <div className="flex w-full flex-col items-center">
-      <p className="mb-2 text-center text-xs font-normal text-[#aaaaaa]">-- ANUNCIO --</p>
+      <p className="mb-2 text-center text-xs font-normal text-[#aaaaaa]">{labelText}</p>
       {slot}
     </div>
   );

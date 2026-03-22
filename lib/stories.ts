@@ -1,11 +1,11 @@
 import pool from "./db";
 import type { Story, StoryPagina } from "./types";
 
-/** Devuelve todas las stories con id, slug, titulo, status, total_paginas, created_at, imagen_portada. */
+/** Devuelve todas las stories con id, slug, titulo, status, total_paginas, created_at, idioma, imagen_portada. */
 export async function getStories(): Promise<Story[]> {
   try {
     const res = await pool.query<Story>(
-      `SELECT s.id, s.slug, s.titulo, s.status, s.total_paginas, s.created_at,
+      `SELECT s.id, s.slug, s.titulo, s.status, s.total_paginas, s.created_at, s.idioma,
        (SELECT imagen_url FROM story_paginas WHERE story_id = s.id AND numero = 1 LIMIT 1) as imagen_portada
        FROM stories s
        ORDER BY s.updated_at DESC`
