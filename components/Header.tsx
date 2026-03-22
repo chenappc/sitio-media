@@ -4,8 +4,31 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import styles from "./Header.module.css";
 
+function getLangToggleHref(pathname: string | null): { href: string; label: "ES" | "EN"; title: string } {
+  const p = pathname || "/";
+  const onEnglish = p === "/en" || p.startsWith("/en/");
+  if (onEnglish) {
+    if (p === "/en" || p === "/en/") {
+      return { href: "/", label: "ES", title: "Ver en español" };
+    }
+    const rest = p.startsWith("/en/") ? p.slice(3) : "/";
+    return { href: rest || "/", label: "ES", title: "Ver en español" };
+  }
+  if (p === "/" || p === "") {
+    return { href: "/en", label: "EN", title: "English" };
+  }
+  if (p.startsWith("/stories")) {
+    return { href: `/en${p}`, label: "EN", title: "English" };
+  }
+  if (p.startsWith("/especiales")) {
+    return { href: "/en", label: "EN", title: "English" };
+  }
+  return { href: `/en${p.startsWith("/") ? p : `/${p}`}`, label: "EN", title: "English" };
+}
+
 export default function Header() {
   const pathname = usePathname();
+  const lang = getLangToggleHref(pathname);
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
@@ -33,15 +56,9 @@ export default function Header() {
           <Link href="/especiales" className={`${styles.navLink} ${pathname?.startsWith("/especiales") ? styles.navLinkActive : ""}`}>
             Especiales
           </Link>
-          {pathname?.startsWith("/en") ? (
-            <Link href="/" className={styles.langLink} title="Ver en español">
-              ES
-            </Link>
-          ) : (
-            <Link href="/en" className={styles.langLink} title="English">
-              EN
-            </Link>
-          )}
+          <Link href={lang.href} className={styles.langLink} title={lang.title}>
+            {lang.label}
+          </Link>
         </div>
       </nav>
     </header>
