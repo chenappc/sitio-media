@@ -12,6 +12,8 @@ export interface Nota {
   shares_buzzsumo: number;
   pais: string;
   publicado: boolean;
+  /** es | en | original — alineado con especiales/scrape */
+  idioma?: string | null;
   fecha: Date;
   created_at?: Date;
   fb_post_id?: string | null;
@@ -28,6 +30,8 @@ export interface Story {
   url_base?: string | null;
   descripcion_protagonista?: string | null;
   imagen_referencia_url?: string | null;
+  /** es | en | original — alineado con especiales/scrape */
+  idioma?: string;
   created_at?: Date;
   updated_at?: Date;
 }
