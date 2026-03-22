@@ -73,6 +73,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function NotaPage({ params }: Props) {
   const { slug } = await params;
+  if (slug === "en") notFound();
   const nota = await getNotaBySlug(slug);
   if (!nota) notFound();
   await incrementarVisitas(nota.id);
