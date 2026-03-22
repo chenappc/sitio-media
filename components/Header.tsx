@@ -6,14 +6,23 @@ import styles from "./Header.module.css";
 
 function getLangToggleHref(pathname: string | null): { href: string; label: "ES" | "EN"; title: string } {
   const p = pathname || "/";
-  const onEnglish = p === "/en" || p.startsWith("/en/");
-  if (onEnglish) {
+
+  if (p === "/en" || p.startsWith("/en/")) {
     if (p === "/en" || p === "/en/") {
       return { href: "/", label: "ES", title: "Ver en español" };
     }
-    const rest = p.startsWith("/en/") ? p.slice(3) : "/";
-    return { href: rest || "/", label: "ES", title: "Ver en español" };
+    if (p.startsWith("/en/stories")) {
+      const href = p.replace(/^\/en\/stories/, "/stories") || "/stories";
+      return { href, label: "ES", title: "Ver en español" };
+    }
+    const oneEn = /^\/en\/([^/]+)$/.exec(p);
+    if (oneEn && oneEn[1] !== "stories") {
+      return { href: "/", label: "ES", title: "Ver en español" };
+    }
+    const rest = p.slice(3);
+    return { href: rest.startsWith("/") ? rest : `/${rest}`, label: "ES", title: "Ver en español" };
   }
+
   if (p === "/" || p === "") {
     return { href: "/en", label: "EN", title: "English" };
   }
@@ -21,7 +30,14 @@ function getLangToggleHref(pathname: string | null): { href: string; label: "ES"
     return { href: `/en${p}`, label: "EN", title: "English" };
   }
   if (p.startsWith("/especiales")) {
-    return { href: "/en", label: "EN", title: "English" };
+    return { href: p, label: "EN", title: "English" };
+  }
+  const oneSp = /^\/([^/]+)$/.exec(p);
+  if (oneSp) {
+    const reserved = new Set(["stories", "especiales", "en", "admin", "api", "_next"]);
+    if (!reserved.has(oneSp[1])) {
+      return { href: "/en", label: "EN", title: "English" };
+    }
   }
   return { href: `/en${p.startsWith("/") ? p : `/${p}`}`, label: "EN", title: "English" };
 }

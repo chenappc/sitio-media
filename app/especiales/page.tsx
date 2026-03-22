@@ -11,7 +11,9 @@ export const metadata = {
 
 export default async function EspecialesPage() {
   const todos = await getEspeciales();
-  const publicados = todos.filter((e) => e.status === "published");
+  const publicados = todos.filter(
+    (e) => e.status === "published" && (e.idioma === "es" || !e.idioma)
+  );
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
