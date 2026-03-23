@@ -47,6 +47,28 @@ function getLangToggleHref(pathname: string | null): { href: string; label: "ES"
 export default function Header() {
   const pathname = usePathname();
   const lang = getLangToggleHref(pathname);
+  const isEn = pathname?.startsWith("/en") ?? false;
+
+  const navNotasHref = isEn ? "/en" : "/";
+  const navNotasLabel = isEn ? "Viral News" : "Notas virales";
+  const navNotasActive = isEn
+    ? pathname === "/en" || pathname === "/en/"
+    : pathname === "/";
+
+  const navStoriesHref = isEn ? "/en/stories" : "/stories";
+  const navStoriesLabel = isEn ? "Stories" : "Historias";
+  const navStoriesActive = isEn
+    ? Boolean(pathname?.startsWith("/en/stories"))
+    : Boolean(pathname?.startsWith("/stories"));
+
+  const navEspecialesHref = isEn ? "/en/especiales" : "/especiales";
+  const navEspecialesLabel = isEn ? "Specials" : "Especiales";
+  const navEspecialesActive = isEn
+    ? Boolean(pathname?.startsWith("/en/especiales"))
+    : Boolean(pathname?.startsWith("/especiales"));
+
+  const sloganText = isEn ? "What everyone is talking about" : "Lo que todo el mundo está hablando";
+
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
@@ -61,18 +83,27 @@ export default function Header() {
             priority
           />
         </Link>
-        <span className={styles.slogan}>Lo que todo el mundo está hablando</span>
+        <span className={styles.slogan}>{sloganText}</span>
       </div>
       <nav className={styles.nav}>
         <div className={styles.navInner}>
-          <Link href="/" className={`${styles.navLink} ${pathname === "/" ? styles.navLinkActive : ""}`}>
-            Notas virales
+          <Link
+            href={navNotasHref}
+            className={`${styles.navLink} ${navNotasActive ? styles.navLinkActive : ""}`}
+          >
+            {navNotasLabel}
           </Link>
-          <Link href="/stories" className={`${styles.navLink} ${pathname?.startsWith("/stories") ? styles.navLinkActive : ""}`}>
-            Historias
+          <Link
+            href={navStoriesHref}
+            className={`${styles.navLink} ${navStoriesActive ? styles.navLinkActive : ""}`}
+          >
+            {navStoriesLabel}
           </Link>
-          <Link href="/especiales" className={`${styles.navLink} ${pathname?.startsWith("/especiales") ? styles.navLinkActive : ""}`}>
-            Especiales
+          <Link
+            href={navEspecialesHref}
+            className={`${styles.navLink} ${navEspecialesActive ? styles.navLinkActive : ""}`}
+          >
+            {navEspecialesLabel}
           </Link>
           <Link href={lang.href} className={styles.langLink} title={lang.title}>
             {lang.label}
