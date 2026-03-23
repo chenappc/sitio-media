@@ -12,8 +12,7 @@ function getLangToggleHref(pathname: string | null): { href: string; label: "ES"
       return { href: "/", label: "ES", title: "Ver en español" };
     }
     if (p.startsWith("/en/stories")) {
-      const href = p.replace(/^\/en\/stories/, "/stories") || "/stories";
-      return { href, label: "ES", title: "Ver en español" };
+      return { href: "/stories", label: "ES", title: "Ver en español" };
     }
     const oneEn = /^\/en\/([^/]+)$/.exec(p);
     if (oneEn && oneEn[1] !== "stories") {
@@ -27,7 +26,7 @@ function getLangToggleHref(pathname: string | null): { href: string; label: "ES"
     return { href: "/en", label: "EN", title: "English" };
   }
   if (p.startsWith("/stories")) {
-    return { href: `/en${p}`, label: "EN", title: "English" };
+    return { href: "/en/stories", label: "EN", title: "English" };
   }
   if (p.startsWith("/especiales")) {
     return { href: p, label: "EN", title: "English" };
