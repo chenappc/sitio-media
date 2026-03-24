@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 type Variant = "mobile" | "desktop";
 
@@ -15,26 +16,26 @@ function getConfig(variant: Variant) {
   return { sc_project: 13211414, sc_security: "7a9e7168" };
 }
 
+function removeAllStatCounterDualScripts() {
+  (["mobile", "desktop"] as Variant[]).forEach((v) => {
+    document.getElementById(`statcounter-dual-inline-${v}`)?.remove();
+    document.getElementById(`statcounter-dual-src-${v}`)?.remove();
+  });
+}
+
 export default function StatCounterDual() {
+  const pathname = usePathname();
+
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    removeAllStatCounterDualScripts();
 
     const variant = getVariantByWidth(window.innerWidth);
     const { sc_project, sc_security } = getConfig(variant);
 
     const inlineId = `statcounter-dual-inline-${variant}`;
     const srcId = `statcounter-dual-src-${variant}`;
-
-    // Evitar duplicados si el componente se monta más de una vez.
-    if (document.getElementById(inlineId) || document.getElementById(srcId)) return;
-
-    // Quitar la otra variante si existiera.
-    (["mobile", "desktop"] as Variant[])
-      .filter((v) => v !== variant)
-      .forEach((v) => {
-        document.getElementById(`statcounter-dual-inline-${v}`)?.remove();
-        document.getElementById(`statcounter-dual-src-${v}`)?.remove();
-      });
 
     const inline = document.createElement("script");
     inline.id = inlineId;
@@ -49,8 +50,11 @@ export default function StatCounterDual() {
 
     document.body.appendChild(inline);
     document.body.appendChild(src);
-  }, []);
+
+    return () => {
+      removeAllStatCounterDualScripts();
+    };
+  }, [pathname]);
 
   return null;
 }
-
