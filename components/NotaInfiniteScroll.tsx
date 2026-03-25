@@ -252,7 +252,10 @@ export default function NotaInfiniteScroll({ notaInicial, idioma }: Props) {
               className="border-b border-[var(--negro)]/15 pb-12 last:border-b-0 last:pb-0"
               data-nota-slug={nota.slug}
             >
-              <h1 className="font-serif text-2xl font-bold leading-tight md:text-3xl">{nota.titulo}</h1>
+              <span className="inline-block rounded bg-[var(--rojo)] px-2 py-0.5 text-sm font-semibold text-white">
+                🔥 Viral
+              </span>
+              <h1 className="mt-3 font-serif text-2xl font-bold leading-tight md:text-3xl">{nota.titulo}</h1>
               <p className="mt-2 text-sm text-[var(--negro)]/60">
                 {formatDistanceToNow(new Date(nota.fecha), { addSuffix: true, locale })}
               </p>
