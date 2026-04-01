@@ -133,14 +133,14 @@ function NotaGptSlot({
 
   if (noteIndex === 1) {
     return (
-      <div className="my-4 max-w-full overflow-hidden rounded border border-[var(--negro)]/10 p-3 flex flex-col items-center">
+      <div className="flex flex-col items-center w-full">
         <AdXSlot slotId={id} showLabel locale={locale} />
       </div>
     );
   }
 
   return (
-    <div className="my-4 max-w-full overflow-hidden rounded border border-[var(--negro)]/10 p-3 flex flex-col items-center">
+    <div className="flex flex-col items-center w-full">
       <p className="mb-2 text-center text-xs font-normal text-[#aaaaaa]">
         {locale === "en" ? "-- ADVERTISEMENT --" : "-- ANUNCIO --"}
       </p>
