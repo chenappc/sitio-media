@@ -49,10 +49,8 @@ export default function StoryPaginaClient({
       <main className="min-w-0 w-full">
         <h1 className="font-serif text-2xl font-bold text-[var(--negro)] md:text-4xl">{storyTitulo}</h1>
 
-        <div className="hidden md:block">
-          <div className="my-4 max-w-full overflow-hidden rounded border border-[var(--negro)]/10 p-3 flex flex-col items-center">
-            <AdXSlot slotId="div-gpt-ad-1774064935710-0" minWidth={728} showLabel locale={locale} />
-          </div>
+        <div className="hidden md:block w-full flex justify-center my-4">
+          <AdXSlot slotId="div-gpt-ad-1774064935710-0" minWidth={728} showLabel locale={locale} />
         </div>
 
         {imagenUrl && (
